@@ -11,12 +11,8 @@ from datetime import datetime
 import asyncio
 import json
 from contextlib import asynccontextmanager
-from concurrent.futures import ThreadPoolExecutor
-import threading
 
 CACHE_FILE = "meridian_cache.csv"
-progress_state = {"current": 0, "total": 0, "deals_found": 0}
-progress_lock = threading.Lock()
 
 def extract_price_from_text(clean_text):
     patterns = [
@@ -60,25 +56,6 @@ def extract_acquirer(clean_text):
         return min(candidates, key=len)
     return "Undisclosed"
 
-def extract_transaction_value(clean_text):
-    patterns = [
-        r'transaction.*?valued.*?approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
-        r'aggregate.*?consideration.*?\$(\d+(?:\.\d+)?)\s*(billion|million)',
-        r'total.*?transaction.*?value.*?\$(\d+(?:\.\d+)?)\s*(billion|million)',
-        r'approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
-        r'\$(\d+(?:\.\d+)?)\s*(billion|million).*?transaction',
-    ]
-    for pattern in patterns:
-        match = re.search(pattern, clean_text[:5000], re.IGNORECASE)
-        if match:
-            value = float(match.group(1))
-            unit = match.group(2).lower()
-            if unit == 'billion':
-                return round(value, 2)
-            else:
-                return round(value / 1000, 2)
-    return None
-
 def score_deal(spread_pct, days_since_filed):
     score = 70
     if 0 < spread_pct < 5:      score += 20
@@ -87,65 +64,6 @@ def score_deal(spread_pct, days_since_filed):
     if days_since_filed < 30:    score += 10
     elif days_since_filed > 180: score -= 10
     return min(max(score, 0), 100)
-
-def process_single_hit(hit, headers):
-    src = hit['_source']
-    name_str = str(src['display_names'])
-    tm = re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str)
-    ticker = tm.group(1) if tm else None
-    cik = src['ciks'][0].lstrip('0') if src['ciks'] else None
-    accession = src['adsh']
-    if not ticker or not cik or not accession:
-        return None
-    try:
-        h = yf.Ticker(ticker).history(period="5d")
-        if h.empty: return None
-        cp = h['Close'].iloc[-1]
-        if cp < 1: return None
-    except:
-        return None
-    try:
-        and_ = accession.replace('-', '')
-        ir = requests.get(
-            f"https://www.sec.gov/Archives/edgar/data/{cik}/{and_}/{accession}-index.htm",
-            headers=headers, timeout=10)
-        links = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
-        dp = None
-        acquirer = "Undisclosed"
-        tx_value = None
-        for lk in links:
-            if 'ex99' in lk.lower():
-                dr = requests.get(f"https://www.sec.gov{lk}", headers=headers, timeout=10)
-                ct = BeautifulSoup(dr.text, 'html.parser').get_text()
-                if 'definitive agreement' in ct.lower():
-                    dp = extract_price_from_text(ct)
-                    acquirer = extract_acquirer(ct)
-                    tx_value = extract_transaction_value(ct)
-                    if dp: break
-        if not dp: return None
-        sp = dp - cp
-        sp_pct = (sp / cp) * 100
-        if sp_pct < -10 or sp_pct > 20: return None
-        days = (datetime.today() - datetime.strptime(src['file_date'], '%Y-%m-%d')).days
-        sc = score_deal(sp_pct, days)
-        risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
-        ann = (sp_pct / 180) * 365
-        return {
-            'ticker':   ticker,
-            'acquirer': acquirer,
-            'cp':       round(cp, 2),
-            'dp':       dp,
-            'sp_pct':   round(sp_pct, 2),
-            'ann':      round(ann, 2),
-            'score':    sc,
-            'risk':     risk,
-            'filed':    src['file_date'],
-            'days_old': days,
-            'tx_value': tx_value,
-            'fetched':  datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
-        }
-    except:
-        return None
 
 def fetch_deals_from_edgar(progress_callback=None):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting EDGAR fetch...")
@@ -167,22 +85,64 @@ def fetch_deals_from_edgar(progress_callback=None):
 
     total = len(all_hits)
     results = []
-    completed = 0
-    results_lock = threading.Lock()
+    for i, hit in enumerate(all_hits):
+        if progress_callback:
+            progress_callback(i + 1, total, len(results))
 
-    def process_and_track(hit):
-        nonlocal completed
-        result = process_single_hit(hit, headers)
-        with results_lock:
-            completed += 1
-            if result:
-                results.append(result)
-            if progress_callback:
-                progress_callback(completed, total, len(results))
-        return result
-
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        executor.map(process_and_track, all_hits)
+        src = hit['_source']
+        name_str = str(src['display_names'])
+        tm = re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str)
+        ticker = tm.group(1) if tm else None
+        cik = src['ciks'][0].lstrip('0') if src['ciks'] else None
+        accession = src['adsh']
+        if not ticker or not cik or not accession:
+            continue
+        try:
+            h = yf.Ticker(ticker).history(period="5d")
+            if h.empty: continue
+            cp = h['Close'].iloc[-1]
+            if cp < 1: continue
+        except:
+            continue
+        try:
+            and_ = accession.replace('-', '')
+            ir = requests.get(
+                f"https://www.sec.gov/Archives/edgar/data/{cik}/{and_}/{accession}-index.htm",
+                headers=headers, timeout=10)
+            links = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
+            dp = None
+            acquirer = "Undisclosed"
+            for lk in links:
+                if 'ex99' in lk.lower():
+                    dr = requests.get(f"https://www.sec.gov{lk}", headers=headers, timeout=10)
+                    ct = BeautifulSoup(dr.text, 'html.parser').get_text()
+                    if 'definitive agreement' in ct.lower():
+                        dp = extract_price_from_text(ct)
+                        acquirer = extract_acquirer(ct)
+                        if dp: break
+            if not dp: continue
+            sp = dp - cp
+            sp_pct = (sp / cp) * 100
+            if sp_pct < -10 or sp_pct > 20: continue
+            days = (datetime.today() - datetime.strptime(src['file_date'], '%Y-%m-%d')).days
+            sc = score_deal(sp_pct, days)
+            risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
+            ann = (sp_pct / 180) * 365
+            results.append({
+                'ticker':   ticker,
+                'acquirer': acquirer,
+                'cp':       round(cp, 2),
+                'dp':       dp,
+                'sp_pct':   round(sp_pct, 2),
+                'ann':      round(ann, 2),
+                'score':    sc,
+                'risk':     risk,
+                'filed':    src['file_date'],
+                'days_old': days,
+                'fetched':  datetime.today().strftime('%Y-%m-%d %H:%M'),
+            })
+        except:
+            continue
 
     if results:
         df = pd.DataFrame(results).drop_duplicates(subset=['ticker'])
@@ -256,7 +216,7 @@ async def refresh_stream():
         while not future.done():
             data = json.dumps(progress_data)
             yield f"data: {data}\n\n"
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1)
 
         deals = await future
         final = json.dumps({"done": True, "deals": deals})
