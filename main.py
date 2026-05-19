@@ -13,7 +13,7 @@ app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-CACHE_FILE = "../meridian_cache.csv"
+CACHE_FILE = "meridian_cache.csv"
 
 def extract_price_from_text(clean_text):
     patterns = [
