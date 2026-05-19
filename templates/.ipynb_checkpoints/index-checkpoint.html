@@ -99,11 +99,10 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .btn{font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.4rem 1rem;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
 .btn:hover{border-color:var(--green2);color:var(--green);background:rgba(90,158,106,0.04);}
 
-/* PROGRESS BAR */
 .progress-wrap{display:none;padding:0.6rem 2.5rem;background:var(--bg2);border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
 .progress-wrap.active{display:block;}
 .progress-label{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);letter-spacing:0.15em;margin-bottom:0.4rem;display:flex;justify-content:space-between;}
-.progress-bar-bg{height:2px;background:var(--bdr2);border-radius:0;}
+.progress-bar-bg{height:2px;background:var(--bdr2);}
 .progress-bar-fill{height:100%;background:var(--green);transition:width 0.3s ease;width:0%;}
 .progress-deals{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--green);letter-spacing:0.1em;margin-top:0.35rem;}
 
@@ -367,8 +366,7 @@ function spColor(val){ return val >= 0 ? 'var(--green)' : 'var(--red)'; }
 function updateLocalTime(fetched){
     if(!fetched) return 'Unknown';
     try {
-        const parts = fetched.split(' ');
-        const dateStr = parts[0] + 'T' + parts[1] + ':00Z';
+        const dateStr = fetched + ':00Z';
         return new Date(dateStr).toLocaleString('en-US', {
             month: 'short', day: 'numeric',
             hour: 'numeric', minute: '2-digit',
@@ -493,7 +491,6 @@ function refreshData(){
 
     evtSource.onmessage = function(e){
         const data = JSON.parse(e.data);
-
         if(data.done){
             evtSource.close();
             allDeals = data.deals || [];
@@ -504,12 +501,9 @@ function refreshData(){
             progressDeals.textContent = allDeals.length + ' deals loaded';
             btn.disabled = false;
             btn.textContent = 'Refresh';
-            setTimeout(() => {
-                progressWrap.classList.remove('active');
-            }, 3000);
+            setTimeout(() => { progressWrap.classList.remove('active'); }, 3000);
             return;
         }
-
         if(data.total > 0){
             const pct = Math.round((data.current / data.total) * 100);
             progressBar.style.width = pct + '%';
@@ -524,9 +518,7 @@ function refreshData(){
         btn.disabled = false;
         btn.textContent = 'Refresh';
         progressText.textContent = 'Error during scan. Try again.';
-        setTimeout(() => {
-            progressWrap.classList.remove('active');
-        }, 3000);
+        setTimeout(() => { progressWrap.classList.remove('active'); }, 3000);
     };
 }
 
