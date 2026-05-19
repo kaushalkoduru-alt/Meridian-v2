@@ -98,7 +98,14 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .toolbar{display:flex;align-items:center;gap:0.75rem;padding:0.55rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);position:relative;z-index:10;}
 .btn{font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.4rem 1rem;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
 .btn:hover{border-color:var(--green2);color:var(--green);background:rgba(90,158,106,0.04);}
-.refresh-status{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.1em;margin-left:0.5rem;}
+
+/* PROGRESS BAR */
+.progress-wrap{display:none;padding:0.6rem 2.5rem;background:var(--bg2);border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
+.progress-wrap.active{display:block;}
+.progress-label{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);letter-spacing:0.15em;margin-bottom:0.4rem;display:flex;justify-content:space-between;}
+.progress-bar-bg{height:2px;background:var(--bdr2);border-radius:0;}
+.progress-bar-fill{height:100%;background:var(--green);transition:width 0.3s ease;width:0%;}
+.progress-deals{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--green);letter-spacing:0.1em;margin-top:0.35rem;}
 
 .mstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:1.25rem 2.5rem;position:relative;z-index:10;}
 .mc{background:var(--bg2);padding:1.25rem 1.75rem;position:relative;}
@@ -271,13 +278,22 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <div class="toolbar">
     <button class="btn" onclick="showLanding()">Back</button>
     <button class="btn" id="refresh-btn" onclick="refreshData()">Refresh</button>
-    <span class="refresh-status" id="refresh-status"></span>
+  </div>
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label">
+      <span id="progress-text">Scanning SEC EDGAR filings...</span>
+      <span id="progress-count">0 / 0</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+    <div class="progress-deals" id="progress-deals">0 deals found so far</div>
   </div>
   <div class="mstrip">
     <div class="mc"><div class="mc-l">Active Deals</div><div class="mc-v" id="m-deals">--</div><div class="mc-h">tracked live</div></div>
     <div class="mc"><div class="mc-l">Avg Spread</div><div class="mc-v gr" id="m-spread">--</div><div class="mc-h">across all positions</div></div>
     <div class="mc"><div class="mc-l">Avg Score</div><div class="mc-v" id="m-score">--</div><div class="mc-h">proprietary model</div></div>
-    <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">click refresh to update</div></div>
+    <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
   </div>
   <div class="tbl-wrap">
     <div class="tbl-header">
@@ -348,6 +364,21 @@ function getScoreColor(score){
 function sign(val){ return val >= 0 ? '+' : ''; }
 function spColor(val){ return val >= 0 ? 'var(--green)' : 'var(--red)'; }
 
+function updateLocalTime(fetched){
+    if(!fetched) return 'Unknown';
+    try {
+        const parts = fetched.split(' ');
+        const dateStr = parts[0] + 'T' + parts[1] + ':00Z';
+        return new Date(dateStr).toLocaleString('en-US', {
+            month: 'short', day: 'numeric',
+            hour: 'numeric', minute: '2-digit',
+            hour12: true, timeZoneName: 'short'
+        });
+    } catch(e) {
+        return fetched;
+    }
+}
+
 function renderDeals(deals){
     const list = document.getElementById('deal-list');
     if(!deals || deals.length === 0){
@@ -359,18 +390,19 @@ function renderDeals(deals){
     document.getElementById('m-deals').textContent = deals.length;
     document.getElementById('m-spread').textContent = sign(avgSpread) + avgSpread.toFixed(2) + '%';
     document.getElementById('m-score').textContent = Math.round(avgScore) + '/100';
-    document.getElementById('m-updated').textContent = deals[0].fetched || 'Unknown';
+    document.getElementById('m-updated').textContent = updateLocalTime(deals[0].fetched);
 
     let html = '';
     deals.forEach((d, i) => {
         const sc = getScoreColor(d.score);
         const bc = getBadgeClass(d.risk);
         const isExp = expandedIndex === i;
+        const company = d.company || d.ticker + ' Corp.';
         html += `
         <div class="deal-row ${isExp ? 'expanded' : ''}" onclick="toggleDeal(${i})">
           <div class="r-ticker">${d.ticker}</div>
           <div class="r-acq">${d.acquirer || 'Undisclosed'}</div>
-          <div class="r-co">${d.ticker} Corp.</div>
+          <div class="r-co">${company}</div>
           <div class="r-num">$${d.cp.toFixed(2)}</div>
           <div class="r-num">$${d.dp.toFixed(2)}</div>
           <div class="r-spread" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
@@ -385,7 +417,9 @@ function renderDeals(deals){
           <div class="dp-top">
             <div>
               <div class="dp-ticker">${d.ticker}</div>
-              <div class="dp-acq-lbl">Being acquired by</div>
+              <div class="dp-acq-lbl">Target Company</div>
+              <div class="dp-acq-name">${company}</div>
+              <div class="dp-acq-lbl" style="margin-top:0.75rem">Being acquired by</div>
               <div class="dp-acq-name">${d.acquirer || 'Undisclosed'}</div>
             </div>
             <span class="badge ${bc}" style="font-size:0.52rem;padding:4px 10px">${d.risk} Risk</span>
@@ -439,24 +473,61 @@ async function loadDeals(){
     }
 }
 
-async function refreshData(){
+function refreshData(){
     const btn = document.getElementById('refresh-btn');
-    const status = document.getElementById('refresh-status');
+    const progressWrap = document.getElementById('progress-wrap');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressCount = document.getElementById('progress-count');
+    const progressDeals = document.getElementById('progress-deals');
+
     btn.disabled = true;
-    btn.textContent = 'Fetching...';
-    status.textContent = 'This takes about 10 minutes';
-    try{
-        const res = await fetch('/api/refresh', {method:'POST'});
-        const data = await res.json();
-        allDeals = data.deals || [];
-        renderDeals(allDeals);
-        status.textContent = 'Updated successfully';
-    } catch(e){
-        status.textContent = 'Error refreshing. Try again.';
-    }
-    btn.disabled = false;
-    btn.textContent = 'Refresh';
-    setTimeout(() => { status.textContent = ''; }, 5000);
+    btn.textContent = 'Scanning...';
+    progressWrap.classList.add('active');
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Connecting to SEC EDGAR...';
+    progressCount.textContent = '0 / 0';
+    progressDeals.textContent = '0 deals found so far';
+
+    const evtSource = new EventSource('/api/refresh-stream');
+
+    evtSource.onmessage = function(e){
+        const data = JSON.parse(e.data);
+
+        if(data.done){
+            evtSource.close();
+            allDeals = data.deals || [];
+            renderDeals(allDeals);
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Scan complete';
+            progressCount.textContent = '';
+            progressDeals.textContent = allDeals.length + ' deals loaded';
+            btn.disabled = false;
+            btn.textContent = 'Refresh';
+            setTimeout(() => {
+                progressWrap.classList.remove('active');
+            }, 3000);
+            return;
+        }
+
+        if(data.total > 0){
+            const pct = Math.round((data.current / data.total) * 100);
+            progressBar.style.width = pct + '%';
+            progressText.textContent = 'Scanning SEC EDGAR filings...';
+            progressCount.textContent = data.current + ' / ' + data.total;
+            progressDeals.textContent = data.deals_found + ' deals found so far';
+        }
+    };
+
+    evtSource.onerror = function(){
+        evtSource.close();
+        btn.disabled = false;
+        btn.textContent = 'Refresh';
+        progressText.textContent = 'Error during scan. Try again.';
+        setTimeout(() => {
+            progressWrap.classList.remove('active');
+        }, 3000);
+    };
 }
 
 loadDeals();

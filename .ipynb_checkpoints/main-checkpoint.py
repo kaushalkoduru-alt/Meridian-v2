@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
 import pandas as pd
 import os
 import requests
@@ -8,12 +8,11 @@ import re
 import yfinance as yf
 from bs4 import BeautifulSoup
 from datetime import datetime
+import asyncio
+import json
+from contextlib import asynccontextmanager
 
-app = FastAPI()
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-CACHE_FILE = "../meridian_cache.csv"
+CACHE_FILE = "meridian_cache.csv"
 
 def extract_price_from_text(clean_text):
     patterns = [
@@ -66,7 +65,8 @@ def score_deal(spread_pct, days_since_filed):
     elif days_since_filed > 180: score -= 10
     return min(max(score, 0), 100)
 
-def fetch_deals_from_edgar():
+def fetch_deals_from_edgar(progress_callback=None):
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting EDGAR fetch...")
     headers = {'User-Agent': 'Kaushal Koduru kaushalkoduru@gmail.com'}
     all_hits = []
     for start in range(0, 400, 100):
@@ -83,8 +83,12 @@ def fetch_deals_from_edgar():
         except:
             break
 
+    total = len(all_hits)
     results = []
-    for hit in all_hits:
+    for i, hit in enumerate(all_hits):
+        if progress_callback:
+            progress_callback(i + 1, total, len(results))
+
         src = hit['_source']
         name_str = str(src['display_names'])
         tm = re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str)
@@ -140,13 +144,16 @@ def fetch_deals_from_edgar():
         except:
             continue
 
-    df = pd.DataFrame(results).drop_duplicates(subset=['ticker'])
-    df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
-    try:
-        df.to_csv(CACHE_FILE, index=False)
-    except:
-        pass
-    return df.to_dict(orient='records')
+    if results:
+        df = pd.DataFrame(results).drop_duplicates(subset=['ticker'])
+        df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
+        try:
+            df.to_csv(CACHE_FILE, index=False)
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Saved {len(df)} deals.")
+        except Exception as e:
+            print(f"Cache save error: {e}")
+        return df.to_dict(orient='records')
+    return []
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -157,6 +164,24 @@ def load_cache():
         except:
             pass
     return None
+
+async def auto_refresh_loop():
+    while True:
+        await asyncio.sleep(3600)
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Auto-refresh triggered.")
+        try:
+            await asyncio.get_event_loop().run_in_executor(None, fetch_deals_from_edgar)
+        except Exception as e:
+            print(f"Auto-refresh error: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    asyncio.create_task(auto_refresh_loop())
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Auto-refresh started.")
+    yield
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 async def home():
@@ -175,7 +200,32 @@ async def get_deals():
         deals = fetch_deals_from_edgar()
     return JSONResponse(content={"deals": deals})
 
+@app.get("/api/refresh-stream")
+async def refresh_stream():
+    async def generate():
+        progress_data = {"current": 0, "total": 0, "deals_found": 0}
+
+        def progress_callback(current, total, deals_found):
+            progress_data["current"] = current
+            progress_data["total"] = total
+            progress_data["deals_found"] = deals_found
+
+        loop = asyncio.get_event_loop()
+        future = loop.run_in_executor(None, lambda: fetch_deals_from_edgar(progress_callback))
+
+        while not future.done():
+            data = json.dumps(progress_data)
+            yield f"data: {data}\n\n"
+            await asyncio.sleep(1)
+
+        deals = await future
+        final = json.dumps({"done": True, "deals": deals})
+        yield f"data: {final}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
 @app.post("/api/refresh")
 async def refresh_deals():
-    deals = fetch_deals_from_edgar()
+    loop = asyncio.get_event_loop()
+    deals = await loop.run_in_executor(None, fetch_deals_from_edgar)
     return JSONResponse(content={"deals": deals})
