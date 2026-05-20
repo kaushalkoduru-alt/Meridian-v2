@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meridian | M&A Arbitrage Intelligence</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23050d08'/><text x='50' y='72' font-family='Georgia,serif' font-size='72' font-weight='400' fill='%23e8e0c8' text-anchor='middle'>M</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root {
     --bg:    #050d08;
@@ -51,7 +51,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .divider{display:flex;align-items:center;justify-content:center;gap:0.75rem;margin:0.5rem 0 1.75rem;}
 .divider::before,.divider::after{content:'';width:80px;height:1px;background:var(--bdr2);}
 .divider-text{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
-.hero-desc{font-family:'DM Sans',sans-serif;font-weight:300;font-size:0.95rem;color:var(--muted);max-width:500px;line-height:1.9;margin-bottom:2.5rem;animation:fadeUp 0.8s ease 0.15s both;}
+.hero-desc{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:1.1rem;color:var(--muted);max-width:520px;line-height:1.9;margin-bottom:2.5rem;animation:fadeUp 0.8s ease 0.15s both;}
 .hero-desc b{color:var(--bone);font-weight:400;}
 .stats{display:flex;border:1px solid var(--bdr2);max-width:440px;margin:0 auto 2.5rem;animation:fadeUp 0.8s ease 0.25s both;}
 .stat{flex:1;text-align:center;padding:0.9rem;border-right:1px solid var(--bdr2);}
@@ -78,12 +78,12 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .s-card.md .s-range{color:#8a6040;}
 .s-card.hi .s-range{color:var(--red);}
 .s-name{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;}
-.s-desc{font-family:'DM Sans',sans-serif;font-size:0.82rem;color:var(--muted);line-height:1.75;font-weight:300;}
+.s-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.75;font-weight:300;}
 .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1100px;margin:0 auto;}
 .how-card{padding:1.5rem 1.5rem 1.5rem 2rem;border-left:1px solid var(--bdr2);}
 .how-n{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;color:var(--bdr2);line-height:1;margin-bottom:1rem;}
 .how-t{font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;color:var(--cream);margin-bottom:0.5rem;}
-.how-d{font-family:'DM Sans',sans-serif;font-size:0.82rem;color:var(--muted);line-height:1.7;font-weight:300;}
+.how-d{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.7;font-weight:300;}
 
 .dnav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
 .dnav-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1.1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;transition:color 0.2s;}
@@ -114,22 +114,62 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .mc-v.gr{color:var(--green);}
 .mc-h{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);margin-top:0.4rem;letter-spacing:0.1em;}
 
-.tbl-wrap{margin:0 2.5rem 2.5rem;border:1px solid var(--bdr);position:relative;z-index:10;}
-.tbl-header{display:grid;grid-template-columns:75px 160px 1fr 110px 110px 100px 110px 110px 90px;padding:0.6rem 1.5rem;border-bottom:1px solid var(--bdr2);background:var(--bg3);position:sticky;top:55px;z-index:5;}
-.th{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
+/* SECTION SEPARATOR */
+.section-sep{
+    display:flex;align-items:center;
+    margin:1.5rem 2.5rem 0;
+    position:relative;z-index:10;
+    cursor:pointer;
+    user-select:none;
+}
+.section-sep-line{flex:1;height:1px;background:var(--bdr2);}
+.section-sep-label{
+    font-family:'DM Mono',monospace;font-size:0.48rem;
+    letter-spacing:0.25em;text-transform:uppercase;
+    color:var(--muted);padding:0 1.25rem;
+    white-space:nowrap;display:flex;align-items:center;gap:0.75rem;
+}
+.section-sep-meta{
+    font-family:'DM Mono',monospace;font-size:0.44rem;
+    color:var(--dim);letter-spacing:0.1em;
+}
+.section-sep-toggle{
+    font-family:'DM Mono',monospace;font-size:0.55rem;
+    color:var(--dim);margin-left:0.5rem;
+    transition:transform 0.2s;display:inline-block;
+}
+.section-sep-toggle.collapsed{transform:rotate(-90deg);}
+.section-sep:hover .section-sep-label{color:var(--green);}
+.section-sep:hover .section-sep-line{background:var(--bdr2);}
+
+/* DEAL TABLE */
+.section-body{overflow:hidden;transition:max-height 0.3s ease;}
+.section-body.collapsed{max-height:0!important;}
+
+.tbl-wrap{margin:0 2.5rem;border:1px solid var(--bdr);border-top:none;position:relative;z-index:10;}
+.tbl-header{display:grid;grid-template-columns:70px 60px 150px 1fr 105px 105px 95px 105px 105px 85px;padding:0.6rem 1.5rem;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
+.th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
 .th.r{text-align:right;}
-.deal-row{display:grid;grid-template-columns:75px 160px 1fr 110px 110px 100px 110px 110px 90px;padding:0.9rem 1.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);align-items:center;cursor:pointer;transition:background 0.15s;}
+
+.deal-row{display:grid;grid-template-columns:70px 60px 150px 1fr 105px 105px 95px 105px 105px 85px;padding:0.85rem 1.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);align-items:center;cursor:pointer;transition:background 0.15s;}
 .deal-row:hover{background:var(--bg3);}
 .deal-row.expanded{background:rgba(90,158,106,0.04);border-left:2px solid var(--green2);padding-left:calc(1.5rem - 2px);}
-.r-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:1.05rem;color:var(--cream);}
-.r-acq{font-family:'DM Sans',sans-serif;font-size:0.72rem;color:var(--muted);font-weight:300;padding-right:1rem;}
-.r-co{font-family:'DM Sans',sans-serif;font-size:0.68rem;color:var(--dim);font-style:italic;}
-.r-num{font-family:'DM Mono',monospace;font-size:0.75rem;text-align:right;color:var(--muted);}
-.r-spread{font-family:'DM Mono',monospace;font-size:0.88rem;font-weight:500;text-align:right;}
+
+.r-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;color:var(--cream);}
+.r-type{font-family:'DM Mono',monospace;font-size:0.38rem;letter-spacing:0.1em;text-transform:uppercase;padding:2px 5px;border:1px solid;display:inline-block;white-space:nowrap;}
+.r-type.cash{color:var(--green);border-color:rgba(90,158,106,0.3);background:rgba(90,158,106,0.05);}
+.r-type.mixed{color:var(--gold);border-color:rgba(168,144,96,0.3);background:rgba(168,144,96,0.05);}
+.r-type.pe{color:#8a7acc;border-color:rgba(138,122,204,0.3);background:rgba(138,122,204,0.05);}
+.r-type.tender{color:#6ab8cc;border-color:rgba(106,184,204,0.3);background:rgba(106,184,204,0.05);}
+.r-acq{font-family:'DM Sans',sans-serif;font-size:0.7rem;color:var(--muted);font-weight:300;padding-right:0.75rem;}
+.r-co{font-family:'DM Sans',sans-serif;font-size:0.65rem;color:var(--dim);font-style:italic;}
+.r-num{font-family:'DM Mono',monospace;font-size:0.72rem;text-align:right;color:var(--muted);}
+.r-spread{font-family:'DM Mono',monospace;font-size:0.85rem;font-weight:500;text-align:right;}
 .r-score-wrap{padding:0 0.5rem;}
 .r-score-bar{height:1px;background:var(--bdr2);margin-bottom:3px;}
-.r-score-val{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);}
+.r-score-val{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--dim);}
 .r-badge-wrap{text-align:right;}
+
 .badge{font-family:'DM Mono',monospace;font-size:0.4rem;letter-spacing:0.12em;text-transform:uppercase;padding:2px 5px;border:1px solid;display:inline-block;white-space:nowrap;}
 .badge-vl{color:var(--green);border-color:rgba(90,158,106,0.35);background:rgba(90,158,106,0.05);}
 .badge-lo{color:var(--gold);border-color:rgba(168,144,96,0.35);background:rgba(168,144,96,0.05);}
@@ -142,7 +182,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .dp-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;}
 .dp-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:2.5rem;color:var(--cream);line-height:1;}
 .dp-acq-lbl{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.4rem;}
-.dp-acq-name{font-family:'DM Sans',sans-serif;font-size:0.88rem;color:var(--muted);font-weight:300;margin-top:0.15rem;}
+.dp-acq-name{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);font-weight:300;margin-top:0.15rem;}
 .dp-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
 .dp-metric{background:var(--bg2);padding:1rem 1.25rem;}
 .dp-metric.hi{border-top:1px solid var(--green2);}
@@ -156,7 +196,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .spinner{width:28px;height:28px;border:1px solid var(--bdr2);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin:1.5rem auto;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:10;margin-top:1rem;}
+footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:10;margin-top:1.5rem;}
 .footer-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:0.85rem;letter-spacing:0.3em;color:var(--dim);text-transform:uppercase;}
 .footer-info{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;text-align:right;line-height:2;}
 </style>
@@ -165,30 +205,32 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 
 <div class="ticker-wrap">
   <div class="ticker-track">
-    <span class="ti"><span class="ti-sym">UNF</span><span class="ti-pos">+18.73%</span></span>
-    <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.09%</span></span>
-    <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.48%</span></span>
-    <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.17%</span></span>
-    <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+3.66%</span></span>
-    <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.85%</span></span>
-    <span class="ti"><span class="ti-sym">GBTG</span><span class="ti-pos">+1.71%</span></span>
-    <span class="ti"><span class="ti-sym">CPRX</span><span class="ti-pos">+1.03%</span></span>
-    <span class="ti"><span class="ti-sym">MASI</span><span class="ti-pos">+0.86%</span></span>
+    <span class="ti"><span class="ti-sym">UNF</span><span class="ti-pos">+17.34%</span></span>
+    <span class="ti"><span class="ti-sym">UAC</span><span class="ti-pos">+16.40%</span></span>
+    <span class="ti"><span class="ti-sym">NATL</span><span class="ti-pos">+13.36%</span></span>
+    <span class="ti"><span class="ti-sym">CWAN</span><span class="ti-pos">+12.93%</span></span>
+    <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.40%</span></span>
+    <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.58%</span></span>
+    <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.32%</span></span>
+    <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+2.95%</span></span>
+    <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.44%</span></span>
+    <span class="ti"><span class="ti-sym">SKYT</span><span class="ti-pos">+2.19%</span></span>
     <span class="ti"><span class="ti-sym">SLNO</span><span class="ti-neg">-0.02%</span></span>
-    <span class="ti"><span class="ti-sym">JHG</span><span class="ti-neg">-5.26%</span></span>
-    <span class="ti"><span class="ti-sym">KW</span><span class="ti-neg">-7.07%</span></span>
-    <span class="ti"><span class="ti-sym">UNF</span><span class="ti-pos">+18.73%</span></span>
-    <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.09%</span></span>
-    <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.48%</span></span>
-    <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.17%</span></span>
-    <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+3.66%</span></span>
-    <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.85%</span></span>
-    <span class="ti"><span class="ti-sym">GBTG</span><span class="ti-pos">+1.71%</span></span>
-    <span class="ti"><span class="ti-sym">CPRX</span><span class="ti-pos">+1.03%</span></span>
-    <span class="ti"><span class="ti-sym">MASI</span><span class="ti-pos">+0.86%</span></span>
+    <span class="ti"><span class="ti-sym">JHG</span><span class="ti-neg">-5.41%</span></span>
+    <span class="ti"><span class="ti-sym">KW</span><span class="ti-neg">-6.82%</span></span>
+    <span class="ti"><span class="ti-sym">UNF</span><span class="ti-pos">+17.34%</span></span>
+    <span class="ti"><span class="ti-sym">UAC</span><span class="ti-pos">+16.40%</span></span>
+    <span class="ti"><span class="ti-sym">NATL</span><span class="ti-pos">+13.36%</span></span>
+    <span class="ti"><span class="ti-sym">CWAN</span><span class="ti-pos">+12.93%</span></span>
+    <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.40%</span></span>
+    <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.58%</span></span>
+    <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.32%</span></span>
+    <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+2.95%</span></span>
+    <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.44%</span></span>
+    <span class="ti"><span class="ti-sym">SKYT</span><span class="ti-pos">+2.19%</span></span>
     <span class="ti"><span class="ti-sym">SLNO</span><span class="ti-neg">-0.02%</span></span>
-    <span class="ti"><span class="ti-sym">JHG</span><span class="ti-neg">-5.26%</span></span>
-    <span class="ti"><span class="ti-sym">KW</span><span class="ti-neg">-7.07%</span></span>
+    <span class="ti"><span class="ti-sym">JHG</span><span class="ti-neg">-5.41%</span></span>
+    <span class="ti"><span class="ti-sym">KW</span><span class="ti-neg">-6.82%</span></span>
   </div>
 </div>
 
@@ -203,13 +245,11 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <h1 class="hero-title">MERI<em>DIAN</em></h1>
     <div class="divider"><span class="divider-text">◈ Live Deal Intelligence ◈</span></div>
     <p class="hero-desc">
-      Meridian tracks every pending cash acquisition filed with the SEC,
-      delivering <b>real-time spread data, proprietary risk scoring,</b> and deal
-      intelligence that used to cost thousands a month. Built for investors
-      who take merger arbitrage seriously.
+      Every pending M&A deal filed with the SEC <b>scored, ranked, and delivered</b> in real time.
+      Built for investors who take merger arbitrage seriously.
     </p>
     <div class="stats">
-      <div class="stat"><div class="stat-v">24+</div><div class="stat-l">Live Deals</div></div>
+      <div class="stat"><div class="stat-v">32+</div><div class="stat-l">Live Deals</div></div>
       <div class="stat"><div class="stat-v">93%</div><div class="stat-l">Accuracy</div></div>
       <div class="stat"><div class="stat-v">1hr</div><div class="stat-l">Refresh</div></div>
       <div class="stat"><div class="stat-v">SEC</div><div class="stat-l">Source</div></div>
@@ -228,17 +268,17 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="s-card lo">
         <div class="s-range">65 to 79</div>
         <div class="s-name">Low Risk</div>
-        <div class="s-desc">Solid deals with minor uncertainties. May have slightly longer timelines or modest regulatory complexity. Still strong risk-adjusted returns.</div>
+        <div class="s-desc">Solid deals with minor uncertainties. Slightly longer timelines or modest regulatory complexity. Still strong risk-adjusted returns.</div>
       </div>
       <div class="s-card md">
         <div class="s-range">50 to 64</div>
         <div class="s-name">Medium Risk</div>
-        <div class="s-desc">Deals with meaningful uncertainties including financing risk, antitrust scrutiny, or unconventional deal structures. Higher spread reflects market caution.</div>
+        <div class="s-desc">Meaningful uncertainties including financing risk, antitrust scrutiny, or unconventional deal structures.</div>
       </div>
       <div class="s-card hi">
         <div class="s-range">0 to 49</div>
         <div class="s-name">High Risk</div>
-        <div class="s-desc">Elevated probability of deal break. Negative spreads, weak buyers, or significant regulatory headwinds. Approach with extreme caution.</div>
+        <div class="s-desc">Elevated break probability. Negative spreads, weak buyers, or significant regulatory headwinds. Approach with caution.</div>
       </div>
     </div>
     <div class="how-grid">
@@ -250,12 +290,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="how-card">
         <div class="how-n">02</div>
         <div class="how-t">Live Spread Calculation</div>
-        <div class="how-d">Current market prices are pulled in real time. The spread is the gap between market price and deal price. That gap is your potential return if the deal closes.</div>
+        <div class="how-d">Current market prices pulled in real time. The spread is the gap between market price and deal price. That gap is your potential return if the deal closes.</div>
       </div>
       <div class="how-card">
         <div class="how-n">03</div>
         <div class="how-t">Proprietary Scoring</div>
-        <div class="how-d">Our model, backtested at 93% accuracy on historical deals, scores each position on deal structure, buyer strength, regulatory risk, and timeline.</div>
+        <div class="how-d">Our model scores each position on deal structure, buyer strength, regulatory risk, and timeline. Backtested at 93% accuracy.</div>
       </div>
     </div>
   </div>
@@ -286,7 +326,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="progress-bar-bg">
       <div class="progress-bar-fill" id="progress-bar"></div>
     </div>
-    <div class="progress-deals" id="progress-deals">0 deals found so far</div>
+    <div class="progress-deals" id="progress-deals">0 candidates found so far</div>
   </div>
   <div class="mstrip">
     <div class="mc"><div class="mc-l">Active Deals</div><div class="mc-v" id="m-deals">--</div><div class="mc-h">tracked live</div></div>
@@ -294,29 +334,18 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="mc"><div class="mc-l">Avg Score</div><div class="mc-v" id="m-score">--</div><div class="mc-h">proprietary model</div></div>
     <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
   </div>
-  <div class="tbl-wrap">
-    <div class="tbl-header">
-      <div class="th">Ticker</div>
-      <div class="th">Acquirer</div>
-      <div class="th">Company</div>
-      <div class="th r">Current</div>
-      <div class="th r">Deal Price</div>
-      <div class="th r">Spread</div>
-      <div class="th r">Ann. Return</div>
-      <div class="th">Score</div>
-      <div class="th r">Risk</div>
-    </div>
-    <div id="deal-list">
-      <div class="loading-wrap">
-        <div class="spinner"></div>
-        <div class="loading-title">Loading deal feed</div>
-        <div class="loading-sub">Fetching from SEC EDGAR</div>
-      </div>
+
+  <div id="deal-list">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <div class="loading-title">Loading deal feed</div>
+      <div class="loading-sub">Fetching from SEC EDGAR</div>
     </div>
   </div>
+
   <footer>
     <div class="footer-logo">Meridian</div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Model backtested · historical deals</div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Model backtested · historical deals · Spread range -10% to +20%</div>
   </footer>
 </div>
 
@@ -324,6 +353,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 let allDeals = [];
 let expandedIndex = null;
 let dealsLoaded = false;
+const collapsedSections = new Set();
 
 function showLanding(){
     document.getElementById('page-landing').classList.add('active');
@@ -360,6 +390,22 @@ function getScoreColor(score){
     return 'var(--red)';
 }
 
+function getTypeClass(dealType){
+    if(dealType === 'All Cash') return 'cash';
+    if(dealType === 'Cash + Stock') return 'mixed';
+    if(dealType === 'Private Equity') return 'pe';
+    if(dealType === 'Tender Offer') return 'tender';
+    return 'cash';
+}
+
+function getTypeLabel(dealType){
+    if(dealType === 'All Cash') return 'Cash';
+    if(dealType === 'Cash + Stock') return 'Cash+Stock';
+    if(dealType === 'Private Equity') return 'PE';
+    if(dealType === 'Tender Offer') return 'Tender';
+    return dealType;
+}
+
 function sign(val){ return val >= 0 ? '+' : ''; }
 function spColor(val){ return val >= 0 ? 'var(--green)' : 'var(--red)'; }
 
@@ -372,8 +418,20 @@ function updateLocalTime(fetched){
             hour: 'numeric', minute: '2-digit',
             hour12: true, timeZoneName: 'short'
         });
-    } catch(e) {
-        return fetched;
+    } catch(e) { return fetched; }
+}
+
+function toggleSection(sectionId){
+    const body = document.getElementById('body-' + sectionId);
+    const toggle = document.getElementById('toggle-' + sectionId);
+    if(collapsedSections.has(sectionId)){
+        collapsedSections.delete(sectionId);
+        body.classList.remove('collapsed');
+        toggle.classList.remove('collapsed');
+    } else {
+        collapsedSections.add(sectionId);
+        body.classList.add('collapsed');
+        toggle.classList.add('collapsed');
     }
 }
 
@@ -383,6 +441,7 @@ function renderDeals(deals){
         list.innerHTML = '<div class="loading-wrap"><div class="loading-title">No deals available</div><div class="loading-sub">Click refresh to fetch from SEC EDGAR</div></div>';
         return;
     }
+
     const avgSpread = deals.reduce((s,d) => s + d.sp_pct, 0) / deals.length;
     const avgScore = deals.reduce((s,d) => s + d.score, 0) / deals.length;
     document.getElementById('m-deals').textContent = deals.length;
@@ -390,66 +449,143 @@ function renderDeals(deals){
     document.getElementById('m-score').textContent = Math.round(avgScore) + '/100';
     document.getElementById('m-updated').textContent = updateLocalTime(deals[0].fetched);
 
+    // group by deal type
+    const sections = [
+        { id: 'all-cash', label: 'All Cash Deals', type: 'All Cash' },
+        { id: 'cash-stock', label: 'Cash + Stock Deals', type: 'Cash + Stock' },
+        { id: 'tender', label: 'Tender Offer Deals', type: 'Tender Offer' },
+        { id: 'pe', label: 'Private Equity Deals', type: 'Private Equity' },
+    ];
+
     let html = '';
-    deals.forEach((d, i) => {
-        const sc = getScoreColor(d.score);
-        const bc = getBadgeClass(d.risk);
-        const isExp = expandedIndex === i;
-        const company = d.company || d.ticker + ' Corp.';
+    let globalIndex = 0;
+
+    sections.forEach(section => {
+        const sectionDeals = deals.filter(d => d.deal_type === section.type);
+        if(sectionDeals.length === 0) return;
+
+        const avgSp = sectionDeals.reduce((s,d) => s + d.sp_pct, 0) / sectionDeals.length;
+        const isCollapsed = collapsedSections.has(section.id);
+
         html += `
-        <div class="deal-row ${isExp ? 'expanded' : ''}" onclick="toggleDeal(${i})">
-          <div class="r-ticker">${d.ticker}</div>
-          <div class="r-acq">${d.acquirer || 'Undisclosed'}</div>
-          <div class="r-co">${company}</div>
-          <div class="r-num">$${d.cp.toFixed(2)}</div>
-          <div class="r-num">$${d.dp.toFixed(2)}</div>
-          <div class="r-spread" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
-          <div class="r-num" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
-          <div class="r-score-wrap">
-            <div class="r-score-bar"><div style="width:${d.score}%;height:100%;background:${sc}"></div></div>
-            <div class="r-score-val">${d.score}/100</div>
+        <div class="section-sep" onclick="toggleSection('${section.id}')">
+          <div class="section-sep-line"></div>
+          <div class="section-sep-label">
+            ${section.label}
+            <span class="section-sep-meta">${sectionDeals.length} deals · avg ${sign(avgSp)}${avgSp.toFixed(2)}%</span>
+            <span class="section-sep-toggle ${isCollapsed ? 'collapsed' : ''}" id="toggle-${section.id}">▾</span>
           </div>
-          <div class="r-badge-wrap"><span class="badge ${bc}">${d.risk}</span></div>
+          <div class="section-sep-line"></div>
         </div>
-        <div class="detail-panel ${isExp ? 'open' : ''}">
-          <div class="dp-top">
-            <div>
-              <div class="dp-ticker">${d.ticker}</div>
-              <div class="dp-acq-lbl">Target Company</div>
-              <div class="dp-acq-name">${company}</div>
-              <div class="dp-acq-lbl" style="margin-top:0.75rem">Being acquired by</div>
-              <div class="dp-acq-name">${d.acquirer || 'Undisclosed'}</div>
+        <div class="section-body ${isCollapsed ? 'collapsed' : ''}" id="body-${section.id}" style="max-height:${isCollapsed ? '0' : '9999px'}">
+          <div class="tbl-wrap">
+            <div class="tbl-header">
+              <div class="th">Ticker</div>
+              <div class="th">Type</div>
+              <div class="th">Acquirer</div>
+              <div class="th">Company</div>
+              <div class="th r">Current</div>
+              <div class="th r">Deal Price</div>
+              <div class="th r">Spread</div>
+              <div class="th r">Ann. Return</div>
+              <div class="th">Score</div>
+              <div class="th r">Risk</div>
+            </div>`;
+
+        sectionDeals.forEach(d => {
+            const i = globalIndex++;
+            const sc = getScoreColor(d.score);
+            const bc = getBadgeClass(d.risk);
+            const tc = getTypeClass(d.deal_type);
+            const tl = getTypeLabel(d.deal_type);
+            const isExp = expandedIndex === i;
+            const company = d.company || d.ticker + ' Corp.';
+            const closeDate = d.close_date && d.close_date !== 'TBD' && d.close_date !== 'nan' ? d.close_date : 'TBD';
+            const txVal = d.tx_value && d.tx_value !== 'nan' && !isNaN(d.tx_value) ? '$' + parseFloat(d.tx_value).toFixed(1) + 'B' : 'N/A';
+
+            html += `
+            <div class="deal-row ${isExp ? 'expanded' : ''}" onclick="toggleDeal(${i})">
+              <div class="r-ticker">${d.ticker}</div>
+              <div><span class="r-type ${tc}">${tl}</span></div>
+              <div class="r-acq">${d.acquirer || 'Undisclosed'}</div>
+              <div class="r-co">${company}</div>
+              <div class="r-num">$${d.cp.toFixed(2)}</div>
+              <div class="r-num">$${d.dp.toFixed(2)}</div>
+              <div class="r-spread" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
+              <div class="r-num" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
+              <div class="r-score-wrap">
+                <div class="r-score-bar"><div style="width:${d.score}%;height:100%;background:${sc}"></div></div>
+                <div class="r-score-val">${d.score}/100</div>
+              </div>
+              <div class="r-badge-wrap"><span class="badge ${bc}">${d.risk}</span></div>
             </div>
-            <span class="badge ${bc}" style="font-size:0.52rem;padding:4px 10px">${d.risk} Risk</span>
-          </div>
-          <div class="dp-metrics">
-            <div class="dp-metric hi">
-              <div class="dp-ml">Spread</div>
-              <div class="dp-mv" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
-            </div>
-            <div class="dp-metric hi">
-              <div class="dp-ml">Ann. Return</div>
-              <div class="dp-mv" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
-            </div>
-            <div class="dp-metric hi">
-              <div class="dp-ml">Profit per $10k</div>
-              <div class="dp-mv" style="color:${spColor(d.sp_pct)}">$${Math.abs(d.sp_pct/100*10000).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-            </div>
-            <div class="dp-metric">
-              <div class="dp-ml">Current Price</div>
-              <div class="dp-mv sm">$${d.cp.toFixed(2)}</div>
-            </div>
-            <div class="dp-metric">
-              <div class="dp-ml">Deal Price</div>
-              <div class="dp-mv sm">$${d.dp.toFixed(2)}</div>
-            </div>
-            <div class="dp-metric">
-              <div class="dp-ml">Filed · Days Old</div>
-              <div class="dp-mv sm">${d.filed} · ${d.days_old}d</div>
-            </div>
-          </div>
-        </div>`;
+            <div class="detail-panel ${isExp ? 'open' : ''}">
+              <div class="dp-top">
+                <div>
+                  <div class="dp-ticker">${d.ticker}</div>
+                  <div class="dp-acq-lbl">Target Company</div>
+                  <div class="dp-acq-name">${company}</div>
+                  <div class="dp-acq-lbl" style="margin-top:0.75rem">Being acquired by</div>
+                  <div class="dp-acq-name">${d.acquirer || 'Undisclosed'}</div>
+                </div>
+                <span class="badge ${bc}" style="font-size:0.52rem;padding:4px 10px">${d.risk} Risk</span>
+              </div>
+              <div class="dp-metrics">
+                <div class="dp-metric hi">
+                  <div class="dp-ml">Spread</div>
+                  <div class="dp-mv" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
+                </div>
+                <div class="dp-metric hi">
+                  <div class="dp-ml">Ann. Return</div>
+                  <div class="dp-mv" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
+                </div>
+                <div class="dp-metric hi">
+                  <div class="dp-ml">Profit per $10k</div>
+                  <div class="dp-mv" style="color:${spColor(d.sp_pct)}">$${Math.abs(d.sp_pct/100*10000).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Current Price</div>
+                  <div class="dp-mv sm">$${d.cp.toFixed(2)}</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Deal Price</div>
+                  <div class="dp-mv sm">$${d.dp.toFixed(2)}</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Expected Close</div>
+                  <div class="dp-mv sm">${closeDate}</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Filed</div>
+                  <div class="dp-mv sm">${d.filed}</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Days Old</div>
+                  <div class="dp-mv sm">${d.days_old}d</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Transaction Value</div>
+                  <div class="dp-mv sm">${txVal}</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Deal Type</div>
+                  <div class="dp-mv sm">${d.deal_type}</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Spread Range</div>
+                  <div class="dp-mv sm">-10% to +20%</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Score</div>
+                  <div class="dp-mv sm">${d.score}/100</div>
+                </div>
+              </div>
+            </div>`;
+        });
+
+        html += '</div></div>';
     });
+
     list.innerHTML = html;
 }
 
@@ -485,7 +621,7 @@ function refreshData(){
     progressBar.style.width = '0%';
     progressText.textContent = 'Connecting to SEC EDGAR...';
     progressCount.textContent = '0 / 0';
-    progressDeals.textContent = '0 deals found so far';
+    progressDeals.textContent = '0 candidates found so far';
 
     const evtSource = new EventSource('/api/refresh-stream');
 
@@ -509,7 +645,7 @@ function refreshData(){
             progressBar.style.width = pct + '%';
             progressText.textContent = 'Scanning SEC EDGAR filings...';
             progressCount.textContent = data.current + ' / ' + data.total;
-            progressDeals.textContent = data.deals_found + ' deals found so far';
+            progressDeals.textContent = data.deals_found + ' candidates found so far · Filtering: spread -10% to +20%, active US listings only';
         }
     };
 

@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import asyncio
 import json
+import math
 from contextlib import asynccontextmanager
 
 CACHE_FILE = "meridian_cache.csv"
@@ -56,6 +57,39 @@ def extract_acquirer(clean_text):
         return min(candidates, key=len)
     return "Undisclosed"
 
+def extract_close_date(clean_text):
+    patterns = [
+        r'expected to close.*?(?:in the\s+)?(\w+\s+(?:half of\s+)?\d{4})',
+        r'expected to be completed.*?(?:in the\s+)?(\w+\s+(?:half of\s+)?\d{4})',
+        r'expected to close.*?(\w+\s+\d{4})',
+        r'close.*?(?:by|in)\s+((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+\d{4})',
+        r'anticipated to close.*?(?:in\s+)?((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+\d{4})',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, clean_text[:3000], re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+    return "TBD"
+
+def extract_transaction_value(clean_text):
+    patterns = [
+        r'transaction.*?valued.*?approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'aggregate.*?consideration.*?\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'total.*?transaction.*?value.*?\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million).*?(?:transaction|deal|acquisition)',
+        r'valued at approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, clean_text[:5000], re.IGNORECASE)
+        if match:
+            value = float(match.group(1))
+            unit = match.group(2).lower()
+            if unit == 'billion':
+                return round(value, 2)
+            else:
+                return round(value / 1000, 2)
+    return None
+
 def score_deal(spread_pct, days_since_filed):
     score = 70
     if 0 < spread_pct < 5:      score += 20
@@ -64,6 +98,18 @@ def score_deal(spread_pct, days_since_filed):
     if days_since_filed < 30:    score += 10
     elif days_since_filed > 180: score -= 10
     return min(max(score, 0), 100)
+
+def clean_records(records):
+    cleaned = []
+    for r in records:
+        clean = {}
+        for k, v in r.items():
+            if isinstance(v, float) and math.isnan(v):
+                clean[k] = None
+            else:
+                clean[k] = v
+        cleaned.append(clean)
+    return cleaned
 
 def fetch_deals_from_edgar(progress_callback=None):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting EDGAR fetch...")
@@ -88,7 +134,6 @@ def fetch_deals_from_edgar(progress_callback=None):
     for i, hit in enumerate(all_hits):
         if progress_callback:
             progress_callback(i + 1, total, len(results))
-
         src = hit['_source']
         name_str = str(src['display_names'])
         tm = re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str)
@@ -112,6 +157,8 @@ def fetch_deals_from_edgar(progress_callback=None):
             links = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
             dp = None
             acquirer = "Undisclosed"
+            close_date = "TBD"
+            tx_value = None
             for lk in links:
                 if 'ex99' in lk.lower():
                     dr = requests.get(f"https://www.sec.gov{lk}", headers=headers, timeout=10)
@@ -119,6 +166,8 @@ def fetch_deals_from_edgar(progress_callback=None):
                     if 'definitive agreement' in ct.lower():
                         dp = extract_price_from_text(ct)
                         acquirer = extract_acquirer(ct)
+                        close_date = extract_close_date(ct)
+                        tx_value = extract_transaction_value(ct)
                         if dp: break
             if not dp: continue
             sp = dp - cp
@@ -129,17 +178,21 @@ def fetch_deals_from_edgar(progress_callback=None):
             risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
             ann = (sp_pct / 180) * 365
             results.append({
-                'ticker':   ticker,
-                'acquirer': acquirer,
-                'cp':       round(cp, 2),
-                'dp':       dp,
-                'sp_pct':   round(sp_pct, 2),
-                'ann':      round(ann, 2),
-                'score':    sc,
-                'risk':     risk,
-                'filed':    src['file_date'],
-                'days_old': days,
-                'fetched':  datetime.today().strftime('%Y-%m-%d %H:%M'),
+                'ticker':     ticker,
+                'acquirer':   acquirer,
+                'company':    ticker + ' Corp.',
+                'deal_type':  'All Cash',
+                'cp':         round(cp, 2),
+                'dp':         dp,
+                'sp_pct':     round(sp_pct, 2),
+                'ann':        round(ann, 2),
+                'score':      sc,
+                'risk':       risk,
+                'filed':      src['file_date'],
+                'days_old':   days,
+                'close_date': close_date,
+                'tx_value':   tx_value,
+                'fetched':    datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
         except:
             continue
@@ -152,7 +205,8 @@ def fetch_deals_from_edgar(progress_callback=None):
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Saved {len(df)} deals.")
         except Exception as e:
             print(f"Cache save error: {e}")
-        return df.to_dict(orient='records')
+        records = df.to_dict(orient='records')
+        return clean_records(records)
     return []
 
 def load_cache():
@@ -160,7 +214,8 @@ def load_cache():
         try:
             df = pd.read_csv(CACHE_FILE)
             if not df.empty:
-                return df.to_dict(orient='records')
+                records = df.to_dict(orient='records')
+                return clean_records(records)
         except:
             pass
     return None
@@ -216,7 +271,7 @@ async def refresh_stream():
         while not future.done():
             data = json.dumps(progress_data)
             yield f"data: {data}\n\n"
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
 
         deals = await future
         final = json.dumps({"done": True, "deals": deals})
