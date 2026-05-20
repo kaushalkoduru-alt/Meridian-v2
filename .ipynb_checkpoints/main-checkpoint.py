@@ -15,6 +15,75 @@ from contextlib import asynccontextmanager
 
 CACHE_FILE = "meridian_cache.csv"
 
+COMPANY_NAMES = {
+    'UNF': 'UniFirst Corporation', 'KDP': 'Keurig Dr Pepper',
+    'OGN': 'Organon & Co.', 'IMXI': 'International Money Express',
+    'AES': 'The AES Corporation', 'WBD': 'Warner Bros. Discovery',
+    'HBT': 'Heartland BancCorp', 'PRA': 'ProAssurance Corporation',
+    'GBTG': 'Global Business Travel Group', 'AVNS': 'Avanos Medical',
+    'CPRX': 'Catalyst Biosciences', 'KALV': 'KalVista Pharmaceuticals',
+    'MASI': 'Masimo Corporation', 'CWAN': 'Clearwater Analytics',
+    'ASRT': 'Assertio Holdings', 'TPH': 'Tri Pointe Homes',
+    'TERN': 'Terns Pharmaceuticals', 'CSGS': 'CSG Systems International',
+    'EHAB': 'Enhabit Home Health', 'SLNO': 'Soleno Therapeutics',
+    'APLS': 'Apellis Pharmaceuticals', 'EWCZ': 'European Wax Center',
+    'JHG': 'Janus Henderson Group', 'KW': 'Kennedy-Wilson Holdings',
+    'UAC': 'United Auto Credit', 'NATL': 'National Western Financial',
+    'SKYT': 'SkyWater Technology', 'CVGW': 'Calavo Growers',
+    'NBRG': 'Northbrook Bank & Trust', 'AFBI': 'Affinity Bancshares',
+    'KTWO': 'K2 Pure Solutions', 'OIM': 'Oil States International',
+}
+
+KNOWN_ACQUIRERS = {
+    'UAC': 'Stellantis', 'NATL': 'NCR Voyix', 'WBD': 'Paramount Global',
+    'AVNS': 'Becton Dickinson', 'HBT': 'Heartland Financial',
+    'ASRT': 'Paratek Pharmaceuticals', 'EHAB': 'KKR',
+    'NBRG': 'Glacier Bancorp', 'AFBI': 'Center Parc Credit Union',
+    'KTWO': 'Roper Technologies', 'SKYT': 'IonQ',
+    'CVGW': 'Mission Produce',
+}
+
+EDGAR_QUERIES = [
+    {
+        'type': 'All Cash',
+        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
+    },
+    {
+        'type': 'All Cash',
+        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22merger+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
+    },
+    {
+        'type': 'Cash + Stock',
+        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22cash+and+stock%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
+    },
+    {
+        'type': 'Private Equity',
+        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22+%22sponsor%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
+    },
+    {
+        'type': 'Tender Offer',
+        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22tender+offer%22+%22per+share%22+%22definitive+agreement%22&forms=8-K&dateRange=custom&startdt=2025-06-01&enddt=2026-05-21&from={start}&size=100'
+    },
+]
+
+FALLBACK_DEALS = [
+    {
+        'ticker': 'CWAN', 'acquirer': 'Advent International',
+        'company': 'Clearwater Analytics', 'deal_type': 'Private Equity',
+        'dp': 27.52, 'filed': '2025-02-18', 'close_date': 'Q3 2026', 'tx_value': 6.50,
+    },
+    {
+        'ticker': 'MASI', 'acquirer': 'Danaher',
+        'company': 'Masimo Corporation', 'deal_type': 'All Cash',
+        'dp': 180.00, 'filed': '2023-02-14', 'close_date': 'TBD', 'tx_value': 7.65,
+    },
+    {
+        'ticker': 'IMXI', 'acquirer': 'Western Union',
+        'company': 'International Money Express', 'deal_type': 'All Cash',
+        'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None,
+    },
+]
+
 def extract_price_from_text(clean_text):
     patterns = [
         r'\$(\d+\.\d+)\s+per\s+share\s+in\s+cash',
@@ -114,33 +183,43 @@ def clean_records(records):
 def fetch_deals_from_edgar(progress_callback=None):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting EDGAR fetch...")
     headers = {'User-Agent': 'Kaushal Koduru kaushalkoduru@gmail.com'}
+
     all_hits = []
-    for start in range(0, 400, 100):
-        url = (f"https://efts.sec.gov/LATEST/search-index?"
-               f"q=%22definitive+agreement%22+%22per+share+in+cash%22"
-               f"&forms=8-K&dateRange=custom&startdt=2025-01-01&enddt=2026-05-20"
-               f"&from={start}&size=100")
-        try:
-            resp = requests.get(url, headers=headers, timeout=10)
-            hits = resp.json()['hits']['hits']
-            all_hits.extend(hits)
-            if len(hits) < 100:
+    seen_ids = set()
+    for q in EDGAR_QUERIES:
+        for start in range(0, 300, 100):
+            url = q['url'].format(start=start)
+            try:
+                resp = requests.get(url, headers=headers, timeout=10)
+                hits = resp.json()['hits']['hits']
+                for h in hits:
+                    if h['_id'] not in seen_ids:
+                        h['_deal_type'] = q['type']
+                        all_hits.append(h)
+                        seen_ids.add(h['_id'])
+                if len(hits) < 100:
+                    break
+            except:
                 break
-        except:
-            break
 
     total = len(all_hits)
     results = []
+    seen_tickers = set()
+
     for i, hit in enumerate(all_hits):
         if progress_callback:
             progress_callback(i + 1, total, len(results))
+
         src = hit['_source']
+        deal_type = hit.get('_deal_type', 'All Cash')
         name_str = str(src['display_names'])
         tm = re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str)
         ticker = tm.group(1) if tm else None
         cik = src['ciks'][0].lstrip('0') if src['ciks'] else None
         accession = src['adsh']
         if not ticker or not cik or not accession:
+            continue
+        if ticker in seen_tickers:
             continue
         try:
             h = yf.Ticker(ticker).history(period="5d")
@@ -177,11 +256,13 @@ def fetch_deals_from_edgar(progress_callback=None):
             sc = score_deal(sp_pct, days)
             risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
             ann = (sp_pct / 180) * 365
+            acquirer = KNOWN_ACQUIRERS.get(ticker, acquirer)
+            seen_tickers.add(ticker)
             results.append({
                 'ticker':     ticker,
                 'acquirer':   acquirer,
-                'company':    ticker + ' Corp.',
-                'deal_type':  'All Cash',
+                'company':    COMPANY_NAMES.get(ticker, ticker + ' Corp.'),
+                'deal_type':  deal_type,
                 'cp':         round(cp, 2),
                 'dp':         dp,
                 'sp_pct':     round(sp_pct, 2),
@@ -197,6 +278,43 @@ def fetch_deals_from_edgar(progress_callback=None):
         except:
             continue
 
+    # Fallback deals EDGAR misses
+    for fd in FALLBACK_DEALS:
+        if fd['ticker'] not in seen_tickers:
+            try:
+                h = yf.Ticker(fd['ticker']).history(period="5d")
+                if h.empty: continue
+                cp = round(h['Close'].iloc[-1], 2)
+                if cp < 1: continue
+                dp = fd['dp']
+                sp_pct = round(((dp - cp) / cp) * 100, 2)
+                if sp_pct < -10 or sp_pct > 20: continue
+                days = (datetime.today() - datetime.strptime(fd['filed'], '%Y-%m-%d')).days
+                sc = score_deal(sp_pct, days)
+                risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
+                ann = round((sp_pct / 180) * 365, 2)
+                results.append({
+                    'ticker':     fd['ticker'],
+                    'acquirer':   fd['acquirer'],
+                    'company':    fd['company'],
+                    'deal_type':  fd['deal_type'],
+                    'cp':         cp,
+                    'dp':         dp,
+                    'sp_pct':     sp_pct,
+                    'ann':        ann,
+                    'score':      sc,
+                    'risk':       risk,
+                    'filed':      fd['filed'],
+                    'days_old':   days,
+                    'close_date': fd['close_date'],
+                    'tx_value':   fd['tx_value'],
+                    'fetched':    datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                })
+                seen_tickers.add(fd['ticker'])
+                print(f"✓ Fallback: {fd['ticker']} | {sp_pct:+.2f}%")
+            except:
+                continue
+
     if results:
         df = pd.DataFrame(results).drop_duplicates(subset=['ticker'])
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
@@ -205,8 +323,7 @@ def fetch_deals_from_edgar(progress_callback=None):
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Saved {len(df)} deals.")
         except Exception as e:
             print(f"Cache save error: {e}")
-        records = df.to_dict(orient='records')
-        return clean_records(records)
+        return clean_records(df.to_dict(orient='records'))
     return []
 
 def load_cache():
@@ -214,8 +331,7 @@ def load_cache():
         try:
             df = pd.read_csv(CACHE_FILE)
             if not df.empty:
-                records = df.to_dict(orient='records')
-                return clean_records(records)
+                return clean_records(df.to_dict(orient='records'))
         except:
             pass
     return None
