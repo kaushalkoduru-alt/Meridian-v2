@@ -1,45 +1,57 @@
 ticker,acquirer,company,deal_type,cp,dp,sp_pct,ann,score,risk,filed,days_old,close_date,tx_value,fetched
-HPE,News Release HPE,HPE Corp.,All Cash,33.81,40.0,18.29,37.09,65,Low,2024-01-10,861,TBD,,2026-05-20T17:57
-OC,Owens Corning,OC Corp.,All Cash,112.59,133.0,18.13,36.76,65,Low,2024-02-09,831,TBD,,2026-05-20T17:57
-UNF,Cintas,UniFirst Corporation,Cash + Stock,263.37,310.0,17.71,35.9,75,Low,2026-03-11,70,TBD,5.5,2026-05-20T18:00
-B,Undisclosed,B Corp.,All Cash,40.79,47.5,16.45,33.36,65,Low,2024-10-07,590,TBD,,2026-05-20T17:55
-UAC,Stellantis,United Auto Credit,Tender Offer,9.88,11.5,16.4,33.25,75,Low,2026-02-05,104,TBD,,2026-05-20T18:02
-CWAN,Advent International,Clearwater Analytics,Private Equity,24.39,27.52,12.83,26.02,65,Low,2025-02-18,456,Q3 2026,6.5,2026-05-20T18:03
-NATL,NCR Voyix,National Western Financial,Cash + Stock,45.03,50.4,11.93,24.18,75,Low,2026-02-26,83,TBD,6.6,2026-05-20T17:59
-KDP,Keurig Dr Pepper,Keurig Dr Pepper,Tender Offer,28.62,31.85,11.29,22.89,65,Low,2025-08-25,268,TBD,,2026-05-20T18:02
-IMXI,Western Union,International Money Express,All Cash,15.22,16.0,5.12,10.38,65,Low,2025-03-10,436,TBD,,2026-05-20T18:03
-OGN,Sun Pharma,Organon & Co.,All Cash,13.44,14.0,4.13,8.37,100,Very Low,2026-04-27,23,TBD,,2026-05-20T17:55
-AES,Consortium,The AES Corporation,All Cash,14.62,15.0,2.56,5.2,90,Very Low,2026-03-02,79,late 2026,,2026-05-20T17:57
-WBD,Paramount Global,Warner Bros. Discovery,Cash + Stock,27.24,27.75,1.89,3.83,90,Very Low,2025-12-05,166,Q3 2026,82.7,2026-05-20T18:00
-PRA,The Doctors Company,ProAssurance Corporation,All Cash,24.69,25.0,1.24,2.5,80,Very Low,2025-03-19,427,first half of 2026,1.3,2026-05-20T17:57
-GBTG,Long Lake Management,Global Business Travel Group,All Cash,9.4,9.5,1.06,2.16,100,Very Low,2026-05-04,16,TBD,6.3,2026-05-20T17:57
-AVNS,Becton Dickinson,Avanos Medical,All Cash,24.75,25.0,1.01,2.05,90,Very Low,2026-04-14,36,TBD,1.27,2026-05-20T17:55
-CPRX,Angelini Pharma,Catalyst Biosciences,All Cash,31.22,31.5,0.9,1.82,100,Very Low,2026-05-07,13,of 2026,,2026-05-20T17:57
-KALV,Chiesi,KalVista Pharmaceuticals,All Cash,26.79,27.0,0.78,1.59,100,Very Low,2026-04-29,21,Q3 2026,,2026-05-20T17:55
-MASI,Danaher,Masimo Corporation,All Cash,178.76,180.0,0.69,1.4,80,Very Low,2023-02-14,1191,TBD,7.65,2026-05-20T18:03
-CVGW,Mission Produce,Calavo Growers,Cash + Stock,26.87,27.0,0.48,0.98,90,Very Low,2026-01-15,125,TBD,,2026-05-20T18:00
-NBRG,Glacier Bancorp,Northbrook Bank & Trust,Tender Offer,9.96,10.0,0.4,0.81,90,Very Low,2026-02-05,104,TBD,,2026-05-20T18:02
-SKYT,IonQ,SkyWater Technology,Cash + Stock,34.89,35.0,0.32,0.64,90,Very Low,2026-01-26,114,TBD,,2026-05-20T17:59
-ASRT,Paratek Pharmaceuticals,Assertio Holdings,All Cash,23.45,23.5,0.21,0.43,100,Very Low,2026-05-13,7,"of
-2026",,2026-05-20T17:55
-AFBI,Center Parc Credit Union,Affinity Bancshares,All Cash,22.46,22.5,0.18,0.36,80,Very Low,2024-05-30,720,TBD,,2026-05-20T17:55
-TPH,Sumitomo Forestry,Tri Pointe Homes,All Cash,46.95,47.0,0.11,0.22,90,Very Low,2026-02-13,96,TBD,,2026-05-20T17:59
-KTWO,Roper Technologies,K2 Pure Solutions,Tender Offer,9.99,10.0,0.1,0.2,90,Very Low,2026-02-05,104,TBD,,2026-05-20T18:02
-TERN,Merck,Terns Pharmaceuticals,Tender Offer,52.95,53.0,0.09,0.19,90,Very Low,2026-03-25,56,TBD,,2026-05-20T18:01
-CSGS,CSG Systems International,CSG Systems International,All Cash,80.69,80.7,0.01,0.03,80,Very Low,2025-10-29,203,the 2026,,2026-05-20T17:57
-EHAB,KKR,Enhabit Home Health,All Cash,13.8,13.8,-0.0,-0.0,50,Medium,2026-02-23,86,TBD,,2026-05-20T17:56
-SLNO,Neurocrine,Soleno Therapeutics,All Cash,53.01,53.0,-0.02,-0.04,50,Medium,2026-04-06,44,TBD,2.9,2026-05-20T17:57
-APLS,Biogen,Apellis Pharmaceuticals,Tender Offer,41.03,41.0,-0.07,-0.15,50,Medium,2026-03-31,50,TBD,,2026-05-20T18:01
-OIM,Undisclosed,Oil States International,Tender Offer,10.02,10.0,-0.2,-0.4,50,Medium,2026-01-23,117,TBD,,2026-05-20T18:02
-EWCZ,General Atlantic,European Wax Center,All Cash,5.82,5.8,-0.34,-0.7,50,Medium,2026-02-10,99,TBD,,2026-05-20T17:55
-GIW,Undisclosed,GIW Corp.,Tender Offer,10.04,10.0,-0.4,-0.81,40,High,2025-10-14,218,TBD,,2026-05-20T18:01
-IEAG,Undisclosed,IEAG Corp.,Tender Offer,10.05,10.0,-0.5,-1.01,50,Medium,2026-01-26,114,TBD,,2026-05-20T18:03
-FVAV,Undisclosed,FVAV Corp.,Tender Offer,10.08,10.0,-0.79,-1.61,50,Medium,2026-03-05,76,TBD,,2026-05-20T18:01
-YCY,Undisclosed,YCY Corp.,Tender Offer,10.13,10.025,-1.04,-2.1,40,High,2025-10-08,224,TBD,,2026-05-20T18:03
-AIIA,Undisclosed,AIIA Corp.,Tender Offer,10.12,10.0,-1.19,-2.4,40,High,2025-10-10,222,TBD,,2026-05-20T18:02
-LKSP,Undisclosed,LKSP Corp.,Tender Offer,10.12,10.0,-1.19,-2.4,40,High,2025-10-15,217,TBD,,2026-05-20T18:02
-HBT,Heartland Financial,Heartland BancCorp,All Cash,28.17,27.73,-1.56,-3.17,40,High,2025-10-20,212,of 2026,0.17,2026-05-20T17:57
-PACH,Undisclosed,PACH Corp.,Tender Offer,10.2,10.0,-1.96,-3.98,40,High,2025-06-26,328,TBD,,2026-05-20T18:02
-SPEGU,Undisclosed,SPEGU Corp.,Tender Offer,10.37,10.0,-3.57,-7.24,40,High,2025-07-23,301,TBD,,2026-05-20T18:03
-JHG,Undisclosed,Janus Henderson Group,All Cash,51.79,49.0,-5.39,-10.92,50,Medium,2025-12-22,149,TBD,,2026-05-20T17:56
-KW,Undisclosed,Kennedy-Wilson Holdings,All Cash,11.04,10.25,-7.16,-14.51,40,High,2025-11-04,197,TBD,,2026-05-20T17:56
+APAC,Undisclosed,APAC Corp.,Tender Offer,10.1,12.0,18.81,38.15,65,Low,2025-10-06,227,TBD,,2026-05-21T06:00
+HPE,Juniper Networks,Hewlett Packard Enterprise,All Cash,33.8,40.0,18.34,37.2,65,Low,2024-01-10,862,TBD,14.0,2026-05-21T05:54
+UNF,Cintas,UniFirst Corporation,Cash + Stock,264.33,310.0,17.28,35.04,75,Low,2026-03-11,71,TBD,5.5,2026-05-21T05:57
+OC,Saint-Gobain,Owens Corning,All Cash,113.43,133.0,17.25,34.99,65,Low,2024-02-09,832,TBD,3.9,2026-05-21T05:55
+NMP,Undisclosed,NMP Corp.,Tender Offer,10.24,12.0,17.19,34.85,65,Low,2025-07-07,318,TBD,,2026-05-21T05:59
+UAC,Stellantis,United Auto Credit,Tender Offer,9.88,11.5,16.4,33.25,75,Low,2026-02-05,105,TBD,,2026-05-21T05:59
+LEGO,Undisclosed,LEGO Corp.,Tender Offer,9.91,11.5,16.04,32.53,75,Low,2026-01-26,115,TBD,,2026-05-21T05:59
+B,Apollo Global Management,Barnes Group,All Cash,40.94,47.5,16.02,32.49,65,Low,2024-10-07,591,TBD,3.6,2026-05-21T05:53
+OIM,Undisclosed,Oil States International,Tender Offer,10.02,11.5,14.77,29.95,75,Low,2026-01-16,125,TBD,,2026-05-21T05:59
+RGR,Undisclosed,RGR Corp.,Tender Offer,39.33,44.8,13.91,28.2,85,Very Low,2026-05-04,17,TBD,,2026-05-21T05:59
+HVMC,Jefferies,HVMC Corp.,Tender Offer,10.12,11.5,13.64,27.65,65,Low,2025-08-13,281,TBD,,2026-05-21T06:00
+CWAN,Advent International,Clearwater Analytics,Private Equity,24.4,27.52,12.79,25.94,65,Low,2025-02-18,457,Q3 2026,6.5,2026-05-21T06:00
+NATL,NCR Voyix,National Western Financial,Cash + Stock,45.17,50.4,11.58,23.48,75,Low,2026-02-26,84,TBD,6.6,2026-05-21T05:56
+KDP,KDP,Keurig Dr Pepper,Tender Offer,28.69,31.85,11.01,22.33,65,Low,2025-08-25,269,TBD,0.4,2026-05-21T05:59
+GSAT,Amazon,GSAT Corp.,Private Equity,82.45,90.0,9.16,18.57,75,Low,2026-04-14,37,TBD,,2026-05-21T05:58
+IMXI,Western Union,International Money Express,All Cash,15.25,16.0,4.92,9.98,80,Very Low,2025-03-10,437,TBD,,2026-05-21T06:00
+ED,Undisclosed,ED Corp.,Tender Offer,106.3,110.81,4.24,8.6,90,Very Low,2026-02-25,85,TBD,,2026-05-21T05:59
+EA,Undisclosed,EA Corp.,All Cash,201.59,210.0,4.17,8.46,80,Very Low,2025-09-29,234,TBD,,2026-05-21T05:54
+OGN,Sun Pharma,Organon & Co.,All Cash,13.46,14.0,4.01,8.14,100,Very Low,2026-04-27,24,TBD,,2026-05-21T05:53
+HQI,Undisclosed,HQI Corp.,Tender Offer,12.01,12.3,2.41,4.9,100,Very Low,2026-05-12,9,TBD,,2026-05-21T05:58
+AES,Consortium,The AES Corporation,All Cash,14.73,15.0,1.83,3.72,90,Very Low,2026-03-02,80,late 2026,10.7,2026-05-21T05:54
+PRA,The Doctors Company,ProAssurance Corporation,All Cash,24.6,25.0,1.63,3.3,80,Very Low,2025-03-19,428,first half of 2026,1.3,2026-05-21T05:55
+TBRG,Undisclosed,TBRG Corp.,All Cash,25.94,26.25,1.2,2.42,100,Very Low,2026-04-23,28,TBD,,2026-05-21T05:56
+WBD,Paramount Global,Warner Bros. Discovery,Cash + Stock,27.42,27.75,1.2,2.44,90,Very Low,2025-12-05,167,Q3 2026,72.0,2026-05-21T05:57
+AVNS,Becton Dickinson,Avanos Medical,All Cash,24.74,25.0,1.05,2.13,90,Very Low,2026-04-14,37,TBD,1.27,2026-05-21T05:53
+GBTG,Long Lake Management,Global Business Travel Group,All Cash,9.41,9.5,0.96,1.94,100,Very Low,2026-05-04,17,TBD,6.3,2026-05-21T05:54
+NATH,Undisclosed,NATH Corp.,All Cash,101.12,102.0,0.87,1.76,90,Very Low,2026-01-21,120,TBD,0.45,2026-05-21T05:56
+CPRX,Angelini Pharma,Catalyst Biosciences,All Cash,31.25,31.5,0.8,1.62,100,Very Low,2026-05-07,14,of 2026,,2026-05-21T05:54
+KALV,Chiesi,KalVista Pharmaceuticals,All Cash,26.81,27.0,0.71,1.44,100,Very Low,2026-04-29,22,Q3 2026,,2026-05-21T05:53
+MASI,Danaher,Masimo Corporation,All Cash,178.79,180.0,0.68,1.38,80,Very Low,2023-02-14,1192,TBD,7.65,2026-05-21T06:00
+CVGW,Mission Produce,Calavo Growers,Cash + Stock,26.86,27.0,0.52,1.06,90,Very Low,2026-01-15,126,TBD,,2026-05-21T05:57
+GPRE,Undisclosed,GPRE Corp.,Cash + Stock,15.65,15.72,0.45,0.91,80,Very Low,2025-10-28,205,TBD,,2026-05-21T05:57
+NBRG,Glacier Bancorp,Northbrook Bank & Trust,Tender Offer,9.96,10.0,0.4,0.81,90,Very Low,2026-02-05,105,TBD,,2026-05-21T05:59
+FSK,Undisclosed,FSK Corp.,Tender Offer,10.96,11.0,0.36,0.74,100,Very Low,2026-05-11,10,TBD,,2026-05-21T05:59
+ASRT,Paratek Pharmaceuticals,Assertio Holdings,All Cash,23.44,23.5,0.26,0.52,100,Very Low,2026-05-13,8,"of
+2026",0.17,2026-05-21T05:53
+TPH,Sumitomo Forestry,Tri Pointe Homes,All Cash,46.95,47.0,0.11,0.22,90,Very Low,2026-02-13,97,TBD,,2026-05-21T05:56
+KTWO,Roper Technologies,K2 Pure Solutions,Tender Offer,9.99,10.0,0.1,0.2,90,Very Low,2026-02-05,105,TBD,,2026-05-21T05:59
+TERN,Merck,Terns Pharmaceuticals,Tender Offer,52.95,53.0,0.09,0.19,90,Very Low,2026-03-25,57,TBD,5.8,2026-05-21T05:58
+AFBI,Center Parc Credit Union,Affinity Bancshares,All Cash,22.49,22.5,0.04,0.09,80,Very Low,2024-05-30,721,TBD,0.87,2026-05-21T05:53
+CSGS,CSG Systems International,CSG Systems International,All Cash,80.69,80.7,0.01,0.03,80,Very Low,2025-10-29,204,the 2026,,2026-05-21T05:55
+VRE,Undisclosed,VRE Corp.,All Cash,19.0,19.0,0.0,0.0,70,Low,2026-02-23,87,of 2026,,2026-05-21T05:55
+EHAB,KKR,Enhabit Home Health,All Cash,13.8,13.8,-0.0,-0.0,50,Medium,2026-02-23,87,TBD,1.1,2026-05-21T05:53
+STKL,Undisclosed,STKL Corp.,All Cash,6.5,6.5,0.0,0.0,70,Low,2026-02-06,104,of 2026,,2026-05-21T05:53
+SLNO,Neurocrine Biosciences,Soleno Therapeutics,All Cash,53.01,53.0,-0.02,-0.04,50,Medium,2026-04-06,45,TBD,,2026-05-21T05:55
+ACLX,Undisclosed,ACLX Corp.,All Cash,115.07,115.0,-0.06,-0.12,50,Medium,2026-02-23,87,TBD,,2026-05-21T05:54
+APLS,Biogen,Apellis Pharmaceuticals,Tender Offer,41.03,41.0,-0.07,-0.15,50,Medium,2026-03-31,51,TBD,5.6,2026-05-21T05:58
+EWCZ,General Atlantic,European Wax Center,All Cash,5.82,5.8,-0.34,-0.7,50,Medium,2026-02-10,100,TBD,0.33,2026-05-21T05:53
+SKYT,IonQ,SkyWater Technology,Cash + Stock,35.13,35.0,-0.37,-0.75,50,Medium,2026-01-26,115,TBD,1.8,2026-05-21T05:57
+MCW,Undisclosed,MCW Corp.,All Cash,7.1,7.0,-1.41,-2.86,50,Medium,2026-02-18,92,"first half of
+2026",,2026-05-21T05:55
+HBT,Heartland Financial,Heartland BancCorp,All Cash,28.17,27.73,-1.56,-3.17,40,High,2025-10-20,213,of 2026,0.17,2026-05-21T05:55
+HLXC,Undisclosed,HLXC Corp.,Tender Offer,10.19,10.0,-1.86,-3.78,50,Medium,2026-01-27,114,TBD,,2026-05-21T06:00
+JHG,Undisclosed,Janus Henderson Group,All Cash,51.8,49.0,-5.41,-10.96,50,Medium,2025-12-22,150,TBD,7.4,2026-05-21T05:54
+KW,Undisclosed,Kennedy-Wilson Holdings,All Cash,11.04,10.25,-7.16,-14.51,40,High,2025-11-04,198,TBD,,2026-05-21T05:53
+FONR,Undisclosed,FONR Corp.,All Cash,18.89,17.25,-8.68,-17.6,40,High,2025-07-21,304,TBD,,2026-05-21T05:54

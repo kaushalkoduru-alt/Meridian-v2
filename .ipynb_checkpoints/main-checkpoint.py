@@ -32,6 +32,8 @@ COMPANY_NAMES = {
     'SKYT': 'SkyWater Technology', 'CVGW': 'Calavo Growers',
     'NBRG': 'Northbrook Bank & Trust', 'AFBI': 'Affinity Bancshares',
     'KTWO': 'K2 Pure Solutions', 'OIM': 'Oil States International',
+    'HPE': 'Hewlett Packard Enterprise', 'OC': 'Owens Corning',
+    'B': 'Barnes Group',
 }
 
 KNOWN_ACQUIRERS = {
@@ -40,7 +42,17 @@ KNOWN_ACQUIRERS = {
     'ASRT': 'Paratek Pharmaceuticals', 'EHAB': 'KKR',
     'NBRG': 'Glacier Bancorp', 'AFBI': 'Center Parc Credit Union',
     'KTWO': 'Roper Technologies', 'SKYT': 'IonQ',
-    'CVGW': 'Mission Produce',
+    'CVGW': 'Mission Produce', 'EWCZ': 'General Atlantic',
+    'PRA': 'The Doctors Company', 'GBTG': 'Long Lake Management',
+    'TERN': 'Merck', 'CSGS': 'CSG Systems International',
+    'HPE': 'Juniper Networks', 'OC': 'Saint-Gobain',
+    'B': 'Apollo Global Management', 'MASI': 'Danaher',
+    'IMXI': 'Western Union', 'CWAN': 'Advent International',
+    'SLNO': 'Neurocrine Biosciences',
+}
+
+EXCLUDED_TICKERS = {
+    'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU'
 }
 
 EDGAR_QUERIES = [
@@ -103,25 +115,55 @@ def extract_price_from_text(clean_text):
 
 def extract_acquirer(clean_text):
     text = clean_text[:5000]
-    patterns = [
-        r'([A-Z][A-Za-z\s&,\.\-]+?)\s+(?:has agreed to acquire|will acquire|agreed to acquire)',
-        r'([A-Z][A-Za-z\s&,\.\-]+?)\s+today announced.*?(?:acquire|merger|combination)',
-        r'([A-Z][A-Za-z\s&,\.\-]+?)\s+(?:Funds?|LLC|Inc|Corp|Ltd).*?(?:agreed to acquire|will acquire|to acquire)',
-        r'(?:acquisition of|merger with)\s+.+?\s+by\s+([A-Z][A-Za-z\s&,\.\-]+?)(?:\s+for|\s+in|\s*,|\s*\.)',
-        r'([A-Z][A-Za-z\s&,\.\-]+?)\s+(?:to Acquire|to acquire)\s+[A-Z]',
+
+    garbage = [
+        r'News\s*Release\s*',
+        r'Press\s*Release\s*',
+        r'For\s*Immediate\s*Release\s*',
+        r'Document\w*\s*(?:News\s*)?Release\w*\s*',
+        r'\bDocument\b\s*',
+        r'Under\s*the\s*terms\s*of\s*the\s*(?:proposed\s*)?(?:merger\s*)?agreement[,\s]*',
+        r'Pursuant\s*to\s*the\s*(?:terms\s*of\s*the\s*)?agreement[,\s]*',
+        r'In\s*connection\s*with\s*the\s*(?:proposed\s*)?(?:merger|transaction)[,\s]*',
+        r'Announces\s+Definitive\s+Agreement\s+',
     ]
+    for g in garbage:
+        text = re.sub(g, ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    patterns = [
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:has agreed to acquire|will acquire|agreed to acquire|agrees to acquire)',
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+today announced\s+(?:it has agreed|a definitive|an agreement)',
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:to Acquire|to acquire)\s+[A-Z][a-z]',
+        r'(?:acquisition of|merger with)\s+.+?\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s*,|\s*\.)',
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?(?:Inc|Corp|LLC|Ltd|Company|Group|Partners|Capital|Holdings|Networks|Sciences|Pharmaceuticals|Financial|Bancorp|Bancshares|Bank|Trust|Union|Technologies|Solutions|Services|Systems))\s+(?:has agreed|will acquire|agreed|announces|today)',
+    ]
+
+    bad_words = [
+        'pursuant', 'stockholder', 'common stock', 'the company',
+        'which', 'upon', 'each', 'document', 'exhibit', 'form 8',
+        'the board', 'the transaction', 'forward', 'investor',
+        'this agreement', 'subject to', 'following', 'certain',
+    ]
+
     candidates = []
     for pattern in patterns:
         matches = re.findall(pattern, text)
         for m in matches:
-            m = m.strip()
+            m = m.strip().rstrip(',.')
             m = re.sub(r'\s+', ' ', m)
-            m = re.sub(r'\s+(Funds?|LLC|managed|affiliated|sponsored).*$', '', m, flags=re.IGNORECASE)
-            if 3 < len(m) < 60 and not any(x in m.lower() for x in [
-                'pursuant', 'stockholder', 'common', 'share', 'the company',
-                'today', 'this', 'which', 'that', 'upon', 'each'
-            ]):
-                candidates.append(m)
+            m = re.sub(r'\s+(?:has|have|will|today|hereby|announces|announced|entered|agrees|agreed|intends)\s*$', '', m, flags=re.IGNORECASE).strip()
+            m = re.sub(r',?\s*(?:Inc|Corp|Ltd|LLC)\.?\s*$', '', m).strip()
+            if not (2 < len(m) < 55):
+                continue
+            if any(bad in m.lower() for bad in bad_words):
+                continue
+            if not m[0].isupper():
+                continue
+            if m.upper() == m and len(m) > 5:
+                continue
+            candidates.append(m)
+
     if candidates:
         return min(candidates, key=len)
     return "Undisclosed"
@@ -141,21 +183,28 @@ def extract_close_date(clean_text):
     return "TBD"
 
 def extract_transaction_value(clean_text):
+    text = clean_text[:8000].replace('\n', ' ').replace('\r', ' ')
+    text = re.sub(r'\s+', ' ', text)
     patterns = [
-        r'transaction.*?valued.*?approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
-        r'aggregate.*?consideration.*?\$(\d+(?:\.\d+)?)\s*(billion|million)',
-        r'total.*?transaction.*?value.*?\$(\d+(?:\.\d+)?)\s*(billion|million)',
-        r'approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million).*?(?:transaction|deal|acquisition)',
-        r'valued at approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'total\s+(?:transaction\s+)?value\s+(?:of\s+)?(?:approximately\s+)?\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'implies\s+a\s+total\s+(?:value|consideration)\s+(?:of\s+)?(?:approximately\s+)?\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'valued\s+at\s+approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'transaction\s+valued\s+at\s+(?:approximately\s+)?\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'aggregate\s+(?:deal\s+)?value\s+(?:of\s+)?(?:approximately\s+)?\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'total\s+(?:equity\s+)?value\s+(?:of\s+)?(?:approximately\s+)?\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)\s+(?:and|in)\s+(?:offers|gives|provides)',
+        r'\$(\d+(?:\.\d+)?)\s*(billion|million)\s+(?:merger|acquisition|deal|transaction)',
+        r'transaction.*?approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
+        r'approximately\s+\$(\d+(?:\.\d+)?)\s*(billion|million)',
     ]
     for pattern in patterns:
-        match = re.search(pattern, clean_text[:5000], re.IGNORECASE)
+        match = re.search(pattern, text, re.IGNORECASE)
         if match:
             value = float(match.group(1))
             unit = match.group(2).lower()
-            if unit == 'billion':
+            if unit == 'billion' and 0.05 <= value <= 500:
                 return round(value, 2)
-            else:
+            elif unit == 'million' and 50 <= value <= 500000:
                 return round(value / 1000, 2)
     return None
 
@@ -179,6 +228,26 @@ def clean_records(records):
                 clean[k] = v
         cleaned.append(clean)
     return cleaned
+
+def get_filing_links(cik, accession, headers):
+    acc_clean = accession.replace('-', '')
+    index_url = f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc_clean}/{accession}-index.html"
+    try:
+        ir = requests.get(index_url, headers=headers, timeout=10)
+        soup = BeautifulSoup(ir.text, 'html.parser')
+        ex99_links = []
+        other_links = []
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if '.htm' in href.lower() and '/Archives/' in href:
+                full = f"https://www.sec.gov{href}" if href.startswith('/') else href
+                if any(x in href.lower() for x in ['ex99', 'ex-99', 'exhibit99', 'press', 'ex9901', 'ex9902']):
+                    ex99_links.append(full)
+                elif 'index' not in href.lower():
+                    other_links.append(full)
+        return ex99_links + other_links
+    except:
+        return []
 
 def fetch_deals_from_edgar(progress_callback=None):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting EDGAR fetch...")
@@ -217,10 +286,14 @@ def fetch_deals_from_edgar(progress_callback=None):
         ticker = tm.group(1) if tm else None
         cik = src['ciks'][0].lstrip('0') if src['ciks'] else None
         accession = src['adsh']
+
         if not ticker or not cik or not accession:
             continue
         if ticker in seen_tickers:
             continue
+        if ticker in EXCLUDED_TICKERS:
+            continue
+
         try:
             h = yf.Ticker(ticker).history(period="5d")
             if h.empty: continue
@@ -228,26 +301,38 @@ def fetch_deals_from_edgar(progress_callback=None):
             if cp < 1: continue
         except:
             continue
+
         try:
-            and_ = accession.replace('-', '')
-            ir = requests.get(
-                f"https://www.sec.gov/Archives/edgar/data/{cik}/{and_}/{accession}-index.htm",
-                headers=headers, timeout=10)
-            links = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
             dp = None
             acquirer = "Undisclosed"
             close_date = "TBD"
             tx_value = None
-            for lk in links:
-                if 'ex99' in lk.lower():
-                    dr = requests.get(f"https://www.sec.gov{lk}", headers=headers, timeout=10)
+
+            links = get_filing_links(cik, accession, headers)
+
+            if not links:
+                acc_clean = accession.replace('-', '')
+                ir = requests.get(
+                    f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc_clean}/{accession}-index.htm",
+                    headers=headers, timeout=10)
+                raw_links = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
+                links = [f"https://www.sec.gov{l}" for l in raw_links if 'ex99' in l.lower()]
+
+            for lk in links[:8]:
+                try:
+                    dr = requests.get(lk, headers=headers, timeout=10)
                     ct = BeautifulSoup(dr.text, 'html.parser').get_text()
-                    if 'definitive agreement' in ct.lower():
-                        dp = extract_price_from_text(ct)
-                        acquirer = extract_acquirer(ct)
-                        close_date = extract_close_date(ct)
-                        tx_value = extract_transaction_value(ct)
-                        if dp: break
+                    if any(kw in ct.lower() for kw in ['definitive agreement', 'merger agreement', 'tender offer', 'per share in cash', 'per share of']):
+                        dp_try = extract_price_from_text(ct)
+                        if dp_try:
+                            dp = dp_try
+                            acquirer = extract_acquirer(ct)
+                            close_date = extract_close_date(ct)
+                            tx_value = extract_transaction_value(ct)
+                            break
+                except:
+                    continue
+
             if not dp: continue
             sp = dp - cp
             sp_pct = (sp / cp) * 100
@@ -278,7 +363,6 @@ def fetch_deals_from_edgar(progress_callback=None):
         except:
             continue
 
-    # Fallback deals EDGAR misses
     for fd in FALLBACK_DEALS:
         if fd['ticker'] not in seen_tickers:
             try:

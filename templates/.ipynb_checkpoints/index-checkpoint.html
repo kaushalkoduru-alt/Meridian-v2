@@ -126,11 +126,11 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .section-body.collapsed{max-height:0!important;}
 
 .tbl-wrap{margin:0 2.5rem;border:1px solid var(--bdr);border-top:none;position:relative;z-index:10;}
-.tbl-header{display:grid;grid-template-columns:70px 60px 150px 1fr 105px 105px 95px 105px 105px 85px;padding:0.6rem 1.5rem;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
+.tbl-header{display:grid;grid-template-columns:80px 70px 170px 1fr 110px 110px 110px 130px 90px;padding:0.6rem 1.5rem;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
 .th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
 .th.r{text-align:right;}
 
-.deal-row{display:grid;grid-template-columns:70px 60px 150px 1fr 105px 105px 95px 105px 105px 85px;padding:0.85rem 1.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);align-items:center;cursor:pointer;transition:background 0.15s;}
+.deal-row{display:grid;grid-template-columns:80px 70px 170px 1fr 110px 110px 110px 130px 90px;padding:0.85rem 1.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);align-items:center;cursor:pointer;transition:background 0.15s;}
 .deal-row:hover{background:var(--bg3);}
 .deal-row.expanded{background:rgba(90,158,106,0.04);border-left:2px solid var(--green2);padding-left:calc(1.5rem - 2px);}
 .r-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;color:var(--cream);}
@@ -143,9 +143,6 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .r-co{font-family:'DM Sans',sans-serif;font-size:0.65rem;color:var(--dim);font-style:italic;}
 .r-num{font-family:'DM Mono',monospace;font-size:0.72rem;text-align:right;color:var(--muted);padding-left:0.75rem;}
 .r-spread{font-family:'DM Mono',monospace;font-size:0.85rem;font-weight:500;text-align:right;}
-.r-score-wrap{padding:0 1.5rem;}
-.r-score-bar{height:1px;background:var(--bdr2);margin-bottom:3px;}
-.r-score-val{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--dim);}
 .r-badge-wrap{text-align:right;}
 .badge{font-family:'DM Mono',monospace;font-size:0.4rem;letter-spacing:0.12em;text-transform:uppercase;padding:2px 5px;border:1px solid;display:inline-block;white-space:nowrap;}
 .badge-vl{color:var(--green);border-color:rgba(90,158,106,0.35);background:rgba(90,158,106,0.05);}
@@ -189,6 +186,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.40%</span></span>
     <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.58%</span></span>
     <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.32%</span></span>
+    <span class="ti"><span class="ti-sym">HPE</span><span class="ti-pos">+3.21%</span></span>
     <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+2.95%</span></span>
     <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.44%</span></span>
     <span class="ti"><span class="ti-sym">SKYT</span><span class="ti-pos">+2.19%</span></span>
@@ -202,6 +200,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.40%</span></span>
     <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.58%</span></span>
     <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.32%</span></span>
+    <span class="ti"><span class="ti-sym">HPE</span><span class="ti-pos">+3.21%</span></span>
     <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+2.95%</span></span>
     <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.44%</span></span>
     <span class="ti"><span class="ti-sym">SKYT</span><span class="ti-pos">+2.19%</span></span>
@@ -465,13 +464,11 @@ function renderDeals(deals){
               <div class="th r">Deal Price</div>
               <div class="th r">Spread</div>
               <div class="th r">Ann. Return</div>
-              <div class="th">Score</div>
               <div class="th r">Risk</div>
             </div>`;
 
         sectionDeals.forEach(d => {
             const i = globalIndex++;
-            const sc = getScoreColor(d.score);
             const bc = getBadgeClass(d.risk);
             const tc = getTypeClass(d.deal_type);
             const tl = getTypeLabel(d.deal_type);
@@ -490,10 +487,6 @@ function renderDeals(deals){
               <div class="r-num">$${d.dp.toFixed(2)}</div>
               <div class="r-spread" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
               <div class="r-num" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
-              <div class="r-score-wrap">
-                <div class="r-score-bar"><div style="width:${d.score}%;height:100%;background:${sc}"></div></div>
-                <div class="r-score-val">${d.score}/100</div>
-              </div>
               <div class="r-badge-wrap"><span class="badge ${bc}">${d.risk}</span></div>
             </div>
             <div class="detail-panel ${isExp ? 'open' : ''}">
@@ -549,12 +542,12 @@ function renderDeals(deals){
                   <div class="dp-mv sm">${d.deal_type}</div>
                 </div>
                 <div class="dp-metric">
-                  <div class="dp-ml">Spread Range</div>
-                  <div class="dp-mv sm">-10% to +20%</div>
-                </div>
-                <div class="dp-metric">
                   <div class="dp-ml">Score</div>
                   <div class="dp-mv sm">${d.score}/100</div>
+                </div>
+                <div class="dp-metric">
+                  <div class="dp-ml">Spread Range</div>
+                  <div class="dp-mv sm">-10% to +20%</div>
                 </div>
               </div>
             </div>`;
