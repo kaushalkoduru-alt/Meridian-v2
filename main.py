@@ -56,44 +56,17 @@ EXCLUDED_TICKERS = {
 }
 
 EDGAR_QUERIES = [
-    {
-        'type': 'All Cash',
-        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
-    },
-    {
-        'type': 'All Cash',
-        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22merger+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
-    },
-    {
-        'type': 'Cash + Stock',
-        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22cash+and+stock%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
-    },
-    {
-        'type': 'Private Equity',
-        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22+%22sponsor%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'
-    },
-    {
-        'type': 'Tender Offer',
-        'url': 'https://efts.sec.gov/LATEST/search-index?q=%22tender+offer%22+%22per+share%22+%22definitive+agreement%22&forms=8-K&dateRange=custom&startdt=2025-06-01&enddt=2026-05-21&from={start}&size=100'
-    },
+    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'},
+    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22merger+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'},
+    {'type': 'Cash + Stock', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22cash+and+stock%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'},
+    {'type': 'Private Equity', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22+%22sponsor%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'},
+    {'type': 'Tender Offer', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22tender+offer%22+%22per+share%22+%22definitive+agreement%22&forms=8-K&dateRange=custom&startdt=2025-06-01&enddt=2026-05-21&from={start}&size=100'},
 ]
 
 FALLBACK_DEALS = [
-    {
-        'ticker': 'CWAN', 'acquirer': 'Advent International',
-        'company': 'Clearwater Analytics', 'deal_type': 'Private Equity',
-        'dp': 27.52, 'filed': '2025-02-18', 'close_date': 'Q3 2026', 'tx_value': 6.50,
-    },
-    {
-        'ticker': 'MASI', 'acquirer': 'Danaher',
-        'company': 'Masimo Corporation', 'deal_type': 'All Cash',
-        'dp': 180.00, 'filed': '2023-02-14', 'close_date': 'TBD', 'tx_value': 7.65,
-    },
-    {
-        'ticker': 'IMXI', 'acquirer': 'Western Union',
-        'company': 'International Money Express', 'deal_type': 'All Cash',
-        'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None,
-    },
+    {'ticker': 'CWAN', 'acquirer': 'Advent International', 'company': 'Clearwater Analytics', 'deal_type': 'Private Equity', 'dp': 27.52, 'filed': '2025-02-18', 'close_date': 'Q3 2026', 'tx_value': 6.50},
+    {'ticker': 'MASI', 'acquirer': 'Danaher', 'company': 'Masimo Corporation', 'deal_type': 'All Cash', 'dp': 180.00, 'filed': '2023-02-14', 'close_date': 'TBD', 'tx_value': 7.65},
+    {'ticker': 'IMXI', 'acquirer': 'Western Union', 'company': 'International Money Express', 'deal_type': 'All Cash', 'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None},
 ]
 
 def extract_price_from_text(clean_text):
@@ -115,10 +88,8 @@ def extract_price_from_text(clean_text):
 
 def extract_acquirer(clean_text):
     text = clean_text[:5000]
-
     garbage = [
-        r'News\s*Release\s*',
-        r'Press\s*Release\s*',
+        r'News\s*Release\s*', r'Press\s*Release\s*',
         r'For\s*Immediate\s*Release\s*',
         r'Document\w*\s*(?:News\s*)?Release\w*\s*',
         r'\bDocument\b\s*',
@@ -138,14 +109,7 @@ def extract_acquirer(clean_text):
         r'(?:acquisition of|merger with)\s+.+?\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s*,|\s*\.)',
         r'([A-Z][A-Za-z0-9\s&,\.\-\']+?(?:Inc|Corp|LLC|Ltd|Company|Group|Partners|Capital|Holdings|Networks|Sciences|Pharmaceuticals|Financial|Bancorp|Bancshares|Bank|Trust|Union|Technologies|Solutions|Services|Systems))\s+(?:has agreed|will acquire|agreed|announces|today)',
     ]
-
-    bad_words = [
-        'pursuant', 'stockholder', 'common stock', 'the company',
-        'which', 'upon', 'each', 'document', 'exhibit', 'form 8',
-        'the board', 'the transaction', 'forward', 'investor',
-        'this agreement', 'subject to', 'following', 'certain',
-    ]
-
+    bad_words = ['pursuant', 'stockholder', 'common stock', 'the company', 'which', 'upon', 'each', 'document', 'exhibit', 'form 8', 'the board', 'the transaction', 'forward', 'investor', 'this agreement', 'subject to', 'following', 'certain']
     candidates = []
     for pattern in patterns:
         matches = re.findall(pattern, text)
@@ -154,16 +118,11 @@ def extract_acquirer(clean_text):
             m = re.sub(r'\s+', ' ', m)
             m = re.sub(r'\s+(?:has|have|will|today|hereby|announces|announced|entered|agrees|agreed|intends)\s*$', '', m, flags=re.IGNORECASE).strip()
             m = re.sub(r',?\s*(?:Inc|Corp|Ltd|LLC)\.?\s*$', '', m).strip()
-            if not (2 < len(m) < 55):
-                continue
-            if any(bad in m.lower() for bad in bad_words):
-                continue
-            if not m[0].isupper():
-                continue
-            if m.upper() == m and len(m) > 5:
-                continue
+            if not (2 < len(m) < 55): continue
+            if any(bad in m.lower() for bad in bad_words): continue
+            if not m[0].isupper(): continue
+            if m.upper() == m and len(m) > 5: continue
             candidates.append(m)
-
     if candidates:
         return min(candidates, key=len)
     return "Undisclosed"
@@ -208,13 +167,28 @@ def extract_transaction_value(clean_text):
                 return round(value / 1000, 2)
     return None
 
-def score_deal(spread_pct, days_since_filed):
+def score_deal(spread_pct, days_since_filed, deal_type='All Cash'):
     score = 70
-    if 0 < spread_pct < 5:      score += 20
-    elif spread_pct >= 5:        score += 5
-    elif spread_pct < 0:         score -= 20
-    if days_since_filed < 30:    score += 10
-    elif days_since_filed > 180: score -= 10
+
+    if deal_type == 'All Cash':         score += 10
+    elif deal_type == 'Tender Offer':   score += 8
+    elif deal_type == 'Private Equity': score += 5
+    elif deal_type == 'Cash + Stock':   score += 0
+
+    if 0 < spread_pct < 3:       score += 25
+    elif 3 <= spread_pct < 5:    score += 18
+    elif 5 <= spread_pct < 8:    score += 10
+    elif 8 <= spread_pct < 12:   score += 0
+    elif 12 <= spread_pct < 18:  score -= 15
+    elif 18 <= spread_pct < 25:  score -= 25
+    elif spread_pct >= 25:       score -= 35
+    elif spread_pct < 0:         score -= 25
+
+    if days_since_filed < 90:    score += 10
+    elif days_since_filed < 270: score += 0
+    elif days_since_filed < 500: score -= 5
+    else:                        score -= 15
+
     return min(max(score, 0), 100)
 
 def clean_records(records):
@@ -287,12 +261,9 @@ def fetch_deals_from_edgar(progress_callback=None):
         cik = src['ciks'][0].lstrip('0') if src['ciks'] else None
         accession = src['adsh']
 
-        if not ticker or not cik or not accession:
-            continue
-        if ticker in seen_tickers:
-            continue
-        if ticker in EXCLUDED_TICKERS:
-            continue
+        if not ticker or not cik or not accession: continue
+        if ticker in seen_tickers: continue
+        if ticker in EXCLUDED_TICKERS: continue
 
         try:
             h = yf.Ticker(ticker).history(period="5d")
@@ -309,12 +280,9 @@ def fetch_deals_from_edgar(progress_callback=None):
             tx_value = None
 
             links = get_filing_links(cik, accession, headers)
-
             if not links:
                 acc_clean = accession.replace('-', '')
-                ir = requests.get(
-                    f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc_clean}/{accession}-index.htm",
-                    headers=headers, timeout=10)
+                ir = requests.get(f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc_clean}/{accession}-index.htm", headers=headers, timeout=10)
                 raw_links = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
                 links = [f"https://www.sec.gov{l}" for l in raw_links if 'ex99' in l.lower()]
 
@@ -338,27 +306,20 @@ def fetch_deals_from_edgar(progress_callback=None):
             sp_pct = (sp / cp) * 100
             if sp_pct < -10 or sp_pct > 20: continue
             days = (datetime.today() - datetime.strptime(src['file_date'], '%Y-%m-%d')).days
-            sc = score_deal(sp_pct, days)
+            sc = score_deal(sp_pct, days, deal_type)
             risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
             ann = (sp_pct / 180) * 365
             acquirer = KNOWN_ACQUIRERS.get(ticker, acquirer)
             seen_tickers.add(ticker)
             results.append({
-                'ticker':     ticker,
-                'acquirer':   acquirer,
-                'company':    COMPANY_NAMES.get(ticker, ticker + ' Corp.'),
-                'deal_type':  deal_type,
-                'cp':         round(cp, 2),
-                'dp':         dp,
-                'sp_pct':     round(sp_pct, 2),
-                'ann':        round(ann, 2),
-                'score':      sc,
-                'risk':       risk,
-                'filed':      src['file_date'],
-                'days_old':   days,
-                'close_date': close_date,
-                'tx_value':   tx_value,
-                'fetched':    datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                'ticker': ticker, 'acquirer': acquirer,
+                'company': COMPANY_NAMES.get(ticker, ticker + ' Corp.'),
+                'deal_type': deal_type, 'cp': round(cp, 2), 'dp': dp,
+                'sp_pct': round(sp_pct, 2), 'ann': round(ann, 2),
+                'score': sc, 'risk': risk, 'filed': src['file_date'],
+                'days_old': days, 'close_date': close_date,
+                'tx_value': tx_value,
+                'fetched': datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
         except:
             continue
@@ -374,25 +335,17 @@ def fetch_deals_from_edgar(progress_callback=None):
                 sp_pct = round(((dp - cp) / cp) * 100, 2)
                 if sp_pct < -10 or sp_pct > 20: continue
                 days = (datetime.today() - datetime.strptime(fd['filed'], '%Y-%m-%d')).days
-                sc = score_deal(sp_pct, days)
+                sc = score_deal(sp_pct, days, fd['deal_type'])
                 risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
                 ann = round((sp_pct / 180) * 365, 2)
                 results.append({
-                    'ticker':     fd['ticker'],
-                    'acquirer':   fd['acquirer'],
-                    'company':    fd['company'],
-                    'deal_type':  fd['deal_type'],
-                    'cp':         cp,
-                    'dp':         dp,
-                    'sp_pct':     sp_pct,
-                    'ann':        ann,
-                    'score':      sc,
-                    'risk':       risk,
-                    'filed':      fd['filed'],
-                    'days_old':   days,
-                    'close_date': fd['close_date'],
-                    'tx_value':   fd['tx_value'],
-                    'fetched':    datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                    'ticker': fd['ticker'], 'acquirer': fd['acquirer'],
+                    'company': fd['company'], 'deal_type': fd['deal_type'],
+                    'cp': cp, 'dp': dp, 'sp_pct': sp_pct, 'ann': ann,
+                    'score': sc, 'risk': risk, 'filed': fd['filed'],
+                    'days_old': days, 'close_date': fd['close_date'],
+                    'tx_value': fd['tx_value'],
+                    'fetched': datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 })
                 seen_tickers.add(fd['ticker'])
                 print(f"✓ Fallback: {fd['ticker']} | {sp_pct:+.2f}%")
@@ -448,6 +401,11 @@ async def dashboard():
     with open("templates/index.html", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read())
 
+@app.get("/methodology")
+async def methodology():
+    with open("templates/index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
+
 @app.get("/api/deals")
 async def get_deals():
     deals = load_cache()
@@ -459,24 +417,19 @@ async def get_deals():
 async def refresh_stream():
     async def generate():
         progress_data = {"current": 0, "total": 0, "deals_found": 0}
-
         def progress_callback(current, total, deals_found):
             progress_data["current"] = current
             progress_data["total"] = total
             progress_data["deals_found"] = deals_found
-
         loop = asyncio.get_event_loop()
         future = loop.run_in_executor(None, lambda: fetch_deals_from_edgar(progress_callback))
-
         while not future.done():
             data = json.dumps(progress_data)
             yield f"data: {data}\n\n"
             await asyncio.sleep(0.5)
-
         deals = await future
         final = json.dumps({"done": True, "deals": deals})
         yield f"data: {final}\n\n"
-
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 @app.post("/api/refresh")

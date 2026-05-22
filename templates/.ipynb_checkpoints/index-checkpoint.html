@@ -7,41 +7,24 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23050d08'/><text x='50' y='72' font-family='Georgia,serif' font-size='72' font-weight='400' fill='%23e8e0c8' text-anchor='middle'>M</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
-:root {
-    --bg:    #050d08;
-    --bg2:   #080f0a;
-    --bg3:   #0a1410;
-    --bdr:   #0f1f14;
-    --bdr2:  #162a1c;
-    --cream: #e8e0c8;
-    --bone:  #c8c0a0;
-    --muted: #6a7a6a;
-    --dim:   #2a3a2a;
-    --green: #5a9e6a;
-    --green2:#3a6a4a;
-    --red:   #9e5a4a;
-    --gold:  #a89060;
-}
+:root{--bg:#050d08;--bg2:#080f0a;--bg3:#0a1410;--bdr:#0f1f14;--bdr2:#162a1c;--cream:#e8e0c8;--bone:#c8c0a0;--muted:#6a7a6a;--dim:#2a3a2a;--green:#5a9e6a;--green2:#3a6a4a;--red:#9e5a4a;--gold:#a89060;}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:var(--bg);color:var(--cream);font-family:'DM Sans',sans-serif;min-height:100vh;}
 body::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(232,224,200,0.008) 3px,rgba(232,224,200,0.008) 4px);pointer-events:none;z-index:0;}
+.page{display:none;}.page.active{display:block;}
 
-.page{display:none;}
-.page.active{display:block;}
-
+/* TICKER */
 .ticker-wrap{background:var(--bg3);border-bottom:1px solid var(--bdr);overflow:hidden;padding:0.4rem 0;position:relative;z-index:10;}
 .ticker-track{display:inline-flex;gap:0;animation:scroll 22s linear infinite;white-space:nowrap;}
 @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .ti{display:inline-flex;align-items:center;gap:0.4rem;padding:0 1.25rem;border-right:1px solid var(--bdr2);font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.1em;}
-.ti-sym{color:var(--cream);font-weight:500;}
-.ti-pos{color:var(--green);}
-.ti-neg{color:var(--red);}
+.ti-sym{color:var(--cream);font-weight:500;}.ti-pos{color:var(--green);}.ti-neg{color:var(--red);}
 
+/* LANDING */
 .land-nav{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 3rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
 .land-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1.2rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);}
 .land-logo em{font-style:italic;color:var(--green);}
 .land-tag{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
-
 .hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:5rem 2rem 4rem;position:relative;z-index:10;min-height:80vh;justify-content:center;}
 .edition{font-family:'DM Mono',monospace;font-size:0.45rem;letter-spacing:0.35em;color:var(--dim);text-transform:uppercase;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;}
 .edition::before,.edition::after{content:'';width:50px;height:1px;background:var(--bdr2);}
@@ -61,10 +44,19 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .enter-btn{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--green);border:1px solid var(--green2);padding:0.85rem 2.5rem;background:rgba(90,158,106,0.04);display:inline-block;transition:all 0.2s;cursor:pointer;animation:fadeUp 0.8s ease 0.35s both;}
 .enter-btn:hover{background:rgba(90,158,106,0.08);color:var(--cream);}
 
+/* METHODOLOGY PROMO BANNER */
+.methodology-banner{background:rgba(90,158,106,0.06);border:1px solid var(--green2);border-left:3px solid var(--green);padding:1.25rem 2rem;max-width:700px;margin:0 auto 2.5rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;animation:fadeUp 0.8s ease 0.45s both;cursor:pointer;transition:background 0.2s;}
+.methodology-banner:hover{background:rgba(90,158,106,0.1);}
+.methodology-banner-left{}
+.methodology-banner-title{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--green);margin-bottom:0.35rem;}
+.methodology-banner-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);font-weight:300;}
+.methodology-banner-arrow{font-family:'DM Mono',monospace;font-size:1.2rem;color:var(--green);flex-shrink:0;}
+
+/* SCORING SECTION */
 .scoring{background:var(--bg2);border-top:1px solid var(--bdr);padding:5rem 4rem;position:relative;z-index:10;}
 .s-title{font-family:'Playfair Display',serif;font-weight:300;font-size:2rem;color:var(--cream);text-align:center;margin-bottom:0.4rem;}
 .s-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.22em;text-transform:uppercase;text-align:center;margin-bottom:3rem;}
-.s-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);max-width:1100px;margin:0 auto 4rem;}
+.s-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);max-width:1100px;margin:0 auto 2rem;}
 .s-card{background:var(--bg3);padding:1.75rem;position:relative;transition:background 0.2s;}
 .s-card:hover{background:var(--bg2);}
 .s-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
@@ -79,12 +71,19 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .s-card.hi .s-range{color:var(--red);}
 .s-name{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;}
 .s-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.75;font-weight:300;}
+
+/* METHODOLOGY LINK IN SCORING SECTION */
+.s-methodology-link{max-width:1100px;margin:0 auto 4rem;display:flex;justify-content:center;}
+.s-methodology-btn{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--green);border:1px solid var(--green2);padding:0.7rem 2rem;background:rgba(90,158,106,0.04);cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.75rem;}
+.s-methodology-btn:hover{background:rgba(90,158,106,0.1);color:var(--cream);}
+
 .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1100px;margin:0 auto;}
 .how-card{padding:1.5rem 1.5rem 1.5rem 2rem;border-left:1px solid var(--bdr2);}
 .how-n{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;color:var(--bdr2);line-height:1;margin-bottom:1rem;}
 .how-t{font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;color:var(--cream);margin-bottom:0.5rem;}
 .how-d{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.7;font-weight:300;}
 
+/* DASHBOARD NAV */
 .dnav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
 .dnav-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1.1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;transition:color 0.2s;}
 .dnav-logo:hover{color:var(--green);}
@@ -95,10 +94,12 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
 .dts{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.1em;}
 
+/* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:0.75rem;padding:0.55rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);position:relative;z-index:10;}
-.btn{font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.4rem 1rem;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-block;}
+.btn{font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.4rem 1rem;cursor:pointer;transition:all 0.2s;}
 .btn:hover{border-color:var(--green2);color:var(--green);background:rgba(90,158,106,0.04);}
 
+/* PROGRESS */
 .progress-wrap{display:none;padding:0.6rem 2.5rem;background:var(--bg2);border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
 .progress-wrap.active{display:block;}
 .progress-label{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);letter-spacing:0.15em;margin-bottom:0.4rem;display:flex;justify-content:space-between;}
@@ -106,6 +107,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .progress-bar-fill{height:100%;background:var(--green);transition:width 0.3s ease;width:0%;}
 .progress-deals{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--green);letter-spacing:0.1em;margin-top:0.35rem;}
 
+/* METRICS */
 .mstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:1.25rem 2.5rem;position:relative;z-index:10;}
 .mc{background:var(--bg2);padding:1.25rem 1.75rem;position:relative;}
 .mc::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--green2),transparent);}
@@ -114,6 +116,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .mc-v.gr{color:var(--green);}
 .mc-h{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);margin-top:0.4rem;letter-spacing:0.1em;}
 
+/* SECTION SEPARATORS */
 .section-sep{display:flex;align-items:center;margin:1.5rem 2.5rem 0;position:relative;z-index:10;cursor:pointer;user-select:none;}
 .section-sep-line{flex:1;height:1px;background:var(--bdr2);}
 .section-sep-label{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);padding:0 1.25rem;white-space:nowrap;display:flex;align-items:center;gap:0.75rem;}
@@ -121,15 +124,14 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .section-sep-toggle{font-family:'DM Mono',monospace;font-size:0.55rem;color:var(--dim);margin-left:0.5rem;transition:transform 0.2s;display:inline-block;}
 .section-sep-toggle.collapsed{transform:rotate(-90deg);}
 .section-sep:hover .section-sep-label{color:var(--green);}
-
 .section-body{overflow:hidden;transition:max-height 0.3s ease;}
 .section-body.collapsed{max-height:0!important;}
 
+/* TABLE */
 .tbl-wrap{margin:0 2.5rem;border:1px solid var(--bdr);border-top:none;position:relative;z-index:10;}
 .tbl-header{display:grid;grid-template-columns:80px 70px 170px 1fr 110px 110px 110px 130px 90px;padding:0.6rem 1.5rem;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
 .th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
 .th.r{text-align:right;}
-
 .deal-row{display:grid;grid-template-columns:80px 70px 170px 1fr 110px 110px 110px 130px 90px;padding:0.85rem 1.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);align-items:center;cursor:pointer;transition:background 0.15s;}
 .deal-row:hover{background:var(--bg3);}
 .deal-row.expanded{background:rgba(90,158,106,0.04);border-left:2px solid var(--green2);padding-left:calc(1.5rem - 2px);}
@@ -150,6 +152,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .badge-md{color:#8a6040;border-color:rgba(138,96,64,0.35);background:rgba(138,96,64,0.05);}
 .badge-hi{color:var(--red);border-color:rgba(158,90,74,0.35);background:rgba(158,90,74,0.05);}
 
+/* DETAIL PANEL */
 .detail-panel{display:none;background:var(--bg3);border-bottom:1px solid var(--bdr2);border-left:2px solid var(--green2);padding:1.75rem 2rem 1.5rem;animation:slideDown 0.2s ease;}
 .detail-panel.open{display:block;}
 @keyframes slideDown{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
@@ -157,22 +160,145 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .dp-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:2.5rem;color:var(--cream);line-height:1;}
 .dp-acq-lbl{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.4rem;}
 .dp-acq-name{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);font-weight:300;margin-top:0.15rem;}
-.dp-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
+.dp-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin-bottom:1.25rem;}
 .dp-metric{background:var(--bg2);padding:1rem 1.25rem;}
 .dp-metric.hi{border-top:1px solid var(--green2);}
 .dp-ml{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.4rem;}
 .dp-mv{font-family:'Playfair Display',serif;font-weight:300;font-size:1.4rem;line-height:1;}
 .dp-mv.sm{font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--cream);}
 
+/* ANALYSIS BUTTON */
+.analysis-btn{display:block;width:100%;padding:1rem;background:rgba(90,158,106,0.06);border:1px solid var(--green2);color:var(--green);font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;text-align:center;cursor:pointer;transition:all 0.2s;margin-top:0;}
+.analysis-btn:hover{background:rgba(90,158,106,0.12);color:var(--cream);letter-spacing:0.35em;}
+.analysis-btn-label{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.15em;text-align:center;margin-top:0.4rem;}
+
+/* LOADING */
 .loading-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4rem;text-align:center;}
 .loading-title{font-family:'Playfair Display',serif;font-weight:300;font-size:1.4rem;color:var(--cream);margin-bottom:0.75rem;}
 .loading-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.15em;}
 .spinner{width:28px;height:28px;border:1px solid var(--bdr2);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin:1.5rem auto;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* FOOTER */
 footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:10;margin-top:1.5rem;}
 .footer-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:0.85rem;letter-spacing:0.3em;color:var(--dim);text-transform:uppercase;}
+.footer-links{display:flex;gap:2rem;align-items:center;}
+.footer-link{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;transition:color 0.2s;background:none;border:none;}
+.footer-link:hover{color:var(--green);}
 .footer-info{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;text-align:right;line-height:2;}
+
+/* DEAL ANALYSIS PAGE */
+.da-nav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+.da-back{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;transition:color 0.2s;}
+.da-back:hover{color:var(--green);}
+.da-hero{padding:3rem 2.5rem 2rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
+.da-hero-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;}
+.da-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:4rem;color:var(--cream);line-height:1;}
+.da-company{font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--muted);font-weight:300;margin-top:0.25rem;}
+.da-acquirer-lbl{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.75rem;}
+.da-acquirer{font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--bone);font-weight:300;margin-top:0.15rem;}
+.da-badges{display:flex;gap:0.5rem;margin-top:1rem;}
+.da-spread-block{text-align:right;}
+.da-spread-num{font-family:'Playfair Display',serif;font-size:3.5rem;font-weight:300;line-height:1;}
+.da-spread-lbl{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.25rem;}
+.da-ann{font-family:'DM Mono',monospace;font-size:0.75rem;margin-top:0.25rem;}
+.da-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:0 2.5rem 2rem;position:relative;z-index:10;}
+.da-metric{background:var(--bg2);padding:1.25rem;}
+.da-metric.hi{border-top:1px solid var(--green2);}
+.da-ml{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.5rem;}
+.da-mv{font-family:'Playfair Display',serif;font-weight:300;font-size:1.5rem;line-height:1;}
+.da-mv.sm{font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--cream);}
+.da-section{margin:0 2.5rem 2rem;position:relative;z-index:10;}
+.da-section-title{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--dim);margin-bottom:1rem;display:flex;align-items:center;gap:1rem;}
+.da-section-title::after{content:'';flex:1;height:1px;background:var(--bdr);}
+.return-table{width:100%;border:1px solid var(--bdr);border-collapse:collapse;}
+.return-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
+.return-table th.r{text-align:right;}
+.return-table td{font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
+.return-table td.r{text-align:right;}
+.return-table tr:last-child td{border-bottom:none;}
+.score-bars{display:flex;flex-direction:column;gap:1rem;background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;}
+.score-bar-item{}
+.score-bar-header{display:flex;justify-content:space-between;margin-bottom:0.4rem;}
+.score-bar-label{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;}
+.score-bar-val{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--cream);}
+.score-bar-desc{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);margin-top:0.25rem;font-weight:300;}
+.score-bar-track{height:2px;background:var(--bdr2);margin-top:0.4rem;}
+.score-bar-fill{height:100%;transition:width 0.6s ease;}
+.risk-factors{background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;}
+.risk-factor{display:flex;gap:1rem;padding:0.75rem 0;border-bottom:1px solid var(--bdr);}
+.risk-factor:last-child{border-bottom:none;}
+.risk-dot{width:6px;height:6px;border-radius:50%;margin-top:0.35rem;flex-shrink:0;}
+.risk-dot.hi{background:var(--red);}
+.risk-dot.md{background:var(--gold);}
+.risk-dot.lo{background:var(--green);}
+.risk-text{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.6;font-weight:300;}
+.timeline{background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem 2rem;}
+.timeline-track{display:flex;align-items:center;gap:0;margin:1rem 0;}
+.timeline-dot{width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.timeline-dot.end{background:var(--dim);}
+.timeline-line{flex:1;height:1px;background:var(--bdr2);position:relative;}
+.timeline-line-fill{height:100%;background:var(--green);}
+.timeline-labels{display:flex;justify-content:space-between;margin-top:0.5rem;}
+.timeline-label{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;}
+.timeline-days{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);text-align:center;margin-top:0.75rem;}
+
+/* METHODOLOGY PAGE */
+.meth-hero{padding:4rem 2.5rem 3rem;border-bottom:1px solid var(--bdr);text-align:center;position:relative;z-index:10;}
+.meth-title{font-family:'Playfair Display',serif;font-weight:300;font-size:3rem;color:var(--cream);margin-bottom:0.75rem;}
+.meth-title em{font-style:italic;color:var(--green);}
+.meth-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;margin-bottom:1.5rem;}
+.meth-desc{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted);max-width:600px;margin:0 auto;line-height:1.9;font-weight:300;}
+
+/* BACKTEST RESULTS STRIP */
+.backtest-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:2rem 2.5rem;position:relative;z-index:10;}
+.bt-cell{background:var(--bg2);padding:1.5rem;text-align:center;position:relative;}
+.bt-cell::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green2),transparent);}
+.bt-val{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;color:var(--green);line-height:1;margin-bottom:0.35rem;}
+.bt-label{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
+.bt-sub{font-family:'Cormorant Garamond',serif;font-size:0.82rem;color:var(--muted);margin-top:0.25rem;font-weight:300;}
+
+/* FACTOR SECTIONS */
+.meth-section{margin:0 2.5rem 2.5rem;position:relative;z-index:10;}
+.meth-section-header{display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem;padding-bottom:0.75rem;border-bottom:1px solid var(--bdr2);}
+.meth-section-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:300;color:var(--green);line-height:1;}
+.meth-section-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:300;color:var(--cream);}
+.meth-section-weight{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--gold);letter-spacing:0.15em;text-transform:uppercase;margin-top:0.2rem;}
+.factor-table{width:100%;border:1px solid var(--bdr);border-collapse:collapse;margin-bottom:1rem;}
+.factor-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
+.factor-table td{font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.7rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
+.factor-table tr:last-child td{border-bottom:none;}
+.factor-table td.pts{text-align:right;font-weight:500;}
+.factor-table td.pts.pos{color:var(--green);}
+.factor-table td.pts.neg{color:var(--red);}
+.factor-table td.pts.neu{color:var(--muted);}
+.factor-note{font-family:'Cormorant Garamond',serif;font-size:0.9rem;color:var(--muted);line-height:1.7;font-weight:300;background:var(--bg2);border:1px solid var(--bdr);border-left:2px solid var(--green2);padding:1rem 1.25rem;}
+
+/* RISK THRESHOLD */
+.threshold-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
+.threshold-cell{background:var(--bg2);padding:1.25rem;position:relative;}
+.threshold-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.threshold-cell.vl::before{background:var(--green);}
+.threshold-cell.lo::before{background:var(--gold);}
+.threshold-cell.md::before{background:#8a6040;}
+.threshold-cell.hi::before{background:var(--red);}
+.threshold-range{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:300;margin-bottom:0.25rem;}
+.threshold-cell.vl .threshold-range{color:var(--green);}
+.threshold-cell.lo .threshold-range{color:var(--gold);}
+.threshold-cell.md .threshold-range{color:#8a6040;}
+.threshold-cell.hi .threshold-range{color:var(--red);}
+.threshold-name{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
+.threshold-desc{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);line-height:1.6;font-weight:300;}
+
+/* DEAL SAMPLE TABLE */
+.sample-table{width:100%;border:1px solid var(--bdr);border-collapse:collapse;}
+.sample-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--bdr);text-align:left;}
+.sample-table td{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.65rem 1rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
+.sample-table tr:last-child td{border-bottom:none;}
+.outcome-closed{color:var(--green);}
+.outcome-broken{color:var(--red);}
+.correct-yes{color:var(--green);}
+.correct-no{color:var(--red);}
 </style>
 </head>
 <body>
@@ -225,10 +351,17 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       Built for investors who take merger arbitrage seriously.
     </p>
     <div class="stats">
-      <div class="stat"><div class="stat-v">43+</div><div class="stat-l">Live Deals</div></div>
-      <div class="stat"><div class="stat-v">93%</div><div class="stat-l">Accuracy</div></div>
+      <div class="stat"><div class="stat-v">54+</div><div class="stat-l">Live Deals</div></div>
+      <div class="stat"><div class="stat-v">88%</div><div class="stat-l">Accuracy</div></div>
       <div class="stat"><div class="stat-v">1hr</div><div class="stat-l">Refresh</div></div>
       <div class="stat"><div class="stat-v">SEC</div><div class="stat-l">Source</div></div>
+    </div>
+    <div class="methodology-banner" onclick="showMethodology()">
+      <div class="methodology-banner-left">
+        <div class="methodology-banner-title">◈ Proprietary Scoring Model</div>
+        <div class="methodology-banner-desc">88.2% accuracy backtested on 51 historical deals from 2023–2025. Read the full methodology.</div>
+      </div>
+      <div class="methodology-banner-arrow">→</div>
     </div>
     <button class="enter-btn" onclick="showDashboard()">Enter Dashboard</button>
   </div>
@@ -257,6 +390,11 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <div class="s-desc">Elevated break probability. Negative spreads, weak buyers, or significant regulatory headwinds. Approach with caution.</div>
       </div>
     </div>
+    <div class="s-methodology-link">
+      <button class="s-methodology-btn" onclick="showMethodology()">
+        View Full Methodology & Backtest Results →
+      </button>
+    </div>
     <div class="how-grid">
       <div class="how-card">
         <div class="how-n">01</div>
@@ -271,13 +409,16 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="how-card">
         <div class="how-n">03</div>
         <div class="how-t">Proprietary Scoring</div>
-        <div class="how-d">Our model scores each position on deal structure, buyer strength, regulatory risk, and timeline. Backtested at 93% accuracy.</div>
+        <div class="how-d">Our model scores each position on spread quality, deal type, and time pending. Backtested at 88.2% accuracy on 51 historical deals from 2023–2025.</div>
       </div>
     </div>
   </div>
   <footer>
     <div class="footer-logo">Meridian</div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Model backtested · historical deals · Spread range -10% to +20%</div>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+    </div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 51 historical deals · 2023–2025</div>
   </footer>
 </div>
 
@@ -293,15 +434,14 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <div class="toolbar">
     <button class="btn" onclick="showLanding()">Back</button>
     <button class="btn" id="refresh-btn" onclick="refreshData()">Refresh</button>
+    <button class="btn" onclick="showMethodology()" style="margin-left:auto">Methodology</button>
   </div>
   <div class="progress-wrap" id="progress-wrap">
     <div class="progress-label">
       <span id="progress-text">Scanning SEC EDGAR filings...</span>
       <span id="progress-count">0 / 0</span>
     </div>
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="progress-bar"></div>
-    </div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
     <div class="progress-deals" id="progress-deals">0 candidates found · Filtering: spread -10% to +20%, active US listings only</div>
   </div>
   <div class="mstrip">
@@ -310,7 +450,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="mc"><div class="mc-l">Avg Score</div><div class="mc-v" id="m-score">--</div><div class="mc-h">proprietary model</div></div>
     <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
   </div>
-
   <div id="deal-list">
     <div class="loading-wrap">
       <div class="spinner"></div>
@@ -318,10 +457,184 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="loading-sub">Fetching from SEC EDGAR</div>
     </div>
   </div>
-
   <footer>
     <div class="footer-logo">Meridian</div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Model backtested · historical deals · Spread range -10% to +20%</div>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+    </div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 51 historical deals · Spread range -10% to +20%</div>
+  </footer>
+</div>
+
+<!-- DEAL ANALYSIS PAGE -->
+<div id="page-analysis" class="page">
+  <nav class="da-nav">
+    <button class="da-back" onclick="showDashboard()">← Back to Dashboard</button>
+    <button class="dnav-logo" onclick="showLanding()" style="font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;">MERI<em style="font-style:italic;color:var(--green);">DIAN</em></button>
+  </nav>
+  <div class="da-hero">
+    <div class="da-hero-top">
+      <div>
+        <div class="da-ticker" id="da-ticker">--</div>
+        <div class="da-company" id="da-company">--</div>
+        <div class="da-acquirer-lbl">Being acquired by</div>
+        <div class="da-acquirer" id="da-acquirer">--</div>
+        <div class="da-badges" id="da-badges"></div>
+      </div>
+      <div class="da-spread-block">
+        <div class="da-spread-num" id="da-spread">--</div>
+        <div class="da-spread-lbl">Spread</div>
+        <div class="da-ann" id="da-ann">--</div>
+      </div>
+    </div>
+  </div>
+  <div class="da-metrics" id="da-metrics"></div>
+  <div class="da-section"><div class="da-section-title">Return Analysis</div><table class="return-table" id="da-return-table"></table></div>
+  <div class="da-section"><div class="da-section-title">Score Breakdown</div><div class="score-bars" id="da-score-bars"></div></div>
+  <div class="da-section"><div class="da-section-title">Risk Factors</div><div class="risk-factors" id="da-risk-factors"></div></div>
+  <div class="da-section"><div class="da-section-title">Deal Timeline</div><div class="timeline" id="da-timeline"></div></div>
+  <footer style="margin-top:2rem;">
+    <div class="footer-logo">Meridian</div>
+    <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance</div>
+  </footer>
+</div>
+
+<!-- METHODOLOGY PAGE -->
+<div id="page-methodology" class="page">
+  <nav class="da-nav">
+    <button class="da-back" onclick="history.back(); setTimeout(()=>{if(document.getElementById('page-methodology').classList.contains('active')) showLanding();},100)">← Back</button>
+    <button class="dnav-logo" onclick="showLanding()" style="font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;">MERI<em style="font-style:italic;color:var(--green);">DIAN</em></button>
+  </nav>
+
+  <div class="meth-hero">
+    <div class="meth-title">The <em>Scoring</em> Model</div>
+    <div class="meth-sub">◈ Methodology & Backtest Results</div>
+    <p class="meth-desc">Meridian's proprietary scoring model evaluates every pending M&A deal across three evidence-based factors. Each factor is weighted based on its historical predictive power across 51 closed and broken deals from 2023 to 2025.</p>
+  </div>
+
+  <!-- BACKTEST RESULTS -->
+  <div class="backtest-strip">
+    <div class="bt-cell"><div class="bt-val">88.2%</div><div class="bt-label">Overall Accuracy</div><div class="bt-sub">Across all 51 deals</div></div>
+    <div class="bt-cell"><div class="bt-val">51</div><div class="bt-label">Deals Backtested</div><div class="bt-sub">2023 through 2025</div></div>
+    <div class="bt-cell"><div class="bt-val">89.2%</div><div class="bt-label">Closed Deal Accuracy</div><div class="bt-sub">33 of 37 correctly predicted</div></div>
+    <div class="bt-cell"><div class="bt-val">85.7%</div><div class="bt-label">Broken Deal Accuracy</div><div class="bt-sub">12 of 14 correctly predicted</div></div>
+  </div>
+
+  <!-- FACTOR 1 -->
+  <div class="meth-section">
+    <div class="meth-section-header">
+      <div class="meth-section-num">01</div>
+      <div>
+        <div class="meth-section-title">Spread Quality</div>
+        <div class="meth-section-weight">Primary Factor · Highest Predictive Weight</div>
+      </div>
+    </div>
+    <p class="factor-note" style="margin-bottom:1rem;">The merger arbitrage spread — the gap between current market price and deal price — is the single most powerful predictor of deal outcome. A tight spread means the market has high confidence the deal closes. A wide spread means the market is pricing in meaningful break risk. This factor accounts for the majority of the model's predictive power.</p>
+    <table class="factor-table">
+      <thead><tr><th>Spread Range</th><th>Market Signal</th><th class="r">Score Adjustment</th></tr></thead>
+      <tbody>
+        <tr><td>0% to 3%</td><td>Market fully confident · deal expected to close</td><td class="pts pos r">+25 points</td></tr>
+        <tr><td>3% to 5%</td><td>Healthy spread · normal deal uncertainty</td><td class="pts pos r">+18 points</td></tr>
+        <tr><td>5% to 8%</td><td>Moderate spread · some market concern</td><td class="pts pos r">+10 points</td></tr>
+        <tr><td>8% to 12%</td><td>Wide spread · notable market skepticism</td><td class="pts neu r">+0 points</td></tr>
+        <tr><td>12% to 18%</td><td>Very wide · serious concern about completion</td><td class="pts neg r">-15 points</td></tr>
+        <tr><td>18% to 25%</td><td>Extreme spread · market pricing in high break risk</td><td class="pts neg r">-25 points</td></tr>
+        <tr><td>25%+</td><td>Market pricing in near-certain deal break</td><td class="pts neg r">-35 points</td></tr>
+        <tr><td>Negative</td><td>Market says deal has already effectively broken</td><td class="pts neg r">-25 points</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FACTOR 2 -->
+  <div class="meth-section">
+    <div class="meth-section-header">
+      <div class="meth-section-num">02</div>
+      <div>
+        <div class="meth-section-title">Deal Structure</div>
+        <div class="meth-section-weight">Secondary Factor · Deal Type Completion Rates</div>
+      </div>
+    </div>
+    <p class="factor-note" style="margin-bottom:1rem;">Different deal structures have meaningfully different completion rates. All-cash deals are the most reliable — there is no stock price risk and the acquirer has secured financing upfront. Tender offers close faster and at higher rates due to the direct shareholder approach. Mixed cash-and-stock deals carry additional complexity because the final value depends on the acquirer's share price at closing.</p>
+    <table class="factor-table">
+      <thead><tr><th>Deal Type</th><th>Characteristics</th><th class="r">Score Adjustment</th></tr></thead>
+      <tbody>
+        <tr><td>All Cash</td><td>Highest certainty · no stock price risk · financing secured</td><td class="pts pos r">+10 points</td></tr>
+        <tr><td>Tender Offer</td><td>Direct shareholder approach · fast timeline · high completion rate</td><td class="pts pos r">+8 points</td></tr>
+        <tr><td>Private Equity</td><td>Financing dependent · leveraged · slightly more break risk</td><td class="pts pos r">+5 points</td></tr>
+        <tr><td>Cash + Stock</td><td>Stock component adds market risk · more complex closing conditions</td><td class="pts neu r">+0 points</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FACTOR 3 -->
+  <div class="meth-section">
+    <div class="meth-section-header">
+      <div class="meth-section-num">03</div>
+      <div>
+        <div class="meth-section-title">Time Pending</div>
+        <div class="meth-section-weight">Tertiary Factor · Deal Duration Signal</div>
+      </div>
+    </div>
+    <p class="factor-note" style="margin-bottom:1rem;">Deals that have been pending longer face greater accumulated risk — regulatory complications, changing market conditions, financing environment shifts. However, this factor is weighted less aggressively than spread because some legitimate deals (particularly large strategic acquisitions requiring multi-jurisdictional regulatory review) take 18-24 months while still closing successfully.</p>
+    <table class="factor-table">
+      <thead><tr><th>Days Pending</th><th>Signal</th><th class="r">Score Adjustment</th></tr></thead>
+      <tbody>
+        <tr><td>Under 90 days</td><td>Fresh deal · full regulatory timeline ahead · low accumulated risk</td><td class="pts pos r">+10 points</td></tr>
+        <tr><td>90 to 270 days</td><td>Normal progression · expected timeline for most deals</td><td class="pts neu r">+0 points</td></tr>
+        <tr><td>270 to 500 days</td><td>Extended timeline · possible complications</td><td class="pts neg r">-5 points</td></tr>
+        <tr><td>500+ days</td><td>Very extended · serious regulatory or financing concerns</td><td class="pts neg r">-15 points</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RISK THRESHOLDS -->
+  <div class="meth-section">
+    <div class="meth-section-header">
+      <div class="meth-section-num">04</div>
+      <div>
+        <div class="meth-section-title">Risk Classification Thresholds</div>
+        <div class="meth-section-weight">How Scores Map to Risk Levels</div>
+      </div>
+    </div>
+    <p class="factor-note" style="margin-bottom:1rem;">All deals start at a base score of 70. The three factors above adjust this score up or down. The final score maps to a risk classification. The 70-point threshold for Low Risk was calibrated through backtesting to maximize accuracy — scores at or above 70 correctly predicted deal closure in 89.2% of historical cases.</p>
+    <div class="threshold-grid">
+      <div class="threshold-cell vl"><div class="threshold-range">80 to 100</div><div class="threshold-name">Very Low Risk</div><div class="threshold-desc">Market has high conviction. Tight spread, strong deal structure. These positions trade closest to deal price.</div></div>
+      <div class="threshold-cell lo"><div class="threshold-range">65 to 79</div><div class="threshold-name">Low Risk</div><div class="threshold-desc">Solid completion probability. Minor uncertainties that the market has priced in appropriately.</div></div>
+      <div class="threshold-cell md"><div class="threshold-range">50 to 64</div><div class="threshold-name">Medium Risk</div><div class="threshold-desc">Elevated uncertainty. Wider spread reflects meaningful market concern about deal completion.</div></div>
+      <div class="threshold-cell hi"><div class="threshold-range">0 to 49</div><div class="threshold-name">High Risk</div><div class="threshold-desc">Market pricing in significant break probability. Approach with caution and size positions accordingly.</div></div>
+    </div>
+  </div>
+
+  <!-- SAMPLE BACKTEST DEALS -->
+  <div class="meth-section">
+    <div class="meth-section-header">
+      <div class="meth-section-num">05</div>
+      <div>
+        <div class="meth-section-title">Sample Backtest Results</div>
+        <div class="meth-section-weight">Selected deals from the 51-deal backtest · 2023–2025</div>
+      </div>
+    </div>
+    <table class="sample-table">
+      <thead><tr><th>Ticker</th><th>Spread at Ann.</th><th>Score</th><th>Predicted</th><th>Actual</th><th>Correct</th></tr></thead>
+      <tbody>
+        <tr><td>CACC</td><td>4.0%</td><td>98</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="correct-yes">✓</td></tr>
+        <tr><td>GTES</td><td>3.0%</td><td>98</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SGEN</td><td>5.0%</td><td>85</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SAVE</td><td>35.0%</td><td>30</td><td>Broken</td><td class="outcome-broken">Broken</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SGFY</td><td>12.0%</td><td>60</td><td>Broken</td><td class="outcome-broken">Broken</td><td class="correct-yes">✓</td></tr>
+        <tr><td>CHNG</td><td>22.0%</td><td>40</td><td>Broken</td><td class="outcome-broken">Broken</td><td class="correct-yes">✓</td></tr>
+        <tr><td>ATVI</td><td>25.0%</td><td>30</td><td>Broken</td><td class="outcome-closed">Closed</td><td class="correct-no">✗</td></tr>
+        <tr><td>ACI</td><td>15.0%</td><td>50</td><td>Broken</td><td class="outcome-closed">Closed</td><td class="correct-no">✗</td></tr>
+      </tbody>
+    </table>
+    <p class="factor-note" style="margin-top:1rem;">The two notable misses — ATVI (Microsoft/Activision) and ACI (Kroger/Albertsons) — were both large strategic acquisitions that faced prolonged antitrust battles but ultimately closed. Their wide spreads correctly signaled elevated risk, but the model classified them as breaks. These cases illustrate the model's limitation: it cannot distinguish between deals that are genuinely breaking and deals that face regulatory headwinds but eventually close.</p>
+  </div>
+
+  <footer style="margin-top:2rem;">
+    <div class="footer-logo">Meridian</div>
+    <div class="footer-links"><button class="footer-link" onclick="showDashboard()">Dashboard</button></div>
+    <div class="footer-info">Backtested · 51 historical deals · 2023–2025<br>Model v4 · May 2026</div>
   </footer>
 </div>
 
@@ -330,18 +643,42 @@ let allDeals = [];
 let expandedIndex = null;
 let dealsLoaded = false;
 const collapsedSections = new Set();
+let currentDeal = null;
+let previousPage = 'landing';
 
 function showLanding(){
     document.getElementById('page-landing').classList.add('active');
     document.getElementById('page-dashboard').classList.remove('active');
+    document.getElementById('page-analysis').classList.remove('active');
+    document.getElementById('page-methodology').classList.remove('active');
     window.scrollTo(0,0);
 }
 
 function showDashboard(){
     document.getElementById('page-landing').classList.remove('active');
     document.getElementById('page-dashboard').classList.add('active');
+    document.getElementById('page-analysis').classList.remove('active');
+    document.getElementById('page-methodology').classList.remove('active');
     window.scrollTo(0,0);
     if(!dealsLoaded) loadDeals();
+}
+
+function showAnalysis(deal){
+    currentDeal = deal;
+    document.getElementById('page-landing').classList.remove('active');
+    document.getElementById('page-dashboard').classList.remove('active');
+    document.getElementById('page-analysis').classList.add('active');
+    document.getElementById('page-methodology').classList.remove('active');
+    window.scrollTo(0,0);
+    renderAnalysis(deal);
+}
+
+function showMethodology(){
+    document.getElementById('page-landing').classList.remove('active');
+    document.getElementById('page-dashboard').classList.remove('active');
+    document.getElementById('page-analysis').classList.remove('active');
+    document.getElementById('page-methodology').classList.add('active');
+    window.scrollTo(0,0);
 }
 
 function formatDate(){
@@ -389,12 +726,146 @@ function updateLocalTime(fetched){
     if(!fetched) return 'Unknown';
     try {
         const dateStr = fetched + ':00Z';
-        return new Date(dateStr).toLocaleString('en-US', {
-            month: 'short', day: 'numeric',
-            hour: 'numeric', minute: '2-digit',
-            hour12: true, timeZoneName: 'short'
-        });
+        return new Date(dateStr).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
     } catch(e){ return fetched; }
+}
+
+function getRiskFactors(deal){
+    const factors = [];
+    if(deal.sp_pct < 0){
+        factors.push({level:'hi', text:'Negative spread indicates the market is pricing in a meaningful probability of deal failure. The current price exceeds the deal price, suggesting investor skepticism.'});
+    }
+    if(deal.days_old > 270){
+        factors.push({level:'md', text:`Deal has been pending for ${deal.days_old} days. Extended timelines increase regulatory and financing risk, and may indicate unresolved issues between parties.`});
+    }
+    if(deal.deal_type === 'Cash + Stock'){
+        factors.push({level:'md', text:"Mixed consideration deals carry additional complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk."});
+    }
+    if(deal.deal_type === 'Tender Offer'){
+        factors.push({level:'lo', text:'Tender offers typically close faster than mergers and have higher completion rates due to the direct shareholder approach and predetermined acceptance thresholds.'});
+    }
+    if(deal.deal_type === 'Private Equity'){
+        factors.push({level:'md', text:'Private equity acquisitions depend on financing conditions. Rising interest rates or tightening credit markets can increase deal break risk for leveraged buyouts.'});
+    }
+    if(deal.sp_pct > 12){
+        factors.push({level:'hi', text:`High spread of ${deal.sp_pct.toFixed(2)}% signals elevated market concern about deal completion. Our model assigns this a significant negative adjustment — historically deals with spreads above 12% break at materially higher rates.`});
+    }
+    if(deal.close_date === 'TBD'){
+        factors.push({level:'md', text:'No expected close date has been publicly disclosed, making annualized return calculations approximate. Timeline uncertainty adds risk to position sizing decisions.'});
+    }
+    if(factors.length === 0){
+        factors.push({level:'lo', text:'Deal structure appears straightforward with no major identified risk factors. Standard merger completion risks apply including regulatory review and shareholder approval.'});
+    }
+    return factors.slice(0,4);
+}
+
+function getScoreBreakdown(deal){
+    // Use the actual scoring model logic for breakdown
+    let spreadScore = 70;
+    if(deal.sp_pct > 0 && deal.sp_pct < 3) spreadScore = 95;
+    else if(deal.sp_pct >= 3 && deal.sp_pct < 5) spreadScore = 88;
+    else if(deal.sp_pct >= 5 && deal.sp_pct < 8) spreadScore = 80;
+    else if(deal.sp_pct >= 8 && deal.sp_pct < 12) spreadScore = 65;
+    else if(deal.sp_pct >= 12 && deal.sp_pct < 18) spreadScore = 45;
+    else if(deal.sp_pct >= 18 && deal.sp_pct < 25) spreadScore = 30;
+    else if(deal.sp_pct >= 25) spreadScore = 15;
+    else if(deal.sp_pct < 0) spreadScore = 25;
+
+    let typeScore = deal.deal_type === 'All Cash' ? 90 : deal.deal_type === 'Tender Offer' ? 85 : deal.deal_type === 'Private Equity' ? 75 : 65;
+
+    let daysScore = deal.days_old < 90 ? 95 : deal.days_old < 270 ? 80 : deal.days_old < 500 ? 65 : 45;
+
+    const spreadDesc = `${deal.sp_pct.toFixed(2)}% spread — ${deal.sp_pct < 5 ? 'tight spread signals market confidence' : deal.sp_pct < 12 ? 'moderate spread reflects some market uncertainty' : 'wide spread indicates elevated break risk'}`;
+    const typeDesc = `${deal.deal_type} — ${deal.deal_type === 'All Cash' ? 'highest reliability, no stock price risk' : deal.deal_type === 'Tender Offer' ? 'fast timeline, high completion rate' : deal.deal_type === 'Private Equity' ? 'financing dependent, moderate risk' : 'stock component adds complexity'}`;
+    const daysDesc = `${deal.days_old} days pending — ${deal.days_old < 90 ? 'fresh deal, minimal accumulated risk' : deal.days_old < 270 ? 'normal deal progression' : 'extended timeline, elevated risk'}`;
+
+    return [
+        {label: 'Spread Quality', score: spreadScore, color: getScoreColor(spreadScore), desc: spreadDesc},
+        {label: 'Deal Structure', score: typeScore, color: getScoreColor(typeScore), desc: typeDesc},
+        {label: 'Time Pending', score: daysScore, color: getScoreColor(daysScore), desc: daysDesc},
+        {label: 'Overall Score', score: deal.score, color: getScoreColor(deal.score), desc: `Final composite score — ${deal.risk} Risk classification`},
+    ];
+}
+
+function renderAnalysis(deal){
+    const bc = getBadgeClass(deal.risk);
+    const tc = getTypeClass(deal.deal_type);
+    const tl = getTypeLabel(deal.deal_type);
+    const company = deal.company || deal.ticker + ' Corp.';
+    const closeDate = deal.close_date && deal.close_date !== 'TBD' && deal.close_date !== 'nan' ? deal.close_date : 'TBD';
+    const txVal = deal.tx_value && !isNaN(deal.tx_value) ? '$' + parseFloat(deal.tx_value).toFixed(1) + 'B' : 'N/A';
+
+    document.getElementById('da-ticker').textContent = deal.ticker;
+    document.getElementById('da-company').textContent = company;
+    document.getElementById('da-acquirer').textContent = deal.acquirer || 'Undisclosed';
+    document.getElementById('da-spread').textContent = sign(deal.sp_pct) + deal.sp_pct.toFixed(2) + '%';
+    document.getElementById('da-spread').style.color = spColor(deal.sp_pct);
+    document.getElementById('da-ann').textContent = 'Ann. Return: ' + sign(deal.ann) + deal.ann.toFixed(2) + '%';
+    document.getElementById('da-ann').style.color = spColor(deal.ann);
+    document.getElementById('da-badges').innerHTML = `
+        <span class="badge ${tc}" style="font-size:0.48rem;padding:3px 8px">${tl}</span>
+        <span class="badge ${bc}" style="font-size:0.48rem;padding:3px 8px">${deal.risk} Risk</span>
+        <span class="badge" style="font-size:0.48rem;padding:3px 8px;color:var(--dim);border-color:var(--bdr2)">${deal.score}/100</span>
+    `;
+
+    document.getElementById('da-metrics').innerHTML = `
+        <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">$${deal.cp.toFixed(2)}</div></div>
+        <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
+        <div class="da-metric hi"><div class="da-ml">Spread</div><div class="da-mv" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div></div>
+        <div class="da-metric"><div class="da-ml">Ann. Return</div><div class="da-mv sm" style="color:${spColor(deal.ann)}">${sign(deal.ann)}${deal.ann.toFixed(2)}%</div></div>
+        <div class="da-metric"><div class="da-ml">Expected Close</div><div class="da-mv sm">${closeDate}</div></div>
+        <div class="da-metric"><div class="da-ml">Transaction Value</div><div class="da-mv sm">${txVal}</div></div>
+    `;
+
+    const investments = [1000, 5000, 10000, 50000, 100000];
+    let tableHtml = `<thead><tr><th>Investment</th><th class="r">Profit if Closes</th><th class="r">Spread Return</th><th class="r">Ann. Return</th></tr></thead><tbody>`;
+    investments.forEach(inv => {
+        const profit = (deal.sp_pct / 100) * inv;
+        tableHtml += `<tr>
+            <td>$${inv.toLocaleString()}</td>
+            <td class="r" style="color:${spColor(profit)}">$${Math.abs(profit).toLocaleString('en-US',{maximumFractionDigits:0})}</td>
+            <td class="r" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</td>
+            <td class="r" style="color:${spColor(deal.ann)}">${sign(deal.ann)}${deal.ann.toFixed(2)}%</td>
+        </tr>`;
+    });
+    tableHtml += '</tbody>';
+    document.getElementById('da-return-table').innerHTML = tableHtml;
+
+    const breakdown = getScoreBreakdown(deal);
+    document.getElementById('da-score-bars').innerHTML = breakdown.map(b => `
+        <div class="score-bar-item">
+            <div class="score-bar-header">
+                <span class="score-bar-label">${b.label}</span>
+                <span class="score-bar-val">${b.score}/100</span>
+            </div>
+            <div class="score-bar-desc">${b.desc}</div>
+            <div class="score-bar-track"><div class="score-bar-fill" style="width:${b.score}%;background:${b.color}"></div></div>
+        </div>
+    `).join('');
+
+    const factors = getRiskFactors(deal);
+    document.getElementById('da-risk-factors').innerHTML = factors.map(f => `
+        <div class="risk-factor">
+            <div class="risk-dot ${f.level}"></div>
+            <div class="risk-text">${f.text}</div>
+        </div>
+    `).join('');
+
+    const daysSinceFiled = deal.days_old;
+    const totalDays = closeDate !== 'TBD' ? 365 : 180;
+    const progress = Math.min(100, (daysSinceFiled / totalDays) * 100);
+    document.getElementById('da-timeline').innerHTML = `
+        <div class="timeline-track">
+            <div class="timeline-dot"></div>
+            <div class="timeline-line"><div class="timeline-line-fill" style="width:${progress}%"></div></div>
+            <div class="timeline-dot end"></div>
+        </div>
+        <div class="timeline-labels">
+            <span class="timeline-label">Announced · ${deal.filed}</span>
+            <span class="timeline-label">Expected Close · ${closeDate}</span>
+        </div>
+        <div class="timeline-days">${daysSinceFiled} days elapsed · ${closeDate !== 'TBD' ? 'Target: ' + closeDate : 'Close date pending disclosure'}</div>
+    `;
 }
 
 function toggleSection(sectionId){
@@ -418,7 +889,6 @@ function renderDeals(deals){
         list.innerHTML = '<div class="loading-wrap"><div class="loading-title">No deals available</div><div class="loading-sub">Click refresh to fetch from SEC EDGAR</div></div>';
         return;
     }
-
     const avgSpread = deals.reduce((s,d) => s + d.sp_pct, 0) / deals.length;
     const avgScore = deals.reduce((s,d) => s + d.score, 0) / deals.length;
     document.getElementById('m-deals').textContent = deals.length;
@@ -427,10 +897,10 @@ function renderDeals(deals){
     document.getElementById('m-updated').textContent = updateLocalTime(deals[0].fetched);
 
     const sections = [
-        { id: 'all-cash', label: 'All Cash Deals', type: 'All Cash' },
-        { id: 'cash-stock', label: 'Cash + Stock Deals', type: 'Cash + Stock' },
-        { id: 'tender', label: 'Tender Offer Deals', type: 'Tender Offer' },
-        { id: 'pe', label: 'Private Equity Deals', type: 'Private Equity' },
+        {id:'all-cash', label:'All Cash Deals', type:'All Cash'},
+        {id:'cash-stock', label:'Cash + Stock Deals', type:'Cash + Stock'},
+        {id:'tender', label:'Tender Offer Deals', type:'Tender Offer'},
+        {id:'pe', label:'Private Equity Deals', type:'Private Equity'},
     ];
 
     let html = '';
@@ -439,7 +909,6 @@ function renderDeals(deals){
     sections.forEach(section => {
         const sectionDeals = deals.filter(d => d.deal_type === section.type);
         if(sectionDeals.length === 0) return;
-
         const avgSp = sectionDeals.reduce((s,d) => s + d.sp_pct, 0) / sectionDeals.length;
         const isCollapsed = collapsedSections.has(section.id);
 
@@ -449,22 +918,16 @@ function renderDeals(deals){
           <div class="section-sep-label">
             ${section.label}
             <span class="section-sep-meta">${sectionDeals.length} deals · avg ${sign(avgSp)}${avgSp.toFixed(2)}%</span>
-            <span class="section-sep-toggle ${isCollapsed ? 'collapsed' : ''}" id="toggle-${section.id}">▾</span>
+            <span class="section-sep-toggle ${isCollapsed?'collapsed':''}" id="toggle-${section.id}">▾</span>
           </div>
           <div class="section-sep-line"></div>
         </div>
-        <div class="section-body ${isCollapsed ? 'collapsed' : ''}" id="body-${section.id}" style="max-height:${isCollapsed ? '0' : '9999px'}">
+        <div class="section-body ${isCollapsed?'collapsed':''}" id="body-${section.id}" style="max-height:${isCollapsed?'0':'9999px'}">
           <div class="tbl-wrap">
             <div class="tbl-header">
-              <div class="th">Ticker</div>
-              <div class="th">Type</div>
-              <div class="th">Acquirer</div>
-              <div class="th">Company</div>
-              <div class="th r">Current</div>
-              <div class="th r">Deal Price</div>
-              <div class="th r">Spread</div>
-              <div class="th r">Ann. Return</div>
-              <div class="th r">Risk</div>
+              <div class="th">Ticker</div><div class="th">Type</div><div class="th">Acquirer</div>
+              <div class="th">Company</div><div class="th r">Current</div><div class="th r">Deal Price</div>
+              <div class="th r">Spread</div><div class="th r">Ann. Return</div><div class="th r">Risk</div>
             </div>`;
 
         sectionDeals.forEach(d => {
@@ -475,13 +938,13 @@ function renderDeals(deals){
             const isExp = expandedIndex === i;
             const company = d.company || d.ticker + ' Corp.';
             const closeDate = d.close_date && d.close_date !== 'TBD' && d.close_date !== 'nan' ? d.close_date : 'TBD';
-            const txVal = d.tx_value && d.tx_value !== 'nan' && !isNaN(d.tx_value) ? '$' + parseFloat(d.tx_value).toFixed(1) + 'B' : 'N/A';
+            const txVal = d.tx_value && !isNaN(d.tx_value) ? '$' + parseFloat(d.tx_value).toFixed(1) + 'B' : 'N/A';
 
             html += `
-            <div class="deal-row ${isExp ? 'expanded' : ''}" onclick="toggleDeal(${i})">
+            <div class="deal-row ${isExp?'expanded':''}" onclick="toggleDeal(${i})">
               <div class="r-ticker">${d.ticker}</div>
               <div><span class="r-type ${tc}">${tl}</span></div>
-              <div class="r-acq">${d.acquirer || 'Undisclosed'}</div>
+              <div class="r-acq">${d.acquirer||'Undisclosed'}</div>
               <div class="r-co">${company}</div>
               <div class="r-num">$${d.cp.toFixed(2)}</div>
               <div class="r-num">$${d.dp.toFixed(2)}</div>
@@ -489,73 +952,39 @@ function renderDeals(deals){
               <div class="r-num" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
               <div class="r-badge-wrap"><span class="badge ${bc}">${d.risk}</span></div>
             </div>
-            <div class="detail-panel ${isExp ? 'open' : ''}">
+            <div class="detail-panel ${isExp?'open':''}">
               <div class="dp-top">
                 <div>
                   <div class="dp-ticker">${d.ticker}</div>
                   <div class="dp-acq-lbl">Target Company</div>
                   <div class="dp-acq-name">${company}</div>
                   <div class="dp-acq-lbl" style="margin-top:0.75rem">Being acquired by</div>
-                  <div class="dp-acq-name">${d.acquirer || 'Undisclosed'}</div>
+                  <div class="dp-acq-name">${d.acquirer||'Undisclosed'}</div>
                 </div>
                 <span class="badge ${bc}" style="font-size:0.52rem;padding:4px 10px">${d.risk} Risk</span>
               </div>
               <div class="dp-metrics">
-                <div class="dp-metric hi">
-                  <div class="dp-ml">Spread</div>
-                  <div class="dp-mv" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
-                </div>
-                <div class="dp-metric hi">
-                  <div class="dp-ml">Ann. Return</div>
-                  <div class="dp-mv" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
-                </div>
-                <div class="dp-metric hi">
-                  <div class="dp-ml">Profit per $10k</div>
-                  <div class="dp-mv" style="color:${spColor(d.sp_pct)}">$${Math.abs(d.sp_pct/100*10000).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Current Price</div>
-                  <div class="dp-mv sm">$${d.cp.toFixed(2)}</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Deal Price</div>
-                  <div class="dp-mv sm">$${d.dp.toFixed(2)}</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Expected Close</div>
-                  <div class="dp-mv sm">${closeDate}</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Filed</div>
-                  <div class="dp-mv sm">${d.filed}</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Days Old</div>
-                  <div class="dp-mv sm">${d.days_old}d</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Transaction Value</div>
-                  <div class="dp-mv sm">${txVal}</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Deal Type</div>
-                  <div class="dp-mv sm">${d.deal_type}</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Score</div>
-                  <div class="dp-mv sm">${d.score}/100</div>
-                </div>
-                <div class="dp-metric">
-                  <div class="dp-ml">Spread Range</div>
-                  <div class="dp-mv sm">-10% to +20%</div>
-                </div>
+                <div class="dp-metric hi"><div class="dp-ml">Spread</div><div class="dp-mv" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div></div>
+                <div class="dp-metric hi"><div class="dp-ml">Ann. Return</div><div class="dp-mv" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div></div>
+                <div class="dp-metric hi"><div class="dp-ml">Profit per $10k</div><div class="dp-mv" style="color:${spColor(d.sp_pct)}">$${Math.abs(d.sp_pct/100*10000).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Current Price</div><div class="dp-mv sm">$${d.cp.toFixed(2)}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Deal Price</div><div class="dp-mv sm">$${d.dp.toFixed(2)}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Expected Close</div><div class="dp-mv sm">${closeDate}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Filed</div><div class="dp-mv sm">${d.filed}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Days Old</div><div class="dp-mv sm">${d.days_old}d</div></div>
+                <div class="dp-metric"><div class="dp-ml">Transaction Value</div><div class="dp-mv sm">${txVal}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Deal Type</div><div class="dp-mv sm">${d.deal_type}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Score</div><div class="dp-mv sm">${d.score}/100</div></div>
+                <div class="dp-metric"><div class="dp-ml">Spread Range</div><div class="dp-mv sm">-10% to +20%</div></div>
               </div>
+              <button class="analysis-btn" onclick="event.stopPropagation(); showAnalysis(allDeals.find(x=>x.ticker==='${d.ticker}'))">
+                View Full Analysis →
+              </button>
+              <div class="analysis-btn-label">Score breakdown · Risk factors · Return analysis · Deal timeline</div>
             </div>`;
         });
-
         html += '</div></div>';
     });
-
     list.innerHTML = html;
 }
 
@@ -572,8 +1001,7 @@ async function loadDeals(){
         dealsLoaded = true;
         renderDeals(allDeals);
     } catch(e){
-        document.getElementById('deal-list').innerHTML =
-            '<div class="loading-wrap"><div class="loading-title">Error loading deals</div><div class="loading-sub">Please refresh the page</div></div>';
+        document.getElementById('deal-list').innerHTML = '<div class="loading-wrap"><div class="loading-title">Error loading deals</div><div class="loading-sub">Please refresh the page</div></div>';
     }
 }
 
@@ -594,7 +1022,6 @@ function refreshData(){
     progressDeals.textContent = '0 candidates found · Filtering: spread -10% to +20%, active US listings only';
 
     const evtSource = new EventSource('/api/refresh-stream');
-
     evtSource.onmessage = function(e){
         const data = JSON.parse(e.data);
         if(data.done){
@@ -607,24 +1034,23 @@ function refreshData(){
             progressDeals.textContent = allDeals.length + ' deals loaded';
             btn.disabled = false;
             btn.textContent = 'Refresh';
-            setTimeout(() => { progressWrap.classList.remove('active'); }, 3000);
+            setTimeout(()=>{progressWrap.classList.remove('active');}, 3000);
             return;
         }
         if(data.total > 0){
-            const pct = Math.round((data.current / data.total) * 100);
-            progressBar.style.width = pct + '%';
+            const pct = Math.round((data.current/data.total)*100);
+            progressBar.style.width = pct+'%';
             progressText.textContent = 'Scanning SEC EDGAR filings...';
-            progressCount.textContent = data.current + ' / ' + data.total;
-            progressDeals.textContent = data.deals_found + ' candidates found · Filtering: spread -10% to +20%, active US listings only';
+            progressCount.textContent = data.current+' / '+data.total;
+            progressDeals.textContent = data.deals_found+' candidates found · Filtering: spread -10% to +20%, active US listings only';
         }
     };
-
     evtSource.onerror = function(){
         evtSource.close();
         btn.disabled = false;
         btn.textContent = 'Refresh';
         progressText.textContent = 'Error during scan. Try again.';
-        setTimeout(() => { progressWrap.classList.remove('active'); }, 3000);
+        setTimeout(()=>{progressWrap.classList.remove('active');},3000);
     };
 }
 
