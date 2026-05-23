@@ -13,14 +13,12 @@ html,body{background:var(--bg);color:var(--cream);font-family:'DM Sans',sans-ser
 body::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(232,224,200,0.008) 3px,rgba(232,224,200,0.008) 4px);pointer-events:none;z-index:0;}
 .page{display:none;}.page.active{display:block;}
 
-/* TICKER */
 .ticker-wrap{background:var(--bg3);border-bottom:1px solid var(--bdr);overflow:hidden;padding:0.4rem 0;position:relative;z-index:10;}
 .ticker-track{display:inline-flex;gap:0;animation:scroll 22s linear infinite;white-space:nowrap;}
 @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .ti{display:inline-flex;align-items:center;gap:0.4rem;padding:0 1.25rem;border-right:1px solid var(--bdr2);font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.1em;}
 .ti-sym{color:var(--cream);font-weight:500;}.ti-pos{color:var(--green);}.ti-neg{color:var(--red);}
 
-/* LANDING */
 .land-nav{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 3rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
 .land-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1.2rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);}
 .land-logo em{font-style:italic;color:var(--green);}
@@ -44,15 +42,12 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .enter-btn{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--green);border:1px solid var(--green2);padding:0.85rem 2.5rem;background:rgba(90,158,106,0.04);display:inline-block;transition:all 0.2s;cursor:pointer;animation:fadeUp 0.8s ease 0.35s both;}
 .enter-btn:hover{background:rgba(90,158,106,0.08);color:var(--cream);}
 
-/* METHODOLOGY PROMO BANNER */
 .methodology-banner{background:rgba(90,158,106,0.06);border:1px solid var(--green2);border-left:3px solid var(--green);padding:1.25rem 2rem;max-width:700px;margin:0 auto 2.5rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;animation:fadeUp 0.8s ease 0.45s both;cursor:pointer;transition:background 0.2s;}
 .methodology-banner:hover{background:rgba(90,158,106,0.1);}
-.methodology-banner-left{}
 .methodology-banner-title{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--green);margin-bottom:0.35rem;}
 .methodology-banner-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);font-weight:300;}
 .methodology-banner-arrow{font-family:'DM Mono',monospace;font-size:1.2rem;color:var(--green);flex-shrink:0;}
 
-/* SCORING SECTION */
 .scoring{background:var(--bg2);border-top:1px solid var(--bdr);padding:5rem 4rem;position:relative;z-index:10;}
 .s-title{font-family:'Playfair Display',serif;font-weight:300;font-size:2rem;color:var(--cream);text-align:center;margin-bottom:0.4rem;}
 .s-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.22em;text-transform:uppercase;text-align:center;margin-bottom:3rem;}
@@ -71,19 +66,15 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .s-card.hi .s-range{color:var(--red);}
 .s-name{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;}
 .s-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.75;font-weight:300;}
-
-/* METHODOLOGY LINK IN SCORING SECTION */
 .s-methodology-link{max-width:1100px;margin:0 auto 4rem;display:flex;justify-content:center;}
 .s-methodology-btn{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--green);border:1px solid var(--green2);padding:0.7rem 2rem;background:rgba(90,158,106,0.04);cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.75rem;}
 .s-methodology-btn:hover{background:rgba(90,158,106,0.1);color:var(--cream);}
-
 .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1100px;margin:0 auto;}
 .how-card{padding:1.5rem 1.5rem 1.5rem 2rem;border-left:1px solid var(--bdr2);}
 .how-n{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;color:var(--bdr2);line-height:1;margin-bottom:1rem;}
 .how-t{font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;color:var(--cream);margin-bottom:0.5rem;}
 .how-d{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.7;font-weight:300;}
 
-/* DASHBOARD NAV */
 .dnav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
 .dnav-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1.1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;transition:color 0.2s;}
 .dnav-logo:hover{color:var(--green);}
@@ -94,12 +85,10 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
 .dts{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.1em;}
 
-/* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:0.75rem;padding:0.55rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);position:relative;z-index:10;}
 .btn{font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.4rem 1rem;cursor:pointer;transition:all 0.2s;}
 .btn:hover{border-color:var(--green2);color:var(--green);background:rgba(90,158,106,0.04);}
 
-/* PROGRESS */
 .progress-wrap{display:none;padding:0.6rem 2.5rem;background:var(--bg2);border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
 .progress-wrap.active{display:block;}
 .progress-label{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);letter-spacing:0.15em;margin-bottom:0.4rem;display:flex;justify-content:space-between;}
@@ -107,7 +96,6 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .progress-bar-fill{height:100%;background:var(--green);transition:width 0.3s ease;width:0%;}
 .progress-deals{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--green);letter-spacing:0.1em;margin-top:0.35rem;}
 
-/* METRICS */
 .mstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:1.25rem 2.5rem;position:relative;z-index:10;}
 .mc{background:var(--bg2);padding:1.25rem 1.75rem;position:relative;}
 .mc::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--green2),transparent);}
@@ -116,7 +104,6 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .mc-v.gr{color:var(--green);}
 .mc-h{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);margin-top:0.4rem;letter-spacing:0.1em;}
 
-/* SECTION SEPARATORS */
 .section-sep{display:flex;align-items:center;margin:1.5rem 2.5rem 0;position:relative;z-index:10;cursor:pointer;user-select:none;}
 .section-sep-line{flex:1;height:1px;background:var(--bdr2);}
 .section-sep-label{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);padding:0 1.25rem;white-space:nowrap;display:flex;align-items:center;gap:0.75rem;}
@@ -127,7 +114,6 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .section-body{overflow:hidden;transition:max-height 0.3s ease;}
 .section-body.collapsed{max-height:0!important;}
 
-/* TABLE */
 .tbl-wrap{margin:0 2.5rem;border:1px solid var(--bdr);border-top:none;position:relative;z-index:10;}
 .tbl-header{display:grid;grid-template-columns:80px 70px 170px 1fr 110px 110px 110px 130px 90px;padding:0.6rem 1.5rem;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
 .th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
@@ -152,7 +138,6 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .badge-md{color:#8a6040;border-color:rgba(138,96,64,0.35);background:rgba(138,96,64,0.05);}
 .badge-hi{color:var(--red);border-color:rgba(158,90,74,0.35);background:rgba(158,90,74,0.05);}
 
-/* DETAIL PANEL */
 .detail-panel{display:none;background:var(--bg3);border-bottom:1px solid var(--bdr2);border-left:2px solid var(--green2);padding:1.75rem 2rem 1.5rem;animation:slideDown 0.2s ease;}
 .detail-panel.open{display:block;}
 @keyframes slideDown{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
@@ -166,28 +151,23 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .dp-ml{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.4rem;}
 .dp-mv{font-family:'Playfair Display',serif;font-weight:300;font-size:1.4rem;line-height:1;}
 .dp-mv.sm{font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--cream);}
-
-/* ANALYSIS BUTTON */
-.analysis-btn{display:block;width:100%;padding:1rem;background:rgba(90,158,106,0.06);border:1px solid var(--green2);color:var(--green);font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;text-align:center;cursor:pointer;transition:all 0.2s;margin-top:0;}
+.analysis-btn{display:block;width:100%;padding:1rem;background:rgba(90,158,106,0.06);border:1px solid var(--green2);color:var(--green);font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;text-align:center;cursor:pointer;transition:all 0.2s;}
 .analysis-btn:hover{background:rgba(90,158,106,0.12);color:var(--cream);letter-spacing:0.35em;}
 .analysis-btn-label{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.15em;text-align:center;margin-top:0.4rem;}
 
-/* LOADING */
 .loading-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4rem;text-align:center;}
 .loading-title{font-family:'Playfair Display',serif;font-weight:300;font-size:1.4rem;color:var(--cream);margin-bottom:0.75rem;}
 .loading-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.15em;}
 .spinner{width:28px;height:28px;border:1px solid var(--bdr2);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin:1.5rem auto;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
-/* FOOTER */
 footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:10;margin-top:1.5rem;}
-.footer-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:0.85rem;letter-spacing:0.3em;color:var(--dim);text-transform:uppercase;}
+.footer-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:0.85rem;letter-spacing:0.3em;color:var(--dim);}
 .footer-links{display:flex;gap:2rem;align-items:center;}
 .footer-link{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;transition:color 0.2s;background:none;border:none;}
 .footer-link:hover{color:var(--green);}
 .footer-info{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;text-align:right;line-height:2;}
 
-/* DEAL ANALYSIS PAGE */
 .da-nav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
 .da-back{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;transition:color 0.2s;}
 .da-back:hover{color:var(--green);}
@@ -218,7 +198,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .return-table td.r{text-align:right;}
 .return-table tr:last-child td{border-bottom:none;}
 .score-bars{display:flex;flex-direction:column;gap:1rem;background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;}
-.score-bar-item{}
 .score-bar-header{display:flex;justify-content:space-between;margin-bottom:0.4rem;}
 .score-bar-label{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;}
 .score-bar-val{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--cream);}
@@ -243,22 +222,17 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .timeline-label{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;}
 .timeline-days{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);text-align:center;margin-top:0.75rem;}
 
-/* METHODOLOGY PAGE */
 .meth-hero{padding:4rem 2.5rem 3rem;border-bottom:1px solid var(--bdr);text-align:center;position:relative;z-index:10;}
 .meth-title{font-family:'Playfair Display',serif;font-weight:300;font-size:3rem;color:var(--cream);margin-bottom:0.75rem;}
 .meth-title em{font-style:italic;color:var(--green);}
 .meth-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;margin-bottom:1.5rem;}
 .meth-desc{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted);max-width:600px;margin:0 auto;line-height:1.9;font-weight:300;}
-
-/* BACKTEST RESULTS STRIP */
 .backtest-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:2rem 2.5rem;position:relative;z-index:10;}
 .bt-cell{background:var(--bg2);padding:1.5rem;text-align:center;position:relative;}
 .bt-cell::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green2),transparent);}
 .bt-val{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;color:var(--green);line-height:1;margin-bottom:0.35rem;}
 .bt-label{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
 .bt-sub{font-family:'Cormorant Garamond',serif;font-size:0.82rem;color:var(--muted);margin-top:0.25rem;font-weight:300;}
-
-/* FACTOR SECTIONS */
 .meth-section{margin:0 2.5rem 2.5rem;position:relative;z-index:10;}
 .meth-section-header{display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem;padding-bottom:0.75rem;border-bottom:1px solid var(--bdr2);}
 .meth-section-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:300;color:var(--green);line-height:1;}
@@ -273,8 +247,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .factor-table td.pts.neg{color:var(--red);}
 .factor-table td.pts.neu{color:var(--muted);}
 .factor-note{font-family:'Cormorant Garamond',serif;font-size:0.9rem;color:var(--muted);line-height:1.7;font-weight:300;background:var(--bg2);border:1px solid var(--bdr);border-left:2px solid var(--green2);padding:1rem 1.25rem;}
-
-/* RISK THRESHOLD */
 .threshold-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
 .threshold-cell{background:var(--bg2);padding:1.25rem;position:relative;}
 .threshold-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
@@ -289,8 +261,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .threshold-cell.hi .threshold-range{color:var(--red);}
 .threshold-name{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
 .threshold-desc{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);line-height:1.6;font-weight:300;}
-
-/* DEAL SAMPLE TABLE */
 .sample-table{width:100%;border:1px solid var(--bdr);border-collapse:collapse;}
 .sample-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--bdr);text-align:left;}
 .sample-table td{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.65rem 1rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
@@ -336,28 +306,27 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
 </div>
 
-<!-- LANDING PAGE -->
+<!-- LANDING -->
 <div id="page-landing" class="page active">
   <nav class="land-nav">
     <div class="land-logo">MERI<em>DIAN</em></div>
-    <div class="land-tag">◈ M&A Arbitrage Intelligence</div>
+    <div class="land-tag">◈ Real-Time M&A Arbitrage Intelligence</div>
   </nav>
   <div class="hero">
     <div class="edition">M&A Arbitrage Intelligence · Est. 2026</div>
     <h1 class="hero-title">MERI<em>DIAN</em></h1>
     <div class="divider"><span class="divider-text">◈ Live Deal Intelligence ◈</span></div>
     <p class="hero-desc">
-      Every pending M&A deal filed with the SEC — <b>scored, ranked, and delivered</b> in real time.
-      Built for investors who take merger arbitrage seriously.
+     Institutional-grade merger arbitrage intelligence, sourced directly from SEC EDGAR. Every active deal <b>tracked, scored, and updated hourly</b> so you can act with conviction.
     </p>
     <div class="stats">
-      <div class="stat"><div class="stat-v">54+</div><div class="stat-l">Live Deals</div></div>
+      <div class="stat"><div class="stat-v" id="landing-deal-count">--</div><div class="stat-l">Live Deals</div></div>
       <div class="stat"><div class="stat-v">88%</div><div class="stat-l">Accuracy</div></div>
       <div class="stat"><div class="stat-v">1hr</div><div class="stat-l">Refresh</div></div>
       <div class="stat"><div class="stat-v">SEC</div><div class="stat-l">Source</div></div>
     </div>
     <div class="methodology-banner" onclick="showMethodology()">
-      <div class="methodology-banner-left">
+      <div>
         <div class="methodology-banner-title">◈ Proprietary Scoring Model</div>
         <div class="methodology-banner-desc">88.2% accuracy backtested on 51 historical deals from 2023–2025. Read the full methodology.</div>
       </div>
@@ -391,9 +360,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       </div>
     </div>
     <div class="s-methodology-link">
-      <button class="s-methodology-btn" onclick="showMethodology()">
-        View Full Methodology & Backtest Results →
-      </button>
+      <button class="s-methodology-btn" onclick="showMethodology()">View Full Methodology & Backtest Results →</button>
     </div>
     <div class="how-grid">
       <div class="how-card">
@@ -404,7 +371,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="how-card">
         <div class="how-n">02</div>
         <div class="how-t">Live Spread Calculation</div>
-        <div class="how-d">Current market prices pulled in real time. The spread is the gap between market price and deal price. That gap is your potential return if the deal closes.</div>
+        <div class="how-d">Current market prices pulled in real time. The spread is the gap between market price and deal price — that gap is your potential return if the deal closes.</div>
       </div>
       <div class="how-card">
         <div class="how-n">03</div>
@@ -414,15 +381,13 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </div>
   <footer>
-    <div class="footer-logo">Meridian</div>
-    <div class="footer-links">
-      <button class="footer-link" onclick="showMethodology()">Methodology</button>
-    </div>
+    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
+    <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 51 historical deals · 2023–2025</div>
   </footer>
 </div>
 
-<!-- DASHBOARD PAGE -->
+<!-- DASHBOARD -->
 <div id="page-dashboard" class="page">
   <nav class="dnav">
     <button class="dnav-logo" onclick="showLanding()">MERI<em>DIAN</em></button>
@@ -442,7 +407,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <span id="progress-count">0 / 0</span>
     </div>
     <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
-    <div class="progress-deals" id="progress-deals">0 candidates found · Filtering: spread -10% to +20%, active US listings only</div>
+    <div class="progress-deals" id="progress-deals">0 candidates found</div>
   </div>
   <div class="mstrip">
     <div class="mc"><div class="mc-l">Active Deals</div><div class="mc-v" id="m-deals">--</div><div class="mc-h">tracked live</div></div>
@@ -458,15 +423,13 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </div>
   <footer>
-    <div class="footer-logo">Meridian</div>
-    <div class="footer-links">
-      <button class="footer-link" onclick="showMethodology()">Methodology</button>
-    </div>
+    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
+    <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 51 historical deals · Spread range -10% to +20%</div>
   </footer>
 </div>
 
-<!-- DEAL ANALYSIS PAGE -->
+<!-- DEAL ANALYSIS -->
 <div id="page-analysis" class="page">
   <nav class="da-nav">
     <button class="da-back" onclick="showDashboard()">← Back to Dashboard</button>
@@ -494,43 +457,35 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <div class="da-section"><div class="da-section-title">Risk Factors</div><div class="risk-factors" id="da-risk-factors"></div></div>
   <div class="da-section"><div class="da-section-title">Deal Timeline</div><div class="timeline" id="da-timeline"></div></div>
   <footer style="margin-top:2rem;">
-    <div class="footer-logo">Meridian</div>
+    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
     <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance</div>
   </footer>
 </div>
 
-<!-- METHODOLOGY PAGE -->
+<!-- METHODOLOGY -->
 <div id="page-methodology" class="page">
   <nav class="da-nav">
-    <button class="da-back" onclick="history.back(); setTimeout(()=>{if(document.getElementById('page-methodology').classList.contains('active')) showLanding();},100)">← Back</button>
+    <button class="da-back" onclick="showLanding()">← Back</button>
     <button class="dnav-logo" onclick="showLanding()" style="font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;">MERI<em style="font-style:italic;color:var(--green);">DIAN</em></button>
   </nav>
-
   <div class="meth-hero">
     <div class="meth-title">The <em>Scoring</em> Model</div>
     <div class="meth-sub">◈ Methodology & Backtest Results</div>
     <p class="meth-desc">Meridian's proprietary scoring model evaluates every pending M&A deal across three evidence-based factors. Each factor is weighted based on its historical predictive power across 51 closed and broken deals from 2023 to 2025.</p>
   </div>
-
-  <!-- BACKTEST RESULTS -->
   <div class="backtest-strip">
     <div class="bt-cell"><div class="bt-val">88.2%</div><div class="bt-label">Overall Accuracy</div><div class="bt-sub">Across all 51 deals</div></div>
     <div class="bt-cell"><div class="bt-val">51</div><div class="bt-label">Deals Backtested</div><div class="bt-sub">2023 through 2025</div></div>
     <div class="bt-cell"><div class="bt-val">89.2%</div><div class="bt-label">Closed Deal Accuracy</div><div class="bt-sub">33 of 37 correctly predicted</div></div>
     <div class="bt-cell"><div class="bt-val">85.7%</div><div class="bt-label">Broken Deal Accuracy</div><div class="bt-sub">12 of 14 correctly predicted</div></div>
   </div>
-
-  <!-- FACTOR 1 -->
   <div class="meth-section">
     <div class="meth-section-header">
       <div class="meth-section-num">01</div>
-      <div>
-        <div class="meth-section-title">Spread Quality</div>
-        <div class="meth-section-weight">Primary Factor · Highest Predictive Weight</div>
-      </div>
+      <div><div class="meth-section-title">Spread Quality</div><div class="meth-section-weight">Primary Factor · Highest Predictive Weight</div></div>
     </div>
-    <p class="factor-note" style="margin-bottom:1rem;">The merger arbitrage spread — the gap between current market price and deal price — is the single most powerful predictor of deal outcome. A tight spread means the market has high confidence the deal closes. A wide spread means the market is pricing in meaningful break risk. This factor accounts for the majority of the model's predictive power.</p>
+    <p class="factor-note" style="margin-bottom:1rem;">The merger arbitrage spread is the single most powerful predictor of deal outcome. A tight spread means the market has high confidence the deal closes. A wide spread means the market is pricing in meaningful break risk.</p>
     <table class="factor-table">
       <thead><tr><th>Spread Range</th><th>Market Signal</th><th class="r">Score Adjustment</th></tr></thead>
       <tbody>
@@ -545,17 +500,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       </tbody>
     </table>
   </div>
-
-  <!-- FACTOR 2 -->
   <div class="meth-section">
     <div class="meth-section-header">
       <div class="meth-section-num">02</div>
-      <div>
-        <div class="meth-section-title">Deal Structure</div>
-        <div class="meth-section-weight">Secondary Factor · Deal Type Completion Rates</div>
-      </div>
+      <div><div class="meth-section-title">Deal Structure</div><div class="meth-section-weight">Secondary Factor · Deal Type Completion Rates</div></div>
     </div>
-    <p class="factor-note" style="margin-bottom:1rem;">Different deal structures have meaningfully different completion rates. All-cash deals are the most reliable — there is no stock price risk and the acquirer has secured financing upfront. Tender offers close faster and at higher rates due to the direct shareholder approach. Mixed cash-and-stock deals carry additional complexity because the final value depends on the acquirer's share price at closing.</p>
+    <p class="factor-note" style="margin-bottom:1rem;">Different deal structures have meaningfully different completion rates. All-cash deals are the most reliable — there is no stock price risk and the acquirer has secured financing upfront.</p>
     <table class="factor-table">
       <thead><tr><th>Deal Type</th><th>Characteristics</th><th class="r">Score Adjustment</th></tr></thead>
       <tbody>
@@ -566,17 +516,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       </tbody>
     </table>
   </div>
-
-  <!-- FACTOR 3 -->
   <div class="meth-section">
     <div class="meth-section-header">
       <div class="meth-section-num">03</div>
-      <div>
-        <div class="meth-section-title">Time Pending</div>
-        <div class="meth-section-weight">Tertiary Factor · Deal Duration Signal</div>
-      </div>
+      <div><div class="meth-section-title">Time Pending</div><div class="meth-section-weight">Tertiary Factor · Deal Duration Signal</div></div>
     </div>
-    <p class="factor-note" style="margin-bottom:1rem;">Deals that have been pending longer face greater accumulated risk — regulatory complications, changing market conditions, financing environment shifts. However, this factor is weighted less aggressively than spread because some legitimate deals (particularly large strategic acquisitions requiring multi-jurisdictional regulatory review) take 18-24 months while still closing successfully.</p>
+    <p class="factor-note" style="margin-bottom:1rem;">Deals that have been pending longer face greater accumulated risk. However, this factor is weighted less aggressively because some legitimate deals take 18-24 months while still closing successfully.</p>
     <table class="factor-table">
       <thead><tr><th>Days Pending</th><th>Signal</th><th class="r">Score Adjustment</th></tr></thead>
       <tbody>
@@ -587,33 +532,23 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       </tbody>
     </table>
   </div>
-
-  <!-- RISK THRESHOLDS -->
   <div class="meth-section">
     <div class="meth-section-header">
       <div class="meth-section-num">04</div>
-      <div>
-        <div class="meth-section-title">Risk Classification Thresholds</div>
-        <div class="meth-section-weight">How Scores Map to Risk Levels</div>
-      </div>
+      <div><div class="meth-section-title">Risk Classification</div><div class="meth-section-weight">How Scores Map to Risk Levels · Base Score 70</div></div>
     </div>
-    <p class="factor-note" style="margin-bottom:1rem;">All deals start at a base score of 70. The three factors above adjust this score up or down. The final score maps to a risk classification. The 70-point threshold for Low Risk was calibrated through backtesting to maximize accuracy — scores at or above 70 correctly predicted deal closure in 89.2% of historical cases.</p>
+    <p class="factor-note" style="margin-bottom:1rem;">All deals start at a base score of 70. The three factors adjust this score up or down. Scores at or above 70 correctly predicted deal closure in 89.2% of historical cases.</p>
     <div class="threshold-grid">
-      <div class="threshold-cell vl"><div class="threshold-range">80 to 100</div><div class="threshold-name">Very Low Risk</div><div class="threshold-desc">Market has high conviction. Tight spread, strong deal structure. These positions trade closest to deal price.</div></div>
-      <div class="threshold-cell lo"><div class="threshold-range">65 to 79</div><div class="threshold-name">Low Risk</div><div class="threshold-desc">Solid completion probability. Minor uncertainties that the market has priced in appropriately.</div></div>
-      <div class="threshold-cell md"><div class="threshold-range">50 to 64</div><div class="threshold-name">Medium Risk</div><div class="threshold-desc">Elevated uncertainty. Wider spread reflects meaningful market concern about deal completion.</div></div>
-      <div class="threshold-cell hi"><div class="threshold-range">0 to 49</div><div class="threshold-name">High Risk</div><div class="threshold-desc">Market pricing in significant break probability. Approach with caution and size positions accordingly.</div></div>
+      <div class="threshold-cell vl"><div class="threshold-range">80–100</div><div class="threshold-name">Very Low Risk</div><div class="threshold-desc">Market has high conviction. Tight spread, strong deal structure.</div></div>
+      <div class="threshold-cell lo"><div class="threshold-range">65–79</div><div class="threshold-name">Low Risk</div><div class="threshold-desc">Solid completion probability. Minor uncertainties priced in.</div></div>
+      <div class="threshold-cell md"><div class="threshold-range">50–64</div><div class="threshold-name">Medium Risk</div><div class="threshold-desc">Elevated uncertainty. Wider spread reflects meaningful concern.</div></div>
+      <div class="threshold-cell hi"><div class="threshold-range">0–49</div><div class="threshold-name">High Risk</div><div class="threshold-desc">Market pricing in significant break probability.</div></div>
     </div>
   </div>
-
-  <!-- SAMPLE BACKTEST DEALS -->
   <div class="meth-section">
     <div class="meth-section-header">
       <div class="meth-section-num">05</div>
-      <div>
-        <div class="meth-section-title">Sample Backtest Results</div>
-        <div class="meth-section-weight">Selected deals from the 51-deal backtest · 2023–2025</div>
-      </div>
+      <div><div class="meth-section-title">Sample Backtest Results</div><div class="meth-section-weight">Selected deals from the 51-deal backtest · 2023–2025</div></div>
     </div>
     <table class="sample-table">
       <thead><tr><th>Ticker</th><th>Spread at Ann.</th><th>Score</th><th>Predicted</th><th>Actual</th><th>Correct</th></tr></thead>
@@ -628,11 +563,10 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <tr><td>ACI</td><td>15.0%</td><td>50</td><td>Broken</td><td class="outcome-closed">Closed</td><td class="correct-no">✗</td></tr>
       </tbody>
     </table>
-    <p class="factor-note" style="margin-top:1rem;">The two notable misses — ATVI (Microsoft/Activision) and ACI (Kroger/Albertsons) — were both large strategic acquisitions that faced prolonged antitrust battles but ultimately closed. Their wide spreads correctly signaled elevated risk, but the model classified them as breaks. These cases illustrate the model's limitation: it cannot distinguish between deals that are genuinely breaking and deals that face regulatory headwinds but eventually close.</p>
+    <p class="factor-note" style="margin-top:1rem;">The two notable misses — ATVI and ACI — were large acquisitions that faced prolonged antitrust battles but ultimately closed. Their wide spreads correctly signaled elevated risk, but the model classified them as breaks. This illustrates the model's primary limitation: it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close.</p>
   </div>
-
   <footer style="margin-top:2rem;">
-    <div class="footer-logo">Meridian</div>
+    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
     <div class="footer-links"><button class="footer-link" onclick="showDashboard()">Dashboard</button></div>
     <div class="footer-info">Backtested · 51 historical deals · 2023–2025<br>Model v4 · May 2026</div>
   </footer>
@@ -643,8 +577,6 @@ let allDeals = [];
 let expandedIndex = null;
 let dealsLoaded = false;
 const collapsedSections = new Set();
-let currentDeal = null;
-let previousPage = 'landing';
 
 function showLanding(){
     document.getElementById('page-landing').classList.add('active');
@@ -664,7 +596,6 @@ function showDashboard(){
 }
 
 function showAnalysis(deal){
-    currentDeal = deal;
     document.getElementById('page-landing').classList.remove('active');
     document.getElementById('page-dashboard').classList.remove('active');
     document.getElementById('page-analysis').classList.add('active');
@@ -690,125 +621,109 @@ formatDate();
 setInterval(formatDate, 60000);
 
 function getBadgeClass(risk){
-    if(risk === 'Very Low') return 'badge-vl';
-    if(risk === 'Low') return 'badge-lo';
-    if(risk === 'Medium') return 'badge-md';
+    if(risk==='Very Low') return 'badge-vl';
+    if(risk==='Low') return 'badge-lo';
+    if(risk==='Medium') return 'badge-md';
     return 'badge-hi';
 }
 
 function getScoreColor(score){
-    if(score >= 80) return 'var(--green)';
-    if(score >= 65) return 'var(--gold)';
-    if(score >= 50) return '#8a6040';
+    if(score>=80) return 'var(--green)';
+    if(score>=65) return 'var(--gold)';
+    if(score>=50) return '#8a6040';
     return 'var(--red)';
 }
 
-function getTypeClass(dealType){
-    if(dealType === 'All Cash') return 'cash';
-    if(dealType === 'Cash + Stock') return 'mixed';
-    if(dealType === 'Private Equity') return 'pe';
-    if(dealType === 'Tender Offer') return 'tender';
+function getTypeClass(dt){
+    if(dt==='All Cash') return 'cash';
+    if(dt==='Cash + Stock') return 'mixed';
+    if(dt==='Private Equity') return 'pe';
+    if(dt==='Tender Offer') return 'tender';
     return 'cash';
 }
 
-function getTypeLabel(dealType){
-    if(dealType === 'All Cash') return 'Cash';
-    if(dealType === 'Cash + Stock') return 'Cash+Stock';
-    if(dealType === 'Private Equity') return 'PE';
-    if(dealType === 'Tender Offer') return 'Tender';
-    return dealType;
+function getTypeLabel(dt){
+    if(dt==='All Cash') return 'Cash';
+    if(dt==='Cash + Stock') return 'Cash+Stock';
+    if(dt==='Private Equity') return 'PE';
+    if(dt==='Tender Offer') return 'Tender';
+    return dt;
 }
 
-function sign(val){ return val >= 0 ? '+' : ''; }
-function spColor(val){ return val >= 0 ? 'var(--green)' : 'var(--red)'; }
+function sign(val){ return val>=0?'+':''; }
+function spColor(val){ return val>=0?'var(--green)':'var(--red)'; }
 
 function updateLocalTime(fetched){
     if(!fetched) return 'Unknown';
-    try {
-        const dateStr = fetched + ':00Z';
-        return new Date(dateStr).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
+    try{
+        const d = new Date(fetched+':00Z');
+        return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
     } catch(e){ return fetched; }
 }
 
+async function updateLandingStats(){
+    try{
+        const res = await fetch('/api/deals');
+        const data = await res.json();
+        const count = data.deals ? data.deals.length : '--';
+        const el = document.getElementById('landing-deal-count');
+        if(el) el.textContent = count + '+';
+    } catch(e){}
+}
+
 function getRiskFactors(deal){
-    const factors = [];
-    if(deal.sp_pct < 0){
-        factors.push({level:'hi', text:'Negative spread indicates the market is pricing in a meaningful probability of deal failure. The current price exceeds the deal price, suggesting investor skepticism.'});
-    }
-    if(deal.days_old > 270){
-        factors.push({level:'md', text:`Deal has been pending for ${deal.days_old} days. Extended timelines increase regulatory and financing risk, and may indicate unresolved issues between parties.`});
-    }
-    if(deal.deal_type === 'Cash + Stock'){
-        factors.push({level:'md', text:"Mixed consideration deals carry additional complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk."});
-    }
-    if(deal.deal_type === 'Tender Offer'){
-        factors.push({level:'lo', text:'Tender offers typically close faster than mergers and have higher completion rates due to the direct shareholder approach and predetermined acceptance thresholds.'});
-    }
-    if(deal.deal_type === 'Private Equity'){
-        factors.push({level:'md', text:'Private equity acquisitions depend on financing conditions. Rising interest rates or tightening credit markets can increase deal break risk for leveraged buyouts.'});
-    }
-    if(deal.sp_pct > 12){
-        factors.push({level:'hi', text:`High spread of ${deal.sp_pct.toFixed(2)}% signals elevated market concern about deal completion. Our model assigns this a significant negative adjustment — historically deals with spreads above 12% break at materially higher rates.`});
-    }
-    if(deal.close_date === 'TBD'){
-        factors.push({level:'md', text:'No expected close date has been publicly disclosed, making annualized return calculations approximate. Timeline uncertainty adds risk to position sizing decisions.'});
-    }
-    if(factors.length === 0){
-        factors.push({level:'lo', text:'Deal structure appears straightforward with no major identified risk factors. Standard merger completion risks apply including regulatory review and shareholder approval.'});
-    }
+    const factors=[];
+    if(deal.sp_pct<0) factors.push({level:'hi',text:'Negative spread indicates the market is pricing in a meaningful probability of deal failure. The current price exceeds the deal price, suggesting investor skepticism.'});
+    if(deal.days_old>270) factors.push({level:'md',text:`Deal has been pending for ${deal.days_old} days. Extended timelines increase regulatory and financing risk, and may indicate unresolved issues between parties.`});
+    if(deal.deal_type==='Cash + Stock') factors.push({level:'md',text:"Mixed consideration deals carry additional complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk."});
+    if(deal.deal_type==='Tender Offer') factors.push({level:'lo',text:'Tender offers typically close faster than mergers and have higher completion rates due to the direct shareholder approach and predetermined acceptance thresholds.'});
+    if(deal.deal_type==='Private Equity') factors.push({level:'md',text:'Private equity acquisitions depend on financing conditions. Rising interest rates or tightening credit markets can increase deal break risk for leveraged buyouts.'});
+    if(deal.sp_pct>12) factors.push({level:'hi',text:`High spread of ${deal.sp_pct.toFixed(2)}% signals elevated market concern about deal completion. Historically deals with spreads above 12% break at materially higher rates.`});
+    if(deal.close_date==='TBD') factors.push({level:'md',text:'No expected close date has been publicly disclosed, making annualized return calculations approximate. Timeline uncertainty adds risk to position sizing decisions.'});
+    if(factors.length===0) factors.push({level:'lo',text:'Deal structure appears straightforward with no major identified risk factors. Standard merger completion risks apply including regulatory review and shareholder approval.'});
     return factors.slice(0,4);
 }
 
 function getScoreBreakdown(deal){
-    // Use the actual scoring model logic for breakdown
-    let spreadScore = 70;
-    if(deal.sp_pct > 0 && deal.sp_pct < 3) spreadScore = 95;
-    else if(deal.sp_pct >= 3 && deal.sp_pct < 5) spreadScore = 88;
-    else if(deal.sp_pct >= 5 && deal.sp_pct < 8) spreadScore = 80;
-    else if(deal.sp_pct >= 8 && deal.sp_pct < 12) spreadScore = 65;
-    else if(deal.sp_pct >= 12 && deal.sp_pct < 18) spreadScore = 45;
-    else if(deal.sp_pct >= 18 && deal.sp_pct < 25) spreadScore = 30;
-    else if(deal.sp_pct >= 25) spreadScore = 15;
-    else if(deal.sp_pct < 0) spreadScore = 25;
-
-    let typeScore = deal.deal_type === 'All Cash' ? 90 : deal.deal_type === 'Tender Offer' ? 85 : deal.deal_type === 'Private Equity' ? 75 : 65;
-
-    let daysScore = deal.days_old < 90 ? 95 : deal.days_old < 270 ? 80 : deal.days_old < 500 ? 65 : 45;
-
-    const spreadDesc = `${deal.sp_pct.toFixed(2)}% spread — ${deal.sp_pct < 5 ? 'tight spread signals market confidence' : deal.sp_pct < 12 ? 'moderate spread reflects some market uncertainty' : 'wide spread indicates elevated break risk'}`;
-    const typeDesc = `${deal.deal_type} — ${deal.deal_type === 'All Cash' ? 'highest reliability, no stock price risk' : deal.deal_type === 'Tender Offer' ? 'fast timeline, high completion rate' : deal.deal_type === 'Private Equity' ? 'financing dependent, moderate risk' : 'stock component adds complexity'}`;
-    const daysDesc = `${deal.days_old} days pending — ${deal.days_old < 90 ? 'fresh deal, minimal accumulated risk' : deal.days_old < 270 ? 'normal deal progression' : 'extended timeline, elevated risk'}`;
-
+    let spreadScore=70;
+    if(deal.sp_pct>0&&deal.sp_pct<3) spreadScore=95;
+    else if(deal.sp_pct>=3&&deal.sp_pct<5) spreadScore=88;
+    else if(deal.sp_pct>=5&&deal.sp_pct<8) spreadScore=80;
+    else if(deal.sp_pct>=8&&deal.sp_pct<12) spreadScore=65;
+    else if(deal.sp_pct>=12&&deal.sp_pct<18) spreadScore=45;
+    else if(deal.sp_pct>=18&&deal.sp_pct<25) spreadScore=30;
+    else if(deal.sp_pct>=25) spreadScore=15;
+    else if(deal.sp_pct<0) spreadScore=25;
+    const typeScore=deal.deal_type==='All Cash'?90:deal.deal_type==='Tender Offer'?85:deal.deal_type==='Private Equity'?75:65;
+    const daysScore=deal.days_old<90?95:deal.days_old<270?80:deal.days_old<500?65:45;
     return [
-        {label: 'Spread Quality', score: spreadScore, color: getScoreColor(spreadScore), desc: spreadDesc},
-        {label: 'Deal Structure', score: typeScore, color: getScoreColor(typeScore), desc: typeDesc},
-        {label: 'Time Pending', score: daysScore, color: getScoreColor(daysScore), desc: daysDesc},
-        {label: 'Overall Score', score: deal.score, color: getScoreColor(deal.score), desc: `Final composite score — ${deal.risk} Risk classification`},
+        {label:'Spread Quality',score:spreadScore,color:getScoreColor(spreadScore),desc:`${deal.sp_pct.toFixed(2)}% spread — ${deal.sp_pct<5?'tight spread signals market confidence':deal.sp_pct<12?'moderate spread reflects some uncertainty':'wide spread indicates elevated break risk'}`},
+        {label:'Deal Structure',score:typeScore,color:getScoreColor(typeScore),desc:`${deal.deal_type} — ${deal.deal_type==='All Cash'?'highest reliability, no stock price risk':deal.deal_type==='Tender Offer'?'fast timeline, high completion rate':deal.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds complexity'}`},
+        {label:'Time Pending',score:daysScore,color:getScoreColor(daysScore),desc:`${deal.days_old} days pending — ${deal.days_old<90?'fresh deal, minimal accumulated risk':deal.days_old<270?'normal deal progression':'extended timeline, elevated risk'}`},
+        {label:'Overall Score',score:deal.score,color:getScoreColor(deal.score),desc:`Final composite score — ${deal.risk} Risk classification`},
     ];
 }
 
 function renderAnalysis(deal){
-    const bc = getBadgeClass(deal.risk);
-    const tc = getTypeClass(deal.deal_type);
-    const tl = getTypeLabel(deal.deal_type);
-    const company = deal.company || deal.ticker + ' Corp.';
-    const closeDate = deal.close_date && deal.close_date !== 'TBD' && deal.close_date !== 'nan' ? deal.close_date : 'TBD';
-    const txVal = deal.tx_value && !isNaN(deal.tx_value) ? '$' + parseFloat(deal.tx_value).toFixed(1) + 'B' : 'N/A';
-
-    document.getElementById('da-ticker').textContent = deal.ticker;
-    document.getElementById('da-company').textContent = company;
-    document.getElementById('da-acquirer').textContent = deal.acquirer || 'Undisclosed';
-    document.getElementById('da-spread').textContent = sign(deal.sp_pct) + deal.sp_pct.toFixed(2) + '%';
-    document.getElementById('da-spread').style.color = spColor(deal.sp_pct);
-    document.getElementById('da-ann').textContent = 'Ann. Return: ' + sign(deal.ann) + deal.ann.toFixed(2) + '%';
-    document.getElementById('da-ann').style.color = spColor(deal.ann);
-    document.getElementById('da-badges').innerHTML = `
+    const bc=getBadgeClass(deal.risk);
+    const tc=getTypeClass(deal.deal_type);
+    const tl=getTypeLabel(deal.deal_type);
+    const company=deal.company||deal.ticker+' Corp.';
+    const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:'TBD';
+    const txVal=deal.tx_value&&!isNaN(deal.tx_value)?'$'+parseFloat(deal.tx_value).toFixed(1)+'B':'N/A';
+    document.getElementById('da-ticker').textContent=deal.ticker;
+    document.getElementById('da-company').textContent=company;
+    document.getElementById('da-acquirer').textContent=deal.acquirer||'Undisclosed';
+    document.getElementById('da-spread').textContent=sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
+    document.getElementById('da-spread').style.color=spColor(deal.sp_pct);
+    document.getElementById('da-ann').textContent='Ann. Return: '+sign(deal.ann)+deal.ann.toFixed(2)+'%';
+    document.getElementById('da-ann').style.color=spColor(deal.ann);
+    document.getElementById('da-badges').innerHTML=`
         <span class="badge ${tc}" style="font-size:0.48rem;padding:3px 8px">${tl}</span>
         <span class="badge ${bc}" style="font-size:0.48rem;padding:3px 8px">${deal.risk} Risk</span>
         <span class="badge" style="font-size:0.48rem;padding:3px 8px;color:var(--dim);border-color:var(--bdr2)">${deal.score}/100</span>
     `;
-
-    document.getElementById('da-metrics').innerHTML = `
+    document.getElementById('da-metrics').innerHTML=`
         <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">$${deal.cp.toFixed(2)}</div></div>
         <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
         <div class="da-metric hi"><div class="da-ml">Spread</div><div class="da-mv" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div></div>
@@ -816,23 +731,21 @@ function renderAnalysis(deal){
         <div class="da-metric"><div class="da-ml">Expected Close</div><div class="da-mv sm">${closeDate}</div></div>
         <div class="da-metric"><div class="da-ml">Transaction Value</div><div class="da-mv sm">${txVal}</div></div>
     `;
-
-    const investments = [1000, 5000, 10000, 50000, 100000];
-    let tableHtml = `<thead><tr><th>Investment</th><th class="r">Profit if Closes</th><th class="r">Spread Return</th><th class="r">Ann. Return</th></tr></thead><tbody>`;
-    investments.forEach(inv => {
-        const profit = (deal.sp_pct / 100) * inv;
-        tableHtml += `<tr>
+    const investments=[1000,5000,10000,50000,100000];
+    let tableHtml=`<thead><tr><th>Investment</th><th class="r">Profit if Closes</th><th class="r">Spread Return</th><th class="r">Ann. Return</th></tr></thead><tbody>`;
+    investments.forEach(inv=>{
+        const profit=(deal.sp_pct/100)*inv;
+        tableHtml+=`<tr>
             <td>$${inv.toLocaleString()}</td>
             <td class="r" style="color:${spColor(profit)}">$${Math.abs(profit).toLocaleString('en-US',{maximumFractionDigits:0})}</td>
             <td class="r" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</td>
             <td class="r" style="color:${spColor(deal.ann)}">${sign(deal.ann)}${deal.ann.toFixed(2)}%</td>
         </tr>`;
     });
-    tableHtml += '</tbody>';
-    document.getElementById('da-return-table').innerHTML = tableHtml;
-
-    const breakdown = getScoreBreakdown(deal);
-    document.getElementById('da-score-bars').innerHTML = breakdown.map(b => `
+    tableHtml+='</tbody>';
+    document.getElementById('da-return-table').innerHTML=tableHtml;
+    const breakdown=getScoreBreakdown(deal);
+    document.getElementById('da-score-bars').innerHTML=breakdown.map(b=>`
         <div class="score-bar-item">
             <div class="score-bar-header">
                 <span class="score-bar-label">${b.label}</span>
@@ -842,19 +755,14 @@ function renderAnalysis(deal){
             <div class="score-bar-track"><div class="score-bar-fill" style="width:${b.score}%;background:${b.color}"></div></div>
         </div>
     `).join('');
-
-    const factors = getRiskFactors(deal);
-    document.getElementById('da-risk-factors').innerHTML = factors.map(f => `
+    document.getElementById('da-risk-factors').innerHTML=getRiskFactors(deal).map(f=>`
         <div class="risk-factor">
             <div class="risk-dot ${f.level}"></div>
             <div class="risk-text">${f.text}</div>
         </div>
     `).join('');
-
-    const daysSinceFiled = deal.days_old;
-    const totalDays = closeDate !== 'TBD' ? 365 : 180;
-    const progress = Math.min(100, (daysSinceFiled / totalDays) * 100);
-    document.getElementById('da-timeline').innerHTML = `
+    const progress=Math.min(100,(deal.days_old/180)*100);
+    document.getElementById('da-timeline').innerHTML=`
         <div class="timeline-track">
             <div class="timeline-dot"></div>
             <div class="timeline-line"><div class="timeline-line-fill" style="width:${progress}%"></div></div>
@@ -864,17 +772,17 @@ function renderAnalysis(deal){
             <span class="timeline-label">Announced · ${deal.filed}</span>
             <span class="timeline-label">Expected Close · ${closeDate}</span>
         </div>
-        <div class="timeline-days">${daysSinceFiled} days elapsed · ${closeDate !== 'TBD' ? 'Target: ' + closeDate : 'Close date pending disclosure'}</div>
+        <div class="timeline-days">${deal.days_old} days elapsed · ${closeDate!=='TBD'?'Target: '+closeDate:'Close date pending disclosure'}</div>
     `;
 }
 
 function toggleSection(sectionId){
-    const body = document.getElementById('body-' + sectionId);
-    const toggle = document.getElementById('toggle-' + sectionId);
+    const body=document.getElementById('body-'+sectionId);
+    const toggle=document.getElementById('toggle-'+sectionId);
     if(collapsedSections.has(sectionId)){
         collapsedSections.delete(sectionId);
         body.classList.remove('collapsed');
-        body.style.maxHeight = '9999px';
+        body.style.maxHeight='9999px';
         toggle.classList.remove('collapsed');
     } else {
         collapsedSections.add(sectionId);
@@ -884,35 +792,34 @@ function toggleSection(sectionId){
 }
 
 function renderDeals(deals){
-    const list = document.getElementById('deal-list');
-    if(!deals || deals.length === 0){
-        list.innerHTML = '<div class="loading-wrap"><div class="loading-title">No deals available</div><div class="loading-sub">Click refresh to fetch from SEC EDGAR</div></div>';
+    const list=document.getElementById('deal-list');
+    if(!deals||deals.length===0){
+        list.innerHTML='<div class="loading-wrap"><div class="loading-title">No deals available</div><div class="loading-sub">Data refreshes automatically every hour</div></div>';
         return;
     }
-    const avgSpread = deals.reduce((s,d) => s + d.sp_pct, 0) / deals.length;
-    const avgScore = deals.reduce((s,d) => s + d.score, 0) / deals.length;
-    document.getElementById('m-deals').textContent = deals.length;
-    document.getElementById('m-spread').textContent = sign(avgSpread) + avgSpread.toFixed(2) + '%';
-    document.getElementById('m-score').textContent = Math.round(avgScore) + '/100';
-    document.getElementById('m-updated').textContent = updateLocalTime(deals[0].fetched);
+    const avgSpread=deals.reduce((s,d)=>s+d.sp_pct,0)/deals.length;
+    const avgScore=deals.reduce((s,d)=>s+d.score,0)/deals.length;
+    document.getElementById('m-deals').textContent=deals.length;
+    document.getElementById('m-spread').textContent=sign(avgSpread)+avgSpread.toFixed(2)+'%';
+    document.getElementById('m-score').textContent=Math.round(avgScore)+'/100';
+    document.getElementById('m-updated').textContent=updateLocalTime(deals[0].fetched);
 
-    const sections = [
-        {id:'all-cash', label:'All Cash Deals', type:'All Cash'},
-        {id:'cash-stock', label:'Cash + Stock Deals', type:'Cash + Stock'},
-        {id:'tender', label:'Tender Offer Deals', type:'Tender Offer'},
-        {id:'pe', label:'Private Equity Deals', type:'Private Equity'},
+    const sections=[
+        {id:'all-cash',label:'All Cash Deals',type:'All Cash'},
+        {id:'cash-stock',label:'Cash + Stock Deals',type:'Cash + Stock'},
+        {id:'tender',label:'Tender Offer Deals',type:'Tender Offer'},
+        {id:'pe',label:'Private Equity Deals',type:'Private Equity'},
     ];
 
-    let html = '';
-    let globalIndex = 0;
+    let html='';
+    let globalIndex=0;
 
-    sections.forEach(section => {
-        const sectionDeals = deals.filter(d => d.deal_type === section.type);
-        if(sectionDeals.length === 0) return;
-        const avgSp = sectionDeals.reduce((s,d) => s + d.sp_pct, 0) / sectionDeals.length;
-        const isCollapsed = collapsedSections.has(section.id);
-
-        html += `
+    sections.forEach(section=>{
+        const sectionDeals=deals.filter(d=>d.deal_type===section.type);
+        if(sectionDeals.length===0) return;
+        const avgSp=sectionDeals.reduce((s,d)=>s+d.sp_pct,0)/sectionDeals.length;
+        const isCollapsed=collapsedSections.has(section.id);
+        html+=`
         <div class="section-sep" onclick="toggleSection('${section.id}')">
           <div class="section-sep-line"></div>
           <div class="section-sep-label">
@@ -929,18 +836,16 @@ function renderDeals(deals){
               <div class="th">Company</div><div class="th r">Current</div><div class="th r">Deal Price</div>
               <div class="th r">Spread</div><div class="th r">Ann. Return</div><div class="th r">Risk</div>
             </div>`;
-
-        sectionDeals.forEach(d => {
-            const i = globalIndex++;
-            const bc = getBadgeClass(d.risk);
-            const tc = getTypeClass(d.deal_type);
-            const tl = getTypeLabel(d.deal_type);
-            const isExp = expandedIndex === i;
-            const company = d.company || d.ticker + ' Corp.';
-            const closeDate = d.close_date && d.close_date !== 'TBD' && d.close_date !== 'nan' ? d.close_date : 'TBD';
-            const txVal = d.tx_value && !isNaN(d.tx_value) ? '$' + parseFloat(d.tx_value).toFixed(1) + 'B' : 'N/A';
-
-            html += `
+        sectionDeals.forEach(d=>{
+            const i=globalIndex++;
+            const bc=getBadgeClass(d.risk);
+            const tc=getTypeClass(d.deal_type);
+            const tl=getTypeLabel(d.deal_type);
+            const isExp=expandedIndex===i;
+            const company=d.company||d.ticker+' Corp.';
+            const closeDate=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'?d.close_date:'TBD';
+            const txVal=d.tx_value&&!isNaN(d.tx_value)?'$'+parseFloat(d.tx_value).toFixed(1)+'B':'N/A';
+            html+=`
             <div class="deal-row ${isExp?'expanded':''}" onclick="toggleDeal(${i})">
               <div class="r-ticker">${d.ticker}</div>
               <div><span class="r-type ${tc}">${tl}</span></div>
@@ -977,83 +882,83 @@ function renderDeals(deals){
                 <div class="dp-metric"><div class="dp-ml">Score</div><div class="dp-mv sm">${d.score}/100</div></div>
                 <div class="dp-metric"><div class="dp-ml">Spread Range</div><div class="dp-mv sm">-10% to +20%</div></div>
               </div>
-              <button class="analysis-btn" onclick="event.stopPropagation(); showAnalysis(allDeals.find(x=>x.ticker==='${d.ticker}'))">
+              <button class="analysis-btn" onclick="event.stopPropagation();showAnalysis(allDeals.find(x=>x.ticker==='${d.ticker}'))">
                 View Full Analysis →
               </button>
               <div class="analysis-btn-label">Score breakdown · Risk factors · Return analysis · Deal timeline</div>
             </div>`;
         });
-        html += '</div></div>';
+        html+='</div></div>';
     });
-    list.innerHTML = html;
+    list.innerHTML=html;
 }
 
 function toggleDeal(i){
-    expandedIndex = expandedIndex === i ? null : i;
+    expandedIndex=expandedIndex===i?null:i;
     renderDeals(allDeals);
 }
 
 async function loadDeals(){
     try{
-        const res = await fetch('/api/deals');
-        const data = await res.json();
-        allDeals = data.deals || [];
-        dealsLoaded = true;
+        const res=await fetch('/api/deals');
+        const data=await res.json();
+        allDeals=data.deals||[];
+        dealsLoaded=true;
         renderDeals(allDeals);
     } catch(e){
-        document.getElementById('deal-list').innerHTML = '<div class="loading-wrap"><div class="loading-title">Error loading deals</div><div class="loading-sub">Please refresh the page</div></div>';
+        document.getElementById('deal-list').innerHTML='<div class="loading-wrap"><div class="loading-title">Error loading deals</div><div class="loading-sub">Please refresh the page</div></div>';
     }
 }
 
 function refreshData(){
-    const btn = document.getElementById('refresh-btn');
-    const progressWrap = document.getElementById('progress-wrap');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    const progressCount = document.getElementById('progress-count');
-    const progressDeals = document.getElementById('progress-deals');
-
-    btn.disabled = true;
-    btn.textContent = 'Scanning...';
+    const btn=document.getElementById('refresh-btn');
+    const progressWrap=document.getElementById('progress-wrap');
+    const progressBar=document.getElementById('progress-bar');
+    const progressText=document.getElementById('progress-text');
+    const progressCount=document.getElementById('progress-count');
+    const progressDeals=document.getElementById('progress-deals');
+    btn.disabled=true;
+    btn.textContent='Scanning...';
     progressWrap.classList.add('active');
-    progressBar.style.width = '0%';
-    progressText.textContent = 'Connecting to SEC EDGAR...';
-    progressCount.textContent = '0 / 0';
-    progressDeals.textContent = '0 candidates found · Filtering: spread -10% to +20%, active US listings only';
-
-    const evtSource = new EventSource('/api/refresh-stream');
-    evtSource.onmessage = function(e){
-        const data = JSON.parse(e.data);
+    progressBar.style.width='0%';
+    progressText.textContent='Connecting to SEC EDGAR...';
+    progressCount.textContent='0 / 0';
+    progressDeals.textContent='0 candidates found · Filtering: spread -10% to +20%, active US listings only';
+    const evtSource=new EventSource('/api/refresh-stream');
+    evtSource.onmessage=function(e){
+        const data=JSON.parse(e.data);
         if(data.done){
             evtSource.close();
-            allDeals = data.deals || [];
+            allDeals=data.deals||[];
             renderDeals(allDeals);
-            progressBar.style.width = '100%';
-            progressText.textContent = 'Scan complete';
-            progressCount.textContent = '';
-            progressDeals.textContent = allDeals.length + ' deals loaded';
-            btn.disabled = false;
-            btn.textContent = 'Refresh';
-            setTimeout(()=>{progressWrap.classList.remove('active');}, 3000);
+            updateLandingStats();
+            progressBar.style.width='100%';
+            progressText.textContent='Scan complete';
+            progressCount.textContent='';
+            progressDeals.textContent=allDeals.length+' deals loaded';
+            btn.disabled=false;
+            btn.textContent='Refresh';
+            setTimeout(()=>{progressWrap.classList.remove('active');},3000);
             return;
         }
-        if(data.total > 0){
-            const pct = Math.round((data.current/data.total)*100);
-            progressBar.style.width = pct+'%';
-            progressText.textContent = 'Scanning SEC EDGAR filings...';
-            progressCount.textContent = data.current+' / '+data.total;
-            progressDeals.textContent = data.deals_found+' candidates found · Filtering: spread -10% to +20%, active US listings only';
+        if(data.total>0){
+            const pct=Math.round((data.current/data.total)*100);
+            progressBar.style.width=pct+'%';
+            progressText.textContent='Scanning SEC EDGAR filings...';
+            progressCount.textContent=data.current+' / '+data.total;
+            progressDeals.textContent=data.deals_found+' candidates found · Filtering: spread -10% to +20%, active US listings only';
         }
     };
-    evtSource.onerror = function(){
+    evtSource.onerror=function(){
         evtSource.close();
-        btn.disabled = false;
-        btn.textContent = 'Refresh';
-        progressText.textContent = 'Error during scan. Try again.';
+        btn.disabled=false;
+        btn.textContent='Refresh';
+        progressText.textContent='Error during scan. Try again.';
         setTimeout(()=>{progressWrap.classList.remove('active');},3000);
     };
 }
 
+updateLandingStats();
 loadDeals();
 </script>
 </body>
