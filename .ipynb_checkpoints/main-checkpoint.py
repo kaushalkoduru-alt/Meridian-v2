@@ -7,7 +7,7 @@ import requests
 import re
 import yfinance as yf
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 import json
 import math
@@ -69,6 +69,32 @@ FALLBACK_DEALS = [
     {'ticker': 'IMXI', 'acquirer': 'Western Union', 'company': 'International Money Express', 'deal_type': 'All Cash', 'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None},
 ]
 
+def get_break_price(ticker, filed_date):
+    """
+    Get the stock price the day before the deal was announced.
+    This is the estimated price the stock would fall to if the deal breaks.
+    We look back up to 7 days before filing to find the last trading day.
+    """
+    try:
+        filed = datetime.strptime(filed_date, '%Y-%m-%d')
+        start = (filed - timedelta(days=7)).strftime('%Y-%m-%d')
+        end = filed.strftime('%Y-%m-%d')
+        h = yf.Ticker(ticker).history(start=start, end=end)
+        if h.empty:
+            return None
+        return round(float(h['Close'].iloc[-1]), 2)
+    except:
+        return None
+
+def get_break_downside(current_price, break_price):
+    """
+    Calculate the percentage downside if the deal breaks.
+    Negative number = stock falls this much from current price.
+    """
+    if not break_price or not current_price:
+        return None
+    return round(((break_price - current_price) / current_price) * 100, 2)
+
 def extract_price_from_text(clean_text):
     patterns = [
         r'\$(\d+\.\d+)\s+per\s+share\s+in\s+cash',
@@ -101,7 +127,6 @@ def extract_acquirer(clean_text):
     for g in garbage:
         text = re.sub(g, ' ', text, flags=re.IGNORECASE)
     text = re.sub(r'\s+', ' ', text).strip()
-
     patterns = [
         r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:has agreed to acquire|will acquire|agreed to acquire|agrees to acquire)',
         r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+today announced\s+(?:it has agreed|a definitive|an agreement)',
@@ -169,12 +194,10 @@ def extract_transaction_value(clean_text):
 
 def score_deal(spread_pct, days_since_filed, deal_type='All Cash'):
     score = 70
-
     if deal_type == 'All Cash':         score += 10
     elif deal_type == 'Tender Offer':   score += 8
     elif deal_type == 'Private Equity': score += 5
     elif deal_type == 'Cash + Stock':   score += 0
-
     if 0 < spread_pct < 3:       score += 25
     elif 3 <= spread_pct < 5:    score += 18
     elif 5 <= spread_pct < 8:    score += 10
@@ -183,12 +206,10 @@ def score_deal(spread_pct, days_since_filed, deal_type='All Cash'):
     elif 18 <= spread_pct < 25:  score -= 25
     elif spread_pct >= 25:       score -= 35
     elif spread_pct < 0:         score -= 25
-
     if days_since_filed < 90:    score += 10
     elif days_since_filed < 270: score += 0
     elif days_since_filed < 500: score -= 5
     else:                        score -= 15
-
     return min(max(score, 0), 100)
 
 def clean_records(records):
@@ -310,16 +331,30 @@ def fetch_deals_from_edgar(progress_callback=None):
             risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
             ann = (sp_pct / 180) * 365
             acquirer = KNOWN_ACQUIRERS.get(ticker, acquirer)
+
+            # Break price analysis
+            break_price = get_break_price(ticker, src['file_date'])
+            break_downside = get_break_downside(round(cp, 2), break_price)
+
             seen_tickers.add(ticker)
             results.append({
-                'ticker': ticker, 'acquirer': acquirer,
-                'company': COMPANY_NAMES.get(ticker, ticker + ' Corp.'),
-                'deal_type': deal_type, 'cp': round(cp, 2), 'dp': dp,
-                'sp_pct': round(sp_pct, 2), 'ann': round(ann, 2),
-                'score': sc, 'risk': risk, 'filed': src['file_date'],
-                'days_old': days, 'close_date': close_date,
-                'tx_value': tx_value,
-                'fetched': datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                'ticker':         ticker,
+                'acquirer':       acquirer,
+                'company':        COMPANY_NAMES.get(ticker, ticker + ' Corp.'),
+                'deal_type':      deal_type,
+                'cp':             round(cp, 2),
+                'dp':             dp,
+                'sp_pct':         round(sp_pct, 2),
+                'ann':            round(ann, 2),
+                'score':          sc,
+                'risk':           risk,
+                'filed':          src['file_date'],
+                'days_old':       days,
+                'close_date':     close_date,
+                'tx_value':       tx_value,
+                'break_price':    break_price,
+                'break_downside': break_downside,
+                'fetched':        datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
         except:
             continue
@@ -338,14 +373,26 @@ def fetch_deals_from_edgar(progress_callback=None):
                 sc = score_deal(sp_pct, days, fd['deal_type'])
                 risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
                 ann = round((sp_pct / 180) * 365, 2)
+                break_price = get_break_price(fd['ticker'], fd['filed'])
+                break_downside = get_break_downside(cp, break_price)
                 results.append({
-                    'ticker': fd['ticker'], 'acquirer': fd['acquirer'],
-                    'company': fd['company'], 'deal_type': fd['deal_type'],
-                    'cp': cp, 'dp': dp, 'sp_pct': sp_pct, 'ann': ann,
-                    'score': sc, 'risk': risk, 'filed': fd['filed'],
-                    'days_old': days, 'close_date': fd['close_date'],
-                    'tx_value': fd['tx_value'],
-                    'fetched': datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                    'ticker':         fd['ticker'],
+                    'acquirer':       fd['acquirer'],
+                    'company':        fd['company'],
+                    'deal_type':      fd['deal_type'],
+                    'cp':             cp,
+                    'dp':             dp,
+                    'sp_pct':         sp_pct,
+                    'ann':            ann,
+                    'score':          sc,
+                    'risk':           risk,
+                    'filed':          fd['filed'],
+                    'days_old':       days,
+                    'close_date':     fd['close_date'],
+                    'tx_value':       fd['tx_value'],
+                    'break_price':    break_price,
+                    'break_downside': break_downside,
+                    'fetched':        datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 })
                 seen_tickers.add(fd['ticker'])
                 print(f"✓ Fallback: {fd['ticker']} | {sp_pct:+.2f}%")
