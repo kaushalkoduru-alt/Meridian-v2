@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 import asyncio
 import json
 import math
-import random
 from contextlib import asynccontextmanager
 
 CACHE_FILE = "meridian_cache.csv"
@@ -70,6 +69,7 @@ FALLBACK_DEALS = [
     {'ticker': 'IMXI', 'acquirer': 'Western Union', 'company': 'International Money Express', 'deal_type': 'All Cash', 'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None},
 ]
 
+# COMPS DATASET — 114 historical deals
 COMPS_DATA = [
     {'ticker': 'ATVI', 'acquirer': 'Microsoft', 'deal_type': 'All Cash', 'spread_at_announce': 25.0, 'outcome': 'Closed', 'days_to_close': 633},
     {'ticker': 'VMW', 'acquirer': 'Broadcom', 'deal_type': 'Cash + Stock', 'spread_at_announce': 18.0, 'outcome': 'Closed', 'days_to_close': 545},
@@ -188,23 +188,21 @@ COMPS_DATA = [
 ]
 
 def get_comparable_deals(deal_type, spread_pct, current_ticker, max_results=4):
-    # Use ticker as deterministic seed — same ticker always gets same comps
-    rng = random.Random(hash(current_ticker) % (2**32))
-
+    import random
     comps = [c for c in COMPS_DATA if c['ticker'] != current_ticker]
     type_match = [c for c in comps if c['deal_type'] == deal_type]
 
     # Try tight match — within 4%
     tight = [c for c in type_match if abs(c['spread_at_announce'] - spread_pct) <= 4]
     if len(tight) >= 3:
-        selected = rng.sample(tight, min(max_results, len(tight)))
+        selected = random.sample(tight, min(max_results, len(tight)))
     else:
         # Loosen to 8%
         loose = [c for c in type_match if abs(c['spread_at_announce'] - spread_pct) <= 8]
         if len(loose) >= 2:
-            selected = rng.sample(loose, min(max_results, len(loose)))
+            selected = random.sample(loose, min(max_results, len(loose)))
         else:
-            selected = rng.sample(type_match, min(max_results, len(type_match))) if type_match else []
+            selected = random.sample(type_match, min(max_results, len(type_match)))
 
     return selected
 
@@ -571,13 +569,21 @@ def fetch_deals_from_edgar(progress_callback=None):
     if results:
         df = pd.DataFrame(results).drop_duplicates(subset=['ticker'])
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
-        try:
-            df.to_csv(CACHE_FILE, index=False)
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Saved {len(df)} deals.")
-        except Exception as e:
-            print(f"Cache save error: {e}")
+        # Only overwrite cache if we got a meaningful number of deals
+        # This prevents a bad cron run from wiping a good cache
+        if len(df) >= 10:
+            try:
+                temp_file = CACHE_FILE + '.tmp'
+                df.to_csv(temp_file, index=False)
+                os.replace(temp_file, CACHE_FILE)
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Saved {len(df)} deals.")
+            except Exception as e:
+                print(f"Cache save error: {e}")
+        else:
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Only {len(df)} deals found — keeping existing cache.")
         return clean_records(df.to_dict(orient='records'))
-    return []
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] No results — keeping existing cache.")
+    return load_cache() or []
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
