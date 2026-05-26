@@ -69,12 +69,80 @@ FALLBACK_DEALS = [
     {'ticker': 'IMXI', 'acquirer': 'Western Union', 'company': 'International Money Express', 'deal_type': 'All Cash', 'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None},
 ]
 
+def get_regulatory_risk(ticker, acquirer, tx_value, deal_type):
+    tags = []
+    try:
+        info = yf.Ticker(ticker).info
+        sector = info.get('sector', '')
+        industry = info.get('industry', '')
+    except:
+        sector = ''
+        industry = ''
+
+    tx_billions = tx_value if tx_value else 0
+    tx_millions = tx_billions * 1000
+
+    # HSR filing threshold
+    if tx_millions >= 119.5 or tx_billions >= 0.12:
+        tags.append({
+            'agency': 'HSR Filing',
+            'level': 'low',
+            'reason': 'Transaction value triggers mandatory Hart-Scott-Rodino antitrust filing with DOJ and FTC'
+        })
+
+    # CFIUS — foreign acquirer
+    foreign_keywords = [
+        'china', 'chinese', 'japan', 'japanese', 'korea', 'korean',
+        'saudi', 'emirates', 'uae', 'russia', 'russian', 'huawei',
+        'alibaba', 'tencent', 'softbank', 'samsung'
+    ]
+    if acquirer and any(kw in acquirer.lower() for kw in foreign_keywords):
+        tags.append({
+            'agency': 'CFIUS Review',
+            'level': 'high',
+            'reason': 'Foreign acquirer may trigger Committee on Foreign Investment in the US national security review'
+        })
+
+    # FTC — tech, pharma, consumer
+    ftc_sectors = ['Technology', 'Healthcare', 'Consumer Defensive', 'Consumer Cyclical', 'Communication Services']
+    if sector in ftc_sectors and tx_billions >= 1:
+        tags.append({
+            'agency': 'FTC Antitrust',
+            'level': 'medium' if tx_billions < 5 else 'high',
+            'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to FTC antitrust review'
+        })
+
+    # DOJ — industrials, financials, energy
+    doj_sectors = ['Industrials', 'Financial Services', 'Energy', 'Basic Materials', 'Utilities']
+    if sector in doj_sectors and tx_billions >= 1:
+        tags.append({
+            'agency': 'DOJ Antitrust',
+            'level': 'medium' if tx_billions < 5 else 'high',
+            'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to DOJ antitrust review'
+        })
+
+    # Market concentration
+    concentrated_industries = [
+        'Software', 'Semiconductors', 'Biotechnology', 'Drug Manufacturers',
+        'Banks', 'Insurance', 'Airlines', 'Telecom'
+    ]
+    if any(c.lower() in industry.lower() for c in concentrated_industries) and tx_billions >= 2:
+        tags.append({
+            'agency': 'Market Concentration',
+            'level': 'high',
+            'reason': 'Highly concentrated industry — enhanced regulatory scrutiny expected'
+        })
+
+    if not tags:
+        tags.append({
+            'agency': 'Standard Review',
+            'level': 'low',
+            'reason': 'No elevated regulatory concerns identified based on deal size and sector'
+        })
+
+    return tags
+
 def get_break_price(ticker, filed_date):
-    """
-    Get the stock price the day before the deal was announced.
-    This is the estimated price the stock would fall to if the deal breaks.
-    We look back up to 7 days before filing to find the last trading day.
-    """
     try:
         filed = datetime.strptime(filed_date, '%Y-%m-%d')
         start = (filed - timedelta(days=7)).strftime('%Y-%m-%d')
@@ -87,10 +155,6 @@ def get_break_price(ticker, filed_date):
         return None
 
 def get_break_downside(current_price, break_price):
-    """
-    Calculate the percentage downside if the deal breaks.
-    Negative number = stock falls this much from current price.
-    """
     if not break_price or not current_price:
         return None
     return round(((break_price - current_price) / current_price) * 100, 2)
@@ -332,9 +396,9 @@ def fetch_deals_from_edgar(progress_callback=None):
             ann = (sp_pct / 180) * 365
             acquirer = KNOWN_ACQUIRERS.get(ticker, acquirer)
 
-            # Break price analysis
             break_price = get_break_price(ticker, src['file_date'])
             break_downside = get_break_downside(round(cp, 2), break_price)
+            reg_tags = get_regulatory_risk(ticker, acquirer, tx_value, deal_type)
 
             seen_tickers.add(ticker)
             results.append({
@@ -354,6 +418,7 @@ def fetch_deals_from_edgar(progress_callback=None):
                 'tx_value':       tx_value,
                 'break_price':    break_price,
                 'break_downside': break_downside,
+                'reg_tags':       json.dumps(reg_tags),
                 'fetched':        datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
         except:
@@ -375,6 +440,7 @@ def fetch_deals_from_edgar(progress_callback=None):
                 ann = round((sp_pct / 180) * 365, 2)
                 break_price = get_break_price(fd['ticker'], fd['filed'])
                 break_downside = get_break_downside(cp, break_price)
+                reg_tags = get_regulatory_risk(fd['ticker'], fd['acquirer'], fd['tx_value'], fd['deal_type'])
                 results.append({
                     'ticker':         fd['ticker'],
                     'acquirer':       fd['acquirer'],
@@ -392,6 +458,7 @@ def fetch_deals_from_edgar(progress_callback=None):
                     'tx_value':       fd['tx_value'],
                     'break_price':    break_price,
                     'break_downside': break_downside,
+                    'reg_tags':       json.dumps(reg_tags),
                     'fetched':        datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 })
                 seen_tickers.add(fd['ticker'])

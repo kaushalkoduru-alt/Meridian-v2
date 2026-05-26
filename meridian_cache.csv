@@ -1,3 +1,4 @@
 ticker,acquirer,company,deal_type,cp,dp,sp_pct,ann,score,risk,filed,days_old,close_date,tx_value,fetched
-B,Apollo Global Management,Barnes Group,All Cash,40.68,47.5,16.76,34.0,65,Low,2024-10-07,592,TBD,3.6,2026-05-23T03:38
-AFBI,Center Parc Credit Union,Affinity Bancshares,All Cash,22.49,22.5,0.04,0.09,80,Very Low,2024-05-30,722,TBD,0.87,2026-05-23T03:38
+B,Apollo Global Management,Barnes Group,All Cash,40.68,47.5,16.76,34.0,50,Medium,2024-10-07,594,TBD,3.6,2026-05-24T04:46
+ASRT,Paratek Pharmaceuticals,Assertio Holdings,All Cash,23.44,23.5,0.26,0.52,100,Very Low,2026-05-13,11,"of
+2026",0.17,2026-05-24T04:46
