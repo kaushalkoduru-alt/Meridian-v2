@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import asyncio
 import json
 import math
+import random
 from contextlib import asynccontextmanager
 
 CACHE_FILE = "meridian_cache.csv"
@@ -69,7 +70,6 @@ FALLBACK_DEALS = [
     {'ticker': 'IMXI', 'acquirer': 'Western Union', 'company': 'International Money Express', 'deal_type': 'All Cash', 'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None},
 ]
 
-# COMPS DATASET — 114 historical deals
 COMPS_DATA = [
     {'ticker': 'ATVI', 'acquirer': 'Microsoft', 'deal_type': 'All Cash', 'spread_at_announce': 25.0, 'outcome': 'Closed', 'days_to_close': 633},
     {'ticker': 'VMW', 'acquirer': 'Broadcom', 'deal_type': 'Cash + Stock', 'spread_at_announce': 18.0, 'outcome': 'Closed', 'days_to_close': 545},
@@ -188,21 +188,23 @@ COMPS_DATA = [
 ]
 
 def get_comparable_deals(deal_type, spread_pct, current_ticker, max_results=4):
-    import random
+    # Use ticker as deterministic seed — same ticker always gets same comps
+    rng = random.Random(hash(current_ticker) % (2**32))
+
     comps = [c for c in COMPS_DATA if c['ticker'] != current_ticker]
     type_match = [c for c in comps if c['deal_type'] == deal_type]
 
     # Try tight match — within 4%
     tight = [c for c in type_match if abs(c['spread_at_announce'] - spread_pct) <= 4]
     if len(tight) >= 3:
-        selected = random.sample(tight, min(max_results, len(tight)))
+        selected = rng.sample(tight, min(max_results, len(tight)))
     else:
         # Loosen to 8%
         loose = [c for c in type_match if abs(c['spread_at_announce'] - spread_pct) <= 8]
         if len(loose) >= 2:
-            selected = random.sample(loose, min(max_results, len(loose)))
+            selected = rng.sample(loose, min(max_results, len(loose)))
         else:
-            selected = random.sample(type_match, min(max_results, len(type_match)))
+            selected = rng.sample(type_match, min(max_results, len(type_match))) if type_match else []
 
     return selected
 
