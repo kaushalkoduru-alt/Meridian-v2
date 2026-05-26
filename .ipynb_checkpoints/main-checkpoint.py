@@ -69,6 +69,143 @@ FALLBACK_DEALS = [
     {'ticker': 'IMXI', 'acquirer': 'Western Union', 'company': 'International Money Express', 'deal_type': 'All Cash', 'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None},
 ]
 
+# COMPS DATASET — 114 historical deals
+COMPS_DATA = [
+    {'ticker': 'ATVI', 'acquirer': 'Microsoft', 'deal_type': 'All Cash', 'spread_at_announce': 25.0, 'outcome': 'Closed', 'days_to_close': 633},
+    {'ticker': 'VMW', 'acquirer': 'Broadcom', 'deal_type': 'Cash + Stock', 'spread_at_announce': 18.0, 'outcome': 'Closed', 'days_to_close': 545},
+    {'ticker': 'SIAL', 'acquirer': 'Pfizer', 'deal_type': 'All Cash', 'spread_at_announce': 8.0, 'outcome': 'Closed', 'days_to_close': 310},
+    {'ticker': 'HES', 'acquirer': 'Chevron', 'deal_type': 'Cash + Stock', 'spread_at_announce': 12.0, 'outcome': 'Closed', 'days_to_close': 343},
+    {'ticker': 'SNPS', 'acquirer': 'Cadence', 'deal_type': 'All Cash', 'spread_at_announce': 6.0, 'outcome': 'Closed', 'days_to_close': 423},
+    {'ticker': 'CACC', 'acquirer': 'Stellantis', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 167},
+    {'ticker': 'ACI', 'acquirer': 'Kroger', 'deal_type': 'All Cash', 'spread_at_announce': 15.0, 'outcome': 'Closed', 'days_to_close': 878},
+    {'ticker': 'NTCT', 'acquirer': 'Broadcom', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 115},
+    {'ticker': 'GTES', 'acquirer': 'Blackstone', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 117},
+    {'ticker': 'MTW', 'acquirer': 'Titan Machinery', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 94},
+    {'ticker': 'AIN', 'acquirer': 'Schweitzer-Mauduit', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 106},
+    {'ticker': 'CRAWA', 'acquirer': 'Amphenol', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 80},
+    {'ticker': 'VSH', 'acquirer': 'Maverick Capital', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 89},
+    {'ticker': 'NINE', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 92},
+    {'ticker': 'RNST', 'acquirer': 'First Horizon', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 185},
+    {'ticker': 'DAY', 'acquirer': 'Carrier Global', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 38},
+    {'ticker': 'SNEX', 'acquirer': 'StoneX Group', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 160},
+    {'ticker': 'IPG', 'acquirer': 'Omnicom', 'deal_type': 'Cash + Stock', 'spread_at_announce': 8.0, 'outcome': 'Closed', 'days_to_close': 259},
+    {'ticker': 'CGC', 'acquirer': 'Acreage Holdings', 'deal_type': 'All Cash', 'spread_at_announce': 6.0, 'outcome': 'Closed', 'days_to_close': 273},
+    {'ticker': 'KN', 'acquirer': 'Solesis', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 115},
+    {'ticker': 'RDW', 'acquirer': 'ATA', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 157},
+    {'ticker': 'IRBT', 'acquirer': 'Amazon', 'deal_type': 'All Cash', 'spread_at_announce': 22.0, 'outcome': 'Broken', 'days_to_close': 517},
+    {'ticker': 'TSEM', 'acquirer': 'Intel', 'deal_type': 'All Cash', 'spread_at_announce': 28.0, 'outcome': 'Broken', 'days_to_close': 547},
+    {'ticker': 'CCXI', 'acquirer': 'AstraZeneca', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 140},
+    {'ticker': 'SGMS', 'acquirer': 'Apollo', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 134},
+    {'ticker': 'FORG', 'acquirer': 'Thales', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 198},
+    {'ticker': 'PING', 'acquirer': 'Thoma Bravo', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 200},
+    {'ticker': 'PCTY', 'acquirer': 'Vista Equity', 'deal_type': 'Private Equity', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 151},
+    {'ticker': 'GDRX', 'acquirer': 'Francisco Partners', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'MIME', 'acquirer': 'Permira', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 210},
+    {'ticker': 'SGEN', 'acquirer': 'Pfizer', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 277},
+    {'ticker': 'PCOR', 'acquirer': 'Trimble', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 150},
+    {'ticker': 'BLKB', 'acquirer': 'Vista Equity', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'INFIQ', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 15.0, 'outcome': 'Broken', 'days_to_close': 204},
+    {'ticker': 'MMLP', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 8.0, 'outcome': 'Broken', 'days_to_close': 208},
+    {'ticker': 'CRVO', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 20.0, 'outcome': 'Broken', 'days_to_close': 181},
+    {'ticker': 'SAVE', 'acquirer': 'JetBlue', 'deal_type': 'All Cash', 'spread_at_announce': 35.0, 'outcome': 'Broken', 'days_to_close': 585},
+    {'ticker': 'ATEX', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 18.0, 'outcome': 'Broken', 'days_to_close': 228},
+    {'ticker': 'SGFY', 'acquirer': 'CVS Health', 'deal_type': 'All Cash', 'spread_at_announce': 12.0, 'outcome': 'Broken', 'days_to_close': 397},
+    {'ticker': 'CHNG', 'acquirer': 'UnitedHealth', 'deal_type': 'All Cash', 'spread_at_announce': 22.0, 'outcome': 'Broken', 'days_to_close': 714},
+    {'ticker': 'ATHA', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 25.0, 'outcome': 'Broken', 'days_to_close': 184},
+    {'ticker': 'IIIN', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 10.0, 'outcome': 'Broken', 'days_to_close': 184},
+    {'ticker': 'TIGR', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 18.0, 'outcome': 'Broken', 'days_to_close': 184},
+    {'ticker': 'EBIX', 'acquirer': 'Fidelity', 'deal_type': 'All Cash', 'spread_at_announce': 25.0, 'outcome': 'Broken', 'days_to_close': 212},
+    {'ticker': 'PNFP', 'acquirer': 'Tennessee Bank', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 182},
+    {'ticker': 'LDOS', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'VRNT', 'acquirer': 'Cognyte', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 152},
+    {'ticker': 'SAIL', 'acquirer': 'Broadcom', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 183},
+    {'ticker': 'ATRC', 'acquirer': 'Johnson & Johnson', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 183},
+    {'ticker': 'XLNX', 'acquirer': 'AMD', 'deal_type': 'Cash + Stock', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 475},
+    {'ticker': 'AJRD', 'acquirer': 'L3Harris', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 221},
+    {'ticker': 'CDAY', 'acquirer': 'Ceridian', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 208},
+    {'ticker': 'PLNT', 'acquirer': 'TSG Consumer', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 182},
+    {'ticker': 'AMED', 'acquirer': 'UnitedHealth', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 341},
+    {'ticker': 'MGLN', 'acquirer': 'Centene', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 365},
+    {'ticker': 'MRTX', 'acquirer': 'Pfizer', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 237},
+    {'ticker': 'SPWR', 'acquirer': 'TotalEnergies', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 183},
+    {'ticker': 'PETQ', 'acquirer': 'KKR', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 152},
+    {'ticker': 'LMNX', 'acquirer': 'DiaSorin', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 240},
+    {'ticker': 'RTLR', 'acquirer': 'Equinor', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 161},
+    {'ticker': 'MYOK', 'acquirer': 'Bristol Myers', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 50},
+    {'ticker': 'ARNA', 'acquirer': 'Pfizer', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 88},
+    {'ticker': 'AFMD', 'acquirer': 'Genmab', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 182},
+    {'ticker': 'KRTX', 'acquirer': 'Roche', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 139},
+    {'ticker': 'RGNX', 'acquirer': 'Ultragenyx', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 145},
+    {'ticker': 'HALO', 'acquirer': 'Janssen', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 228},
+    {'ticker': 'IMVT', 'acquirer': 'Roche', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 153},
+    {'ticker': 'AKBA', 'acquirer': 'Akebia', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 153},
+    {'ticker': 'MCRB', 'acquirer': 'Nestlé', 'deal_type': 'All Cash', 'spread_at_announce': 7.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'CTIC', 'acquirer': 'Swedish Orphan', 'deal_type': 'All Cash', 'spread_at_announce': 6.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'PNTM', 'acquirer': 'Merck', 'deal_type': 'All Cash', 'spread_at_announce': 8.0, 'outcome': 'Closed', 'days_to_close': 181},
+    {'ticker': 'ALDX', 'acquirer': 'AbbVie', 'deal_type': 'All Cash', 'spread_at_announce': 9.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'ENTA', 'acquirer': 'Roche', 'deal_type': 'All Cash', 'spread_at_announce': 6.0, 'outcome': 'Closed', 'days_to_close': 183},
+    {'ticker': 'YMAB', 'acquirer': 'Jazz Pharma', 'deal_type': 'All Cash', 'spread_at_announce': 7.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'MDVN', 'acquirer': 'Pfizer', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 181},
+    {'ticker': 'ACHN', 'acquirer': 'Alexion', 'deal_type': 'All Cash', 'spread_at_announce': 6.0, 'outcome': 'Closed', 'days_to_close': 123},
+    {'ticker': 'PGNX', 'acquirer': 'Servier', 'deal_type': 'All Cash', 'spread_at_announce': 8.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'PTLA', 'acquirer': 'Pfizer', 'deal_type': 'All Cash', 'spread_at_announce': 7.0, 'outcome': 'Closed', 'days_to_close': 145},
+    {'ticker': 'AMAG', 'acquirer': 'Covis Pharma', 'deal_type': 'All Cash', 'spread_at_announce': 14.0, 'outcome': 'Broken', 'days_to_close': 100},
+    {'ticker': 'SGBX', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 16.0, 'outcome': 'Broken', 'days_to_close': 212},
+    {'ticker': 'TTGT', 'acquirer': 'Informa', 'deal_type': 'All Cash', 'spread_at_announce': 13.0, 'outcome': 'Broken', 'days_to_close': 275},
+    {'ticker': 'PRSP', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 17.0, 'outcome': 'Broken', 'days_to_close': 182},
+    {'ticker': 'DMTK', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 20.0, 'outcome': 'Broken', 'days_to_close': 214},
+    {'ticker': 'PAHC', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 22.0, 'outcome': 'Broken', 'days_to_close': 212},
+    {'ticker': 'COHN', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 19.0, 'outcome': 'Broken', 'days_to_close': 214},
+    {'ticker': 'FWAA', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 15.0, 'outcome': 'Broken', 'days_to_close': 213},
+    {'ticker': 'AZPN', 'acquirer': 'Emerson Electric', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 223},
+    {'ticker': 'COUP', 'acquirer': 'Vista Equity', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 77},
+    {'ticker': 'EVBG', 'acquirer': 'Thoma Bravo', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 115},
+    {'ticker': 'DOMO', 'acquirer': 'Thoma Bravo', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 183},
+    {'ticker': 'APPN', 'acquirer': 'Vista Equity', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'INST', 'acquirer': 'KKR', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 129},
+    {'ticker': 'NLOK', 'acquirer': 'Broadcom', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 469},
+    {'ticker': 'AVEPO', 'acquirer': 'Apollo', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'PRGS', 'acquirer': 'KKR', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 181},
+    {'ticker': 'AMSF', 'acquirer': 'Blackstone', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 183},
+    {'ticker': 'TWTR', 'acquirer': 'Elon Musk', 'deal_type': 'All Cash', 'spread_at_announce': 10.0, 'outcome': 'Closed', 'days_to_close': 185},
+    {'ticker': 'DISCA', 'acquirer': 'AT&T', 'deal_type': 'Cash + Stock', 'spread_at_announce': 8.0, 'outcome': 'Closed', 'days_to_close': 326},
+    {'ticker': 'MGM', 'acquirer': 'Amazon', 'deal_type': 'All Cash', 'spread_at_announce': 6.0, 'outcome': 'Closed', 'days_to_close': 295},
+    {'ticker': 'ZNGA', 'acquirer': 'Take-Two Interactive', 'deal_type': 'Cash + Stock', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 133},
+    {'ticker': 'MBWM', 'acquirer': 'Old National', 'deal_type': 'Cash + Stock', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 198},
+    {'ticker': 'CLDR', 'acquirer': 'KKR + CDP', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 221},
+    {'ticker': 'PEGA', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'FORG2', 'acquirer': 'Francisco Partners', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'ULTA', 'acquirer': 'Berkshire Hathaway', 'deal_type': 'Tender Offer', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'LHCG', 'acquirer': 'UnitedHealth', 'deal_type': 'Tender Offer', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 315},
+    {'ticker': 'ATRS', 'acquirer': 'Amneal', 'deal_type': 'Tender Offer', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 123},
+    {'ticker': 'CTIC2', 'acquirer': 'Servier', 'deal_type': 'Tender Offer', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 122},
+    {'ticker': 'HRMY', 'acquirer': 'Jazz Pharma', 'deal_type': 'Tender Offer', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 122},
+    {'ticker': 'PRTO', 'acquirer': 'Novo Nordisk', 'deal_type': 'Tender Offer', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 122},
+    {'ticker': 'BMRN', 'acquirer': 'Roche', 'deal_type': 'Tender Offer', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'ARWR', 'acquirer': 'Roche', 'deal_type': 'Tender Offer', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 122},
+    {'ticker': 'FATE', 'acquirer': 'Undisclosed', 'deal_type': 'Tender Offer', 'spread_at_announce': 14.0, 'outcome': 'Broken', 'days_to_close': 121},
+    {'ticker': 'ARCT', 'acquirer': 'Undisclosed', 'deal_type': 'Tender Offer', 'spread_at_announce': 18.0, 'outcome': 'Broken', 'days_to_close': 182},
+]
+
+def get_comparable_deals(deal_type, spread_pct, current_ticker, max_results=4):
+    import random
+    comps = [c for c in COMPS_DATA if c['ticker'] != current_ticker]
+    type_match = [c for c in comps if c['deal_type'] == deal_type]
+
+    # Try tight match — within 4%
+    tight = [c for c in type_match if abs(c['spread_at_announce'] - spread_pct) <= 4]
+    if len(tight) >= 3:
+        selected = random.sample(tight, min(max_results, len(tight)))
+    else:
+        # Loosen to 8%
+        loose = [c for c in type_match if abs(c['spread_at_announce'] - spread_pct) <= 8]
+        if len(loose) >= 2:
+            selected = random.sample(loose, min(max_results, len(loose)))
+        else:
+            selected = random.sample(type_match, min(max_results, len(type_match)))
+
+    return selected
+
 def get_regulatory_risk(ticker, acquirer, tx_value, deal_type):
     tags = []
     try:
@@ -82,63 +219,27 @@ def get_regulatory_risk(ticker, acquirer, tx_value, deal_type):
     tx_billions = tx_value if tx_value else 0
     tx_millions = tx_billions * 1000
 
-    # HSR filing threshold
     if tx_millions >= 119.5 or tx_billions >= 0.12:
-        tags.append({
-            'agency': 'HSR Filing',
-            'level': 'low',
-            'reason': 'Transaction value triggers mandatory Hart-Scott-Rodino antitrust filing with DOJ and FTC'
-        })
+        tags.append({'agency': 'HSR Filing', 'level': 'low', 'reason': 'Transaction value triggers mandatory Hart-Scott-Rodino antitrust filing with DOJ and FTC'})
 
-    # CFIUS — foreign acquirer
-    foreign_keywords = [
-        'china', 'chinese', 'japan', 'japanese', 'korea', 'korean',
-        'saudi', 'emirates', 'uae', 'russia', 'russian', 'huawei',
-        'alibaba', 'tencent', 'softbank', 'samsung'
-    ]
+    foreign_keywords = ['china', 'chinese', 'japan', 'japanese', 'korea', 'korean', 'saudi', 'emirates', 'uae', 'russia', 'russian', 'huawei', 'alibaba', 'tencent', 'softbank', 'samsung']
     if acquirer and any(kw in acquirer.lower() for kw in foreign_keywords):
-        tags.append({
-            'agency': 'CFIUS Review',
-            'level': 'high',
-            'reason': 'Foreign acquirer may trigger Committee on Foreign Investment in the US national security review'
-        })
+        tags.append({'agency': 'CFIUS Review', 'level': 'high', 'reason': 'Foreign acquirer may trigger Committee on Foreign Investment in the US national security review'})
 
-    # FTC — tech, pharma, consumer
     ftc_sectors = ['Technology', 'Healthcare', 'Consumer Defensive', 'Consumer Cyclical', 'Communication Services']
     if sector in ftc_sectors and tx_billions >= 1:
-        tags.append({
-            'agency': 'FTC Antitrust',
-            'level': 'medium' if tx_billions < 5 else 'high',
-            'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to FTC antitrust review'
-        })
+        tags.append({'agency': 'FTC Antitrust', 'level': 'medium' if tx_billions < 5 else 'high', 'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to FTC antitrust review'})
 
-    # DOJ — industrials, financials, energy
     doj_sectors = ['Industrials', 'Financial Services', 'Energy', 'Basic Materials', 'Utilities']
     if sector in doj_sectors and tx_billions >= 1:
-        tags.append({
-            'agency': 'DOJ Antitrust',
-            'level': 'medium' if tx_billions < 5 else 'high',
-            'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to DOJ antitrust review'
-        })
+        tags.append({'agency': 'DOJ Antitrust', 'level': 'medium' if tx_billions < 5 else 'high', 'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to DOJ antitrust review'})
 
-    # Market concentration
-    concentrated_industries = [
-        'Software', 'Semiconductors', 'Biotechnology', 'Drug Manufacturers',
-        'Banks', 'Insurance', 'Airlines', 'Telecom'
-    ]
+    concentrated_industries = ['Software', 'Semiconductors', 'Biotechnology', 'Drug Manufacturers', 'Banks', 'Insurance', 'Airlines', 'Telecom']
     if any(c.lower() in industry.lower() for c in concentrated_industries) and tx_billions >= 2:
-        tags.append({
-            'agency': 'Market Concentration',
-            'level': 'high',
-            'reason': 'Highly concentrated industry — enhanced regulatory scrutiny expected'
-        })
+        tags.append({'agency': 'Market Concentration', 'level': 'high', 'reason': 'Highly concentrated industry — enhanced regulatory scrutiny expected'})
 
     if not tags:
-        tags.append({
-            'agency': 'Standard Review',
-            'level': 'low',
-            'reason': 'No elevated regulatory concerns identified based on deal size and sector'
-        })
+        tags.append({'agency': 'Standard Review', 'level': 'low', 'reason': 'No elevated regulatory concerns identified based on deal size and sector'})
 
     return tags
 
@@ -395,7 +496,6 @@ def fetch_deals_from_edgar(progress_callback=None):
             risk = 'Very Low' if sc >= 80 else 'Low' if sc >= 65 else 'Medium' if sc >= 50 else 'High'
             ann = (sp_pct / 180) * 365
             acquirer = KNOWN_ACQUIRERS.get(ticker, acquirer)
-
             break_price = get_break_price(ticker, src['file_date'])
             break_downside = get_break_downside(round(cp, 2), break_price)
             reg_tags = get_regulatory_risk(ticker, acquirer, tx_value, deal_type)
@@ -526,6 +626,22 @@ async def get_deals():
     if deals is None:
         deals = fetch_deals_from_edgar()
     return JSONResponse(content={"deals": deals})
+
+@app.get("/api/comps/{ticker}")
+async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.0):
+    comps = get_comparable_deals(deal_type, spread, ticker)
+    closed = sum(1 for c in comps if c['outcome'] == 'Closed')
+    broken = sum(1 for c in comps if c['outcome'] == 'Broken')
+    return JSONResponse(content={
+        "comps": comps,
+        "summary": {
+            "total": len(comps),
+            "closed": closed,
+            "broken": broken,
+            "close_rate": round(closed / len(comps) * 100) if comps else 0,
+            "avg_days": round(sum(c['days_to_close'] for c in comps) / len(comps)) if comps else 0
+        }
+    })
 
 @app.get("/api/refresh-stream")
 async def refresh_stream():

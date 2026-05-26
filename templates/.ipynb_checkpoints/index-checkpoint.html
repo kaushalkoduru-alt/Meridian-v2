@@ -213,7 +213,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .rr-table td.neg{color:var(--red);}
 .rr-note{font-family:'Cormorant Garamond',serif;font-size:0.82rem;color:var(--dim);margin-top:1rem;line-height:1.6;font-weight:300;font-style:italic;}
 
-/* REGULATORY RISK */
 .reg-risk-list{background:var(--bg2);border:1px solid var(--bdr);padding:0;}
 .reg-risk-item{display:flex;align-items:flex-start;gap:1.25rem;padding:1rem 1.5rem;border-bottom:1px solid var(--bdr);}
 .reg-risk-item:last-child{border-bottom:none;}
@@ -221,8 +220,26 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .reg-dot.low{background:var(--green);}
 .reg-dot.medium{background:var(--gold);}
 .reg-dot.high{background:var(--red);}
-.reg-agency{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--cream);min-width:140px;flex-shrink:0;}
+.reg-agency{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--cream);min-width:160px;flex-shrink:0;}
 .reg-reason{font-family:'Cormorant Garamond',serif;font-size:0.92rem;color:var(--muted);line-height:1.6;font-weight:300;}
+
+/* COMPARABLE DEALS */
+.comps-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin-bottom:1px;}
+.comp-stat{background:var(--bg2);padding:1rem 1.25rem;text-align:center;}
+.comp-stat-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:300;line-height:1;margin-bottom:0.2rem;}
+.comp-stat-val.green{color:var(--green);}
+.comp-stat-val.red{color:var(--red);}
+.comp-stat-val.gold{color:var(--gold);}
+.comp-stat-lbl{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
+.comps-table{width:100%;border:1px solid var(--bdr);border-top:none;border-collapse:collapse;}
+.comps-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
+.comps-table th.r{text-align:right;}
+.comps-table td{font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);color:var(--cream);}
+.comps-table td.r{text-align:right;}
+.comps-table tr:last-child td{border-bottom:none;}
+.comp-outcome-closed{color:var(--green);}
+.comp-outcome-broken{color:var(--red);}
+.comps-note{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);margin-top:0.75rem;line-height:1.6;font-weight:300;font-style:italic;padding:0.75rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);border-top:none;}
 
 .score-bars{display:flex;flex-direction:column;gap:1rem;background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;}
 .score-bar-header{display:flex;justify-content:space-between;margin-bottom:0.4rem;}
@@ -413,11 +430,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
   </div>
   <div id="deal-list">
-    <div class="loading-wrap">
-      <div class="spinner"></div>
-      <div class="loading-title">Loading deal feed</div>
-      <div class="loading-sub">Fetching from SEC EDGAR</div>
-    </div>
+    <div class="loading-wrap"><div class="spinner"></div><div class="loading-title">Loading deal feed</div><div class="loading-sub">Fetching from SEC EDGAR</div></div>
   </div>
   <footer>
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
@@ -450,6 +463,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="da-metrics" id="da-metrics"></div>
   <div class="da-section"><div class="da-section-title">Risk / Reward Analysis</div><div class="rr-grid" id="da-rr-grid"></div></div>
+  <div class="da-section"><div class="da-section-title">Comparable Deals</div><div id="da-comps"></div></div>
   <div class="da-section"><div class="da-section-title">Regulatory Risk</div><div class="reg-risk-list" id="da-reg-risk"></div></div>
   <div class="da-section"><div class="da-section-title">Score Breakdown</div><div class="score-bars" id="da-score-bars"></div></div>
   <div class="da-section"><div class="da-section-title">Risk Factors</div><div class="risk-factors" id="da-risk-factors"></div></div>
@@ -595,7 +609,7 @@ function showMethodology(){
 function formatDate(){
     const now = new Date();
     const el = document.getElementById('timestamp');
-    if(el) el.textContent = now.toISOString().slice(0,10) + ' · ' + now.toTimeString().slice(0,5) + ' UTC';
+    if(el) el.textContent = now.toISOString().slice(0,10)+' · '+now.toTimeString().slice(0,5)+' UTC';
 }
 formatDate();
 setInterval(formatDate, 60000);
@@ -604,10 +618,10 @@ async function updateLandingStats(){
     try{
         const res = await fetch('/api/deals');
         const data = await res.json();
-        const count = data.deals ? data.deals.length : '--';
+        const count = data.deals?data.deals.length:'--';
         const el = document.getElementById('landing-deal-count');
-        if(el) el.textContent = count + '+';
-    } catch(e){}
+        if(el) el.textContent = count+'+';
+    }catch(e){}
 }
 
 function getBadgeClass(risk){
@@ -644,7 +658,7 @@ function updateLocalTime(fetched){
     try{
         const d = new Date(fetched+':00Z');
         return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
-    } catch(e){ return fetched; }
+    }catch(e){ return fetched; }
 }
 
 function getRiskFactors(deal){
@@ -654,7 +668,7 @@ function getRiskFactors(deal){
     if(deal.deal_type==='Cash + Stock') factors.push({level:'md',text:"Mixed consideration deals carry additional complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk."});
     if(deal.deal_type==='Tender Offer') factors.push({level:'lo',text:'Tender offers typically close faster than mergers and have higher completion rates due to the direct shareholder approach and predetermined acceptance thresholds.'});
     if(deal.deal_type==='Private Equity') factors.push({level:'md',text:'Private equity acquisitions depend on financing conditions. Rising interest rates or tightening credit markets can increase deal break risk for leveraged buyouts.'});
-    if(deal.sp_pct>12) factors.push({level:'hi',text:`High spread of ${deal.sp_pct.toFixed(2)}% signals elevated market concern about deal completion. Historically deals with spreads above 12% break at materially higher rates.`});
+    if(deal.sp_pct>12) factors.push({level:'hi',text:`High spread of ${deal.sp_pct.toFixed(2)}% signals elevated market concern. Historically deals with spreads above 12% break at materially higher rates.`});
     if(deal.close_date==='TBD') factors.push({level:'md',text:'No expected close date has been publicly disclosed, making annualized return calculations approximate. Timeline uncertainty adds risk to position sizing decisions.'});
     if(factors.length===0) factors.push({level:'lo',text:'Deal structure appears straightforward with no major identified risk factors. Standard merger completion risks apply including regulatory review and shareholder approval.'});
     return factors.slice(0,4);
@@ -680,7 +694,7 @@ function getScoreBreakdown(deal){
     ];
 }
 
-function renderAnalysis(deal){
+async function renderAnalysis(deal){
     const bc=getBadgeClass(deal.risk);
     const tc=getTypeClass(deal.deal_type);
     const tl=getTypeLabel(deal.deal_type);
@@ -712,15 +726,13 @@ function renderAnalysis(deal){
     `;
 
     const investments=[1000,5000,10000,50000,100000];
-    let upsideRows='';
-    let downsideRows='';
+    let upsideRows='',downsideRows='';
     investments.forEach(inv=>{
         const upProfit=(deal.sp_pct/100)*inv;
         const downLoss=bd?((bd/100)*inv):null;
         upsideRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r pos">+$${Math.abs(upProfit).toLocaleString('en-US',{maximumFractionDigits:0})}</td></tr>`;
         downsideRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r neg">${downLoss!==null?'-$'+Math.abs(downLoss).toLocaleString('en-US',{maximumFractionDigits:0}):'N/A'}</td></tr>`;
     });
-
     document.getElementById('da-rr-grid').innerHTML=`
         <div class="rr-col upside">
             <div class="rr-title">If Deal Closes</div>
@@ -744,39 +756,65 @@ function renderAnalysis(deal){
         </div>
     `;
 
-    // Regulatory risk
-    let regTags = [];
-    try {
-        regTags = deal.reg_tags ? JSON.parse(deal.reg_tags) : [];
-    } catch(e){ regTags = []; }
+    // Load comparable deals from API
+    document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.48rem;color:var(--dim);letter-spacing:0.15em;">Loading comparable deals...</div>';
+    try{
+        const compsRes = await fetch(`/api/comps/${deal.ticker}?deal_type=${encodeURIComponent(deal.deal_type)}&spread=${deal.sp_pct}`);
+        const compsData = await compsRes.json();
+        const comps = compsData.comps || [];
+        const summary = compsData.summary || {};
 
-    document.getElementById('da-reg-risk').innerHTML = regTags.length > 0
-        ? regTags.map(t=>`
-            <div class="reg-risk-item">
-                <div class="reg-dot ${t.level}"></div>
-                <div class="reg-agency">${t.agency}</div>
-                <div class="reg-reason">${t.reason}</div>
-            </div>
-        `).join('')
-        : '<div class="reg-risk-item"><div class="reg-dot low"></div><div class="reg-agency">Standard Review</div><div class="reg-reason">No elevated regulatory concerns identified based on deal size and sector.</div></div>';
+        if(comps.length === 0){
+            document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">No comparable deals found in our historical database for this deal type and spread range.</div>';
+        } else {
+            const closeColor = summary.close_rate >= 70 ? 'var(--green)' : summary.close_rate >= 50 ? 'var(--gold)' : 'var(--red)';
+            let rows = comps.map(c=>`
+                <tr>
+                    <td>${c.ticker}</td>
+                    <td>${c.acquirer}</td>
+                    <td>${c.deal_type}</td>
+                    <td class="r">${c.spread_at_announce.toFixed(1)}%</td>
+                    <td class="r ${c.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${c.outcome}</td>
+                    <td class="r">${c.days_to_close} days</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('da-comps').innerHTML=`
+                <div class="comps-summary">
+                    <div class="comp-stat"><div class="comp-stat-val">${summary.total}</div><div class="comp-stat-lbl">Comparable Deals</div></div>
+                    <div class="comp-stat"><div class="comp-stat-val green">${summary.closed}</div><div class="comp-stat-lbl">Closed</div></div>
+                    <div class="comp-stat"><div class="comp-stat-val red">${summary.broken}</div><div class="comp-stat-lbl">Broken</div></div>
+                    <div class="comp-stat"><div class="comp-stat-val" style="color:${closeColor}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
+                </div>
+                <table class="comps-table">
+                    <thead><tr><th>Ticker</th><th>Acquirer</th><th>Type</th><th class="r">Spread</th><th class="r">Outcome</th><th class="r">Days to Close</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <div class="comps-note">Comparable deals matched by deal type (${deal.deal_type}) and spread range. Historical data from 2020–2025. ${summary.close_rate}% of similar deals closed successfully with an average of ${summary.avg_days} days to completion.</div>
+            `;
+        }
+    }catch(e){
+        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to load comparable deals.</div>';
+    }
+
+    // Regulatory risk
+    let regTags=[];
+    try{ regTags=deal.reg_tags?JSON.parse(deal.reg_tags):[]; }catch(e){ regTags=[]; }
+    document.getElementById('da-reg-risk').innerHTML=regTags.length>0
+        ?regTags.map(t=>`<div class="reg-risk-item"><div class="reg-dot ${t.level}"></div><div class="reg-agency">${t.agency}</div><div class="reg-reason">${t.reason}</div></div>`).join('')
+        :'<div class="reg-risk-item"><div class="reg-dot low"></div><div class="reg-agency">Standard Review</div><div class="reg-reason">No elevated regulatory concerns identified based on deal size and sector.</div></div>';
 
     const breakdown=getScoreBreakdown(deal);
     document.getElementById('da-score-bars').innerHTML=breakdown.map(b=>`
         <div class="score-bar-item">
-            <div class="score-bar-header">
-                <span class="score-bar-label">${b.label}</span>
-                <span class="score-bar-val">${b.score}/100</span>
-            </div>
+            <div class="score-bar-header"><span class="score-bar-label">${b.label}</span><span class="score-bar-val">${b.score}/100</span></div>
             <div class="score-bar-desc">${b.desc}</div>
             <div class="score-bar-track"><div class="score-bar-fill" style="width:${b.score}%;background:${b.color}"></div></div>
         </div>
     `).join('');
 
     document.getElementById('da-risk-factors').innerHTML=getRiskFactors(deal).map(f=>`
-        <div class="risk-factor">
-            <div class="risk-dot ${f.level}"></div>
-            <div class="risk-text">${f.text}</div>
-        </div>
+        <div class="risk-factor"><div class="risk-dot ${f.level}"></div><div class="risk-text">${f.text}</div></div>
     `).join('');
 
     const progress=Math.min(100,(deal.days_old/180)*100);
@@ -922,7 +960,7 @@ function renderDeals(deals){
               <button class="analysis-btn" onclick="event.stopPropagation();showAnalysis(allDeals.find(x=>x.ticker==='${d.ticker}'))">
                 View Full Analysis →
               </button>
-              <div class="analysis-btn-label">Full risk/reward · Regulatory risk · Score breakdown · Break price analysis</div>
+              <div class="analysis-btn-label">Full risk/reward · Comparable deals · Regulatory risk · Score breakdown</div>
             </div>`;
         });
         html+='</div></div>';
@@ -942,7 +980,7 @@ async function loadDeals(){
         allDeals=data.deals||[];
         dealsLoaded=true;
         renderDeals(allDeals);
-    } catch(e){
+    }catch(e){
         document.getElementById('deal-list').innerHTML='<div class="loading-wrap"><div class="loading-title">Error loading deals</div><div class="loading-sub">Please refresh the page</div></div>';
     }
 }
