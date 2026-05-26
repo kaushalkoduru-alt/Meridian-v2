@@ -297,6 +297,14 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .threshold-cell.hi .threshold-range{color:var(--red);}
 .threshold-name{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
 .threshold-desc{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);line-height:1.6;font-weight:300;}
+.spread-rules{width:100%;border:1px solid var(--bdr);border-collapse:collapse;margin-bottom:1rem;}
+.spread-rules th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
+.spread-rules td{font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.7rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
+.spread-rules tr:last-child td{border-bottom:none;}
+.spread-rules td.rate{text-align:right;font-weight:500;}
+.spread-rules td.rate.safe{color:var(--green);}
+.spread-rules td.rate.warn{color:var(--gold);}
+.spread-rules td.rate.danger{color:var(--red);}
 .sample-table{width:100%;border:1px solid var(--bdr);border-collapse:collapse;}
 .sample-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--bdr);text-align:left;}
 .sample-table td{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.65rem 1rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
@@ -355,14 +363,14 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <p class="hero-desc">Institutional-grade merger arbitrage intelligence, sourced directly from SEC EDGAR. Every active deal <b>tracked, scored, and updated hourly</b> so you can act with conviction.</p>
     <div class="stats">
       <div class="stat"><div class="stat-v" id="landing-deal-count">--</div><div class="stat-l">Active Deals Tracked</div></div>
-      <div class="stat"><div class="stat-v">88%</div><div class="stat-l">Deal Close Prediction</div></div>
+      <div class="stat"><div class="stat-v">93%</div><div class="stat-l">Deal Close Prediction</div></div>
       <div class="stat"><div class="stat-v">1hr</div><div class="stat-l">Data Refresh Cycle</div></div>
       <div class="stat"><div class="stat-v">SEC</div><div class="stat-l">Primary Data Source</div></div>
     </div>
     <div class="methodology-banner" onclick="showMethodology()">
       <div>
-        <div class="methodology-banner-title">◈ Proprietary Scoring Model</div>
-        <div class="methodology-banner-desc">88% accuracy at predicting whether a deal closes or breaks — backtested on 150+ historical deals. Read the full methodology.</div>
+        <div class="methodology-banner-title">◈ Proprietary Scoring Model · V2</div>
+        <div class="methodology-banner-desc">93.1% accuracy at predicting whether a deal closes or breaks — backtested on 159 historical deals from 2020–2025. Read the full methodology.</div>
       </div>
       <div class="methodology-banner-arrow">→</div>
     </div>
@@ -372,24 +380,24 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="s-title">The Scoring System</div>
     <div class="s-sub">◈ How Meridian evaluates every deal</div>
     <div class="s-grid">
-      <div class="s-card vl"><div class="s-range">80 to 100</div><div class="s-name">Very Low Risk</div><div class="s-desc">High confidence deals. Strong buyer, clean regulatory path, healthy break fee. These are positions institutional arb funds hold with conviction.</div></div>
-      <div class="s-card lo"><div class="s-range">65 to 79</div><div class="s-name">Low Risk</div><div class="s-desc">Solid deals with minor uncertainties. Slightly longer timelines or modest regulatory complexity. Still strong risk-adjusted returns.</div></div>
-      <div class="s-card md"><div class="s-range">50 to 64</div><div class="s-name">Medium Risk</div><div class="s-desc">Meaningful uncertainties including financing risk, antitrust scrutiny, or unconventional deal structures.</div></div>
-      <div class="s-card hi"><div class="s-range">0 to 49</div><div class="s-name">High Risk</div><div class="s-desc">Elevated break probability. Negative spreads, weak buyers, or significant regulatory headwinds. Approach with caution.</div></div>
+      <div class="s-card vl"><div class="s-range">Very Low</div><div class="s-name">0–8% Spread · Score 80+</div><div class="s-desc">0% break rate across 116 historical deals. Market has high conviction. These are the positions institutional arb funds hold with maximum confidence.</div></div>
+      <div class="s-card lo"><div class="s-range">Low</div><div class="s-name">0–8% Spread · Score 65–79</div><div class="s-desc">Tight spread with minor score uncertainty. Still strong risk-adjusted returns. Monitor for any change in deal terms or regulatory news.</div></div>
+      <div class="s-card md"><div class="s-range">Medium</div><div class="s-name">8–12% Spread · Score 75+</div><div class="s-desc">36% historical break rate in this spread range. Meaningful market skepticism priced in. Proceed with careful position sizing.</div></div>
+      <div class="s-card hi"><div class="s-range">High</div><div class="s-name">12%+ Spread · or Score Below 75</div><div class="s-desc">87% break rate above 12% spread. Market is pricing in near-certain deal failure. Approach only with full understanding of downside risk.</div></div>
     </div>
     <div class="s-methodology-link">
       <button class="s-methodology-btn" onclick="showMethodology()">View Full Methodology & Backtest Results →</button>
     </div>
     <div class="how-grid">
-      <div class="how-card"><div class="how-n">01</div><div class="how-t">SEC EDGAR Monitoring</div><div class="how-d">Every hour, Meridian scans 8-K filings for definitive merger agreements, automatically extracting deal price, acquirer, and terms.</div></div>
-      <div class="how-card"><div class="how-n">02</div><div class="how-t">Near Real-Time Spread Calculation</div><div class="how-d">Market prices updated hourly via Yahoo Finance. The spread is the gap between market price and deal price — that gap is your potential return if the deal closes.</div></div>
-      <div class="how-card"><div class="how-n">03</div><div class="how-t">Proprietary Scoring</div><div class="how-d">Our model scores each position on spread quality, deal type, and time pending. Backtested at 88% accuracy on 150+ historical deals from 2020–2025.</div></div>
+      <div class="how-card"><div class="how-n">01</div><div class="how-t">SEC EDGAR Monitoring</div><div class="how-d">Every hour, Meridian scans 8-K filings for definitive merger agreements, automatically extracting deal price, acquirer, and terms directly from SEC filings.</div></div>
+      <div class="how-card"><div class="how-n">02</div><div class="how-t">Near Real-Time Spread Calculation</div><div class="how-d">Market prices updated hourly via Yahoo Finance. The spread is the gap between market price and deal price — your potential return if the deal closes.</div></div>
+      <div class="how-card"><div class="how-n">03</div><div class="how-t">V2 Scoring Model</div><div class="how-d">Our model uses empirical spread-based break rates from 159 historical deals. Deals under 8% spread have shown a 0% break rate. Above 12%, break rate exceeds 87%.</div></div>
     </div>
   </div>
   <footer>
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
     <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 150+ historical deals · 2020–2025</div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 159 historical deals · 2020–2025</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Spreads reflect Yahoo Finance data which may be delayed up to 15 minutes. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
@@ -419,7 +427,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <div class="mstrip">
     <div class="mc"><div class="mc-l">Active Deals</div><div class="mc-v" id="m-deals">--</div><div class="mc-h">tracked from SEC EDGAR</div></div>
     <div class="mc"><div class="mc-l">Avg Spread</div><div class="mc-v gr" id="m-spread">--</div><div class="mc-h">across all positions</div></div>
-    <div class="mc"><div class="mc-l">Avg Score</div><div class="mc-v" id="m-score">--</div><div class="mc-h">proprietary model</div></div>
+    <div class="mc"><div class="mc-l">Avg Score</div><div class="mc-v" id="m-score">--</div><div class="mc-h">proprietary v2 model</div></div>
     <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
   </div>
   <div class="data-note">◈ Prices via Yahoo Finance · May be delayed up to 15 minutes · For informational purposes only · Not financial advice</div>
@@ -479,100 +487,98 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </nav>
   <div class="meth-hero">
     <div class="meth-title">The <em>Scoring</em> Model</div>
-    <div class="meth-sub">◈ Methodology & Backtest Results</div>
-    <p class="meth-desc">Meridian's proprietary scoring model evaluates every pending M&A deal across three evidence-based factors. Each factor is weighted based on its historical predictive power — backtested on 150+ closed and broken deals from 2020 to 2025.</p>
+    <div class="meth-sub">◈ V2 Methodology & Backtest Results</div>
+    <p class="meth-desc">Meridian's V2 scoring model combines a base score with empirical spread-based break rates derived from 159 historical deals. The key insight: spread range alone predicts deal outcomes with remarkable accuracy.</p>
   </div>
   <div class="backtest-strip">
-    <div class="bt-cell"><div class="bt-val">~88%</div><div class="bt-label">Deal Close Prediction</div><div class="bt-sub">Accuracy at predicting whether a deal closes or breaks</div></div>
-    <div class="bt-cell"><div class="bt-val">150+</div><div class="bt-label">Deals Backtested</div><div class="bt-sub">Historical deals from 2020 through 2025</div></div>
-    <div class="bt-cell"><div class="bt-val">89%</div><div class="bt-label">Closed Deal Accuracy</div><div class="bt-sub">Of deals predicted to close, 89% closed</div></div>
-    <div class="bt-cell"><div class="bt-val">86%</div><div class="bt-label">Broken Deal Accuracy</div><div class="bt-sub">Of deals predicted to break, 86% broke</div></div>
+    <div class="bt-cell"><div class="bt-val">93.1%</div><div class="bt-label">Overall Accuracy</div><div class="bt-sub">Predicting deal close or break · 159 deals</div></div>
+    <div class="bt-cell"><div class="bt-val">159</div><div class="bt-label">Deals Backtested</div><div class="bt-sub">Historical deals from 2020 through 2025</div></div>
+    <div class="bt-cell"><div class="bt-val">94.5%</div><div class="bt-label">Closed Deal Accuracy</div><div class="bt-sub">120 of 127 closed deals correctly predicted</div></div>
+    <div class="bt-cell"><div class="bt-val">87.5%</div><div class="bt-label">Broken Deal Accuracy</div><div class="bt-sub">28 of 32 broken deals correctly predicted</div></div>
   </div>
   <div class="base-rate-banner">
-    <div class="base-rate-title">◈ Model Lift Over Base Rate</div>
+    <div class="base-rate-title">◈ Model Lift Over Base Rate · Average Annualized Return</div>
     <div class="base-rate-grid">
       <div class="base-rate-item"><div class="base-rate-val">~73%</div><div class="base-rate-lbl">Historical M&A Close Rate</div></div>
-      <div class="base-rate-item"><div class="base-rate-val">89%</div><div class="base-rate-lbl">Meridian Very Low Risk Close Rate</div></div>
-      <div class="base-rate-item"><div class="base-rate-val">+16pts</div><div class="base-rate-lbl">Lift Over Base Rate</div></div>
+      <div class="base-rate-item"><div class="base-rate-val">100%</div><div class="base-rate-lbl">Very Low Risk Close Rate · 0–8% Spread</div></div>
+      <div class="base-rate-item"><div class="base-rate-val">+8.2%</div><div class="base-rate-lbl">Avg Annualized Return on Closed Deals</div></div>
     </div>
-    <div class="base-rate-note">Historically, approximately 73% of announced M&A deals close. Meridian's Very Low Risk bucket closes at 89% — 16 percentage points above the market baseline. That lift is what the model is designed to deliver.</div>
+    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low Risk bucket — deals with spreads under 8% — showed a 0% break rate across 116 historical deals. The average annualized return on correctly predicted closed deals was 8.2%. These numbers reflect historical backtesting and do not guarantee future performance.</div>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">Spread Quality</div><div class="meth-section-weight">Primary Factor · Highest Predictive Weight</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The merger arbitrage spread is the single most powerful predictor of deal outcome. A tight spread means the market has high confidence the deal closes. A wide spread means the market is pricing in meaningful break risk.</p>
-    <table class="factor-table">
-      <thead><tr><th>Spread Range</th><th>Market Signal</th><th class="r">Score Adjustment</th></tr></thead>
+    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight — Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates from 159 Historical Deals</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The V2 model is built on a simple but powerful empirical finding: the spread range at deal announcement is the strongest predictor of whether a deal closes or breaks. Below 8%, no deals in our dataset broke. Above 12%, 87% broke.</p>
+    <table class="spread-rules">
+      <thead><tr><th>Spread Range</th><th>Deals in Dataset</th><th>Broken</th><th class="r">Break Rate</th><th class="r">V2 Classification</th></tr></thead>
       <tbody>
-        <tr><td>0% to 3%</td><td>Market fully confident · deal expected to close</td><td class="pts pos r">+25 points</td></tr>
-        <tr><td>3% to 5%</td><td>Healthy spread · normal deal uncertainty</td><td class="pts pos r">+18 points</td></tr>
-        <tr><td>5% to 8%</td><td>Moderate spread · some market concern</td><td class="pts pos r">+10 points</td></tr>
-        <tr><td>8% to 12%</td><td>Wide spread · notable market skepticism</td><td class="pts neu r">+0 points</td></tr>
-        <tr><td>12% to 18%</td><td>Very wide · serious concern about completion</td><td class="pts neg r">-15 points</td></tr>
-        <tr><td>18% to 25%</td><td>Extreme spread · market pricing in high break risk</td><td class="pts neg r">-25 points</td></tr>
-        <tr><td>25%+</td><td>Market pricing in near-certain deal break</td><td class="pts neg r">-35 points</td></tr>
-        <tr><td>Negative</td><td>Stock trading above deal price · deal likely broken or competing bid</td><td class="pts neg r">-25 points</td></tr>
+        <tr><td>0% to 3%</td><td>33 deals</td><td>0 broken</td><td class="rate safe r">0.0%</td><td class="rate safe r">Very Low Risk</td></tr>
+        <tr><td>3% to 5%</td><td>62 deals</td><td>0 broken</td><td class="rate safe r">0.0%</td><td class="rate safe r">Very Low / Low Risk</td></tr>
+        <tr><td>5% to 8%</td><td>21 deals</td><td>0 broken</td><td class="rate safe r">0.0%</td><td class="rate safe r">Very Low / Low Risk</td></tr>
+        <tr><td>8% to 12%</td><td>11 deals</td><td>4 broken</td><td class="rate warn r">36.4%</td><td class="rate warn r">Medium / High Risk</td></tr>
+        <tr><td>12% to 18%</td><td>15 deals</td><td>13 broken</td><td class="rate danger r">86.7%</td><td class="rate danger r">High Risk</td></tr>
+        <tr><td>18% to 25%</td><td>12 deals</td><td>11 broken</td><td class="rate danger r">91.7%</td><td class="rate danger r">High Risk</td></tr>
+        <tr><td>25%+</td><td>5 deals</td><td>4 broken</td><td class="rate danger r">80.0%</td><td class="rate danger r">High Risk</td></tr>
       </tbody>
     </table>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Deal Structure</div><div class="meth-section-weight">Secondary Factor · Deal Type Completion Rates</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">Different deal structures have meaningfully different completion rates. All-cash deals are the most reliable — there is no stock price risk and the acquirer has secured financing upfront.</p>
+    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Base Score Calculation</div><div class="meth-section-weight">Three Factors · Base Score 70 · Used as Tiebreaker in Gray Zone</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The base score starts at 70 and is adjusted by three factors. For deals with spreads under 8%, the score determines whether risk is Very Low or Low. For deals in the 8-12% gray zone, the score determines whether risk is Medium or High.</p>
     <table class="factor-table">
-      <thead><tr><th>Deal Type</th><th>Characteristics</th><th class="r">Score Adjustment</th></tr></thead>
+      <thead><tr><th>Factor</th><th>Condition</th><th class="r">Adjustment</th></tr></thead>
       <tbody>
-        <tr><td>All Cash</td><td>Highest certainty · no stock price risk · financing secured</td><td class="pts pos r">+10 points</td></tr>
-        <tr><td>Tender Offer</td><td>Direct shareholder approach · fast timeline · high completion rate</td><td class="pts pos r">+8 points</td></tr>
-        <tr><td>Private Equity</td><td>Financing dependent · leveraged · slightly more break risk</td><td class="pts pos r">+5 points</td></tr>
-        <tr><td>Cash + Stock</td><td>Stock component adds market risk · more complex closing conditions</td><td class="pts neu r">+0 points</td></tr>
+        <tr><td>Deal Type</td><td>All Cash</td><td class="pts pos r">+10 points</td></tr>
+        <tr><td>Deal Type</td><td>Tender Offer</td><td class="pts pos r">+8 points</td></tr>
+        <tr><td>Deal Type</td><td>Private Equity</td><td class="pts pos r">+5 points</td></tr>
+        <tr><td>Deal Type</td><td>Cash + Stock</td><td class="pts neu r">+0 points</td></tr>
+        <tr><td>Spread Quality</td><td>0% to 3%</td><td class="pts pos r">+25 points</td></tr>
+        <tr><td>Spread Quality</td><td>3% to 5%</td><td class="pts pos r">+18 points</td></tr>
+        <tr><td>Spread Quality</td><td>5% to 8%</td><td class="pts pos r">+10 points</td></tr>
+        <tr><td>Spread Quality</td><td>8% to 12%</td><td class="pts neu r">+0 points</td></tr>
+        <tr><td>Spread Quality</td><td>12% to 18%</td><td class="pts neg r">-15 points</td></tr>
+        <tr><td>Spread Quality</td><td>18% to 25%</td><td class="pts neg r">-25 points</td></tr>
+        <tr><td>Spread Quality</td><td>25%+</td><td class="pts neg r">-35 points</td></tr>
+        <tr><td>Time Pending</td><td>Under 90 days</td><td class="pts pos r">+10 points</td></tr>
+        <tr><td>Time Pending</td><td>90 to 270 days</td><td class="pts neu r">+0 points</td></tr>
+        <tr><td>Time Pending</td><td>270 to 500 days</td><td class="pts neg r">-5 points</td></tr>
+        <tr><td>Time Pending</td><td>500+ days</td><td class="pts neg r">-15 points</td></tr>
       </tbody>
     </table>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">03</div><div><div class="meth-section-title">Time Pending</div><div class="meth-section-weight">Tertiary Factor · Deal Duration Signal</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">Deals pending longer face greater accumulated risk. This factor is weighted conservatively — some legitimate deals take 18-24 months due to regulatory review and still close. A long timeline alone is not a break signal.</p>
-    <table class="factor-table">
-      <thead><tr><th>Days Pending</th><th>Signal</th><th class="r">Score Adjustment</th></tr></thead>
-      <tbody>
-        <tr><td>Under 90 days</td><td>Fresh deal · full regulatory timeline ahead · low accumulated risk</td><td class="pts pos r">+10 points</td></tr>
-        <tr><td>90 to 270 days</td><td>Normal progression · expected timeline for most deals</td><td class="pts neu r">+0 points</td></tr>
-        <tr><td>270 to 500 days</td><td>Extended timeline · possible complications · watch spread carefully</td><td class="pts neg r">-5 points</td></tr>
-        <tr><td>500+ days</td><td>Very extended · serious regulatory or financing concerns</td><td class="pts neg r">-15 points</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">04</div><div><div class="meth-section-title">Risk Classification</div><div class="meth-section-weight">How Scores Map to Risk Levels · Base Score 70</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">All deals start at a base score of 70. The three factors adjust this score up or down. The base rate for M&A deal closure is approximately 73%. Meridian's scoring is designed to meaningfully separate high-probability deals from high-risk ones.</p>
+    <div class="meth-section-header"><div class="meth-section-num">03</div><div><div class="meth-section-title">Risk Classification Logic</div><div class="meth-section-weight">V2 Model · Spread Rules Override Score</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">Spread range determines the risk bucket first. The base score is used as a secondary tiebreaker within the 8-12% gray zone. This approach produced 93.1% accuracy versus 88.7% with score-only classification.</p>
     <div class="threshold-grid">
-      <div class="threshold-cell vl"><div class="threshold-range">80–100</div><div class="threshold-name">Very Low Risk</div><div class="threshold-desc">Market has high conviction. Tight spread, strong deal structure. 89% historical close rate.</div></div>
-      <div class="threshold-cell lo"><div class="threshold-range">65–79</div><div class="threshold-name">Low Risk</div><div class="threshold-desc">Solid completion probability. Minor uncertainties priced in.</div></div>
-      <div class="threshold-cell md"><div class="threshold-range">50–64</div><div class="threshold-name">Medium Risk</div><div class="threshold-desc">Elevated uncertainty. Wider spread reflects meaningful concern.</div></div>
-      <div class="threshold-cell hi"><div class="threshold-range">0–49</div><div class="threshold-name">High Risk</div><div class="threshold-desc">Market pricing in significant break probability. Approach with caution.</div></div>
+      <div class="threshold-cell vl"><div class="threshold-range">Very Low</div><div class="threshold-name">Spread under 8% · Score 80+</div><div class="threshold-desc">0% break rate across 116 historical deals. Market has maximum conviction this deal closes.</div></div>
+      <div class="threshold-cell lo"><div class="threshold-range">Low</div><div class="threshold-name">Spread under 8% · Score 65–79</div><div class="threshold-desc">0% break rate historically. Minor score uncertainty. Still strong risk-adjusted returns.</div></div>
+      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 75+</div><div class="threshold-desc">36% break rate in this range. Some confidence from score but meaningful market skepticism.</div></div>
+      <div class="threshold-cell hi"><div class="threshold-range">High</div><div class="threshold-name">Spread 12%+ · or Score below 75 with 8–12% spread</div><div class="threshold-desc">87%+ break rate above 12%. Market pricing in near-certain deal failure.</div></div>
     </div>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">05</div><div><div class="meth-section-title">Sample Backtest Results</div><div class="meth-section-weight">Selected deals from the backtest · 2020–2025</div></div></div>
+    <div class="meth-section-header"><div class="meth-section-num">04</div><div><div class="meth-section-title">Sample Backtest Results</div><div class="meth-section-weight">Selected deals · 2020–2025 · V2 Model</div></div></div>
     <table class="sample-table">
-      <thead><tr><th>Ticker</th><th>Spread at Ann.</th><th>Score</th><th>Predicted</th><th>Actual Outcome</th><th>Ann. Return</th><th>Correct</th></tr></thead>
+      <thead><tr><th>Ticker</th><th>Spread</th><th>Score</th><th>V2 Risk</th><th>Outcome</th><th>Ann. Return</th><th>Correct</th></tr></thead>
       <tbody>
-        <tr><td>CACC</td><td>4.0%</td><td>98</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+8.7%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>GTES</td><td>3.0%</td><td>98</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+9.4%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>SGEN</td><td>5.0%</td><td>85</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.6%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>NUAN</td><td>2.0%</td><td>95</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+2.0%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>PING</td><td>3.0%</td><td>93</td><td>Closed</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+5.5%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>SAVE</td><td>35.0%</td><td>30</td><td>Broken</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
-        <tr><td>SGFY</td><td>12.0%</td><td>60</td><td>Broken</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
-        <tr><td>CHNG</td><td>22.0%</td><td>40</td><td>Broken</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
-        <tr><td>ATVI</td><td>25.0%</td><td>30</td><td>Broken</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+3.8%</td><td class="correct-no">✗</td></tr>
-        <tr><td>ACI</td><td>15.0%</td><td>50</td><td>Broken</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.2%</td><td class="correct-no">✗</td></tr>
+        <tr><td>CACC</td><td>4.0%</td><td>98</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+8.7%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>GTES</td><td>3.0%</td><td>98</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+9.4%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>NUAN</td><td>2.0%</td><td>95</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+2.0%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SGEN</td><td>5.0%</td><td>85</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.6%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>PING</td><td>3.0%</td><td>93</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+5.5%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SAVE</td><td>35.0%</td><td>30</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SGFY</td><td>12.0%</td><td>60</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>CHNG</td><td>22.0%</td><td>40</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SGMO</td><td>19.0%</td><td>40</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>ATVI</td><td>25.0%</td><td>30</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+3.8%</td><td class="correct-no">✗</td></tr>
+        <tr><td>ACI</td><td>15.0%</td><td>50</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.2%</td><td class="correct-no">✗</td></tr>
       </tbody>
     </table>
-    <p class="factor-note" style="margin-top:1rem;">The two notable misses — ATVI and ACI — faced prolonged antitrust battles but ultimately closed. Their wide spreads correctly signaled elevated risk, but the model classified them as breaks. This illustrates the model's primary limitation: it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close. Both still returned positive annualized returns to investors who held through the uncertainty.</p>
+    <p class="factor-note" style="margin-top:1rem;">The V2 model's primary limitation is the same as V1 — it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close. ATVI and ACI both had wide spreads driven by antitrust risk, were correctly flagged as High Risk, but ultimately closed after prolonged battles. Notably, both still returned positive annualized returns to investors who held through the uncertainty. The model's purpose is risk identification, not absolute prediction.</p>
   </div>
   <footer style="margin-top:2rem;">
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
     <div class="footer-links"><button class="footer-link" onclick="showDashboard()">Dashboard</button></div>
-    <div class="footer-info">Backtested · 150+ historical deals · 2020–2025<br>Model v4 · May 2026</div>
+    <div class="footer-info">Backtested · 159 historical deals · 2020–2025<br>Model V2 · May 2026</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
@@ -672,14 +678,15 @@ function updateLocalTime(fetched){
 
 function getRiskFactors(deal){
     const factors=[];
-    if(deal.sp_pct<0) factors.push({level:'hi',text:'Negative spread indicates the market is pricing in a meaningful probability of deal failure. The current price exceeds the deal price, which may signal a broken deal or an incoming competing bid.'});
-    if(deal.days_old>270) factors.push({level:'md',text:`Deal has been pending for ${deal.days_old} days. Extended timelines increase regulatory and financing risk. However, some legitimate deals require 18-24 months due to regulatory review and still close.`});
-    if(deal.deal_type==='Cash + Stock') factors.push({level:'md',text:"Mixed consideration deals carry additional complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk."});
-    if(deal.deal_type==='Tender Offer') factors.push({level:'lo',text:'Tender offers typically close faster than mergers and have higher completion rates due to the direct shareholder approach and predetermined acceptance thresholds.'});
+    if(deal.sp_pct>=12) factors.push({level:'hi',text:`Spread of ${deal.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. Historically 87% of deals with spreads above 12% have broken. The market is pricing in near-certain deal failure.`});
+    if(deal.sp_pct>=8&&deal.sp_pct<12) factors.push({level:'md',text:`Spread of ${deal.sp_pct.toFixed(2)}% is in the gray zone. Historically 36% of deals in the 8-12% spread range have broken. Monitor closely for regulatory or financing developments.`});
+    if(deal.sp_pct<0) factors.push({level:'hi',text:'Negative spread — the stock is trading above the deal price. This may indicate a broken deal or an incoming competing bid. Extreme caution warranted.'});
+    if(deal.days_old>270) factors.push({level:'md',text:`Deal has been pending for ${deal.days_old} days. Extended timelines can indicate regulatory complexity. Some legitimate deals take 18-24 months and still close — watch the spread for signals.`});
+    if(deal.deal_type==='Cash + Stock') factors.push({level:'md',text:"Mixed consideration deals add complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk beyond the deal itself."});
+    if(deal.deal_type==='Tender Offer') factors.push({level:'lo',text:'Tender offers typically close faster than mergers and have higher completion rates due to direct shareholder approach and predetermined acceptance thresholds.'});
     if(deal.deal_type==='Private Equity') factors.push({level:'md',text:'Private equity acquisitions depend on financing conditions. Rising interest rates or tightening credit markets can increase deal break risk for leveraged buyouts.'});
-    if(deal.sp_pct>12) factors.push({level:'hi',text:`High spread of ${deal.sp_pct.toFixed(2)}% signals elevated market concern. Historically deals with spreads above 12% break at materially higher rates — though some do close after extended regulatory processes.`});
-    if(deal.close_date==='TBD') factors.push({level:'md',text:'No expected close date has been publicly disclosed, making annualized return calculations approximate. Timeline uncertainty adds risk to position sizing decisions.'});
-    if(factors.length===0) factors.push({level:'lo',text:'Deal structure appears straightforward with no major identified risk factors. Standard merger completion risks apply including regulatory review and shareholder approval.'});
+    if(deal.close_date==='TBD') factors.push({level:'md',text:'No expected close date publicly disclosed. Annualized return calculations are approximate. Timeline uncertainty adds risk to position sizing decisions.'});
+    if(factors.length===0) factors.push({level:'lo',text:'Deal spread is under 8% — historically a 0% break rate across 116 deals in our dataset. Standard merger completion risks apply including regulatory review and shareholder approval.'});
     return factors.slice(0,4);
 }
 
@@ -695,11 +702,12 @@ function getScoreBreakdown(deal){
     else if(deal.sp_pct<0) spreadScore=25;
     const typeScore=deal.deal_type==='All Cash'?90:deal.deal_type==='Tender Offer'?85:deal.deal_type==='Private Equity'?75:65;
     const daysScore=deal.days_old<90?95:deal.days_old<270?80:deal.days_old<500?65:45;
+    const spreadLabel=deal.sp_pct<8?'under 8% — 0% historical break rate':deal.sp_pct<12?'8-12% gray zone — 36% historical break rate':'above 12% — 87%+ historical break rate';
     return [
-        {label:'Spread Quality',score:spreadScore,color:getScoreColor(spreadScore),desc:`${deal.sp_pct.toFixed(2)}% spread — ${deal.sp_pct<5?'tight spread signals market confidence':deal.sp_pct<12?'moderate spread reflects some uncertainty':'wide spread indicates elevated break risk'}`},
+        {label:'Spread Quality',score:spreadScore,color:getScoreColor(spreadScore),desc:`${deal.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
         {label:'Deal Structure',score:typeScore,color:getScoreColor(typeScore),desc:`${deal.deal_type} — ${deal.deal_type==='All Cash'?'highest reliability, no stock price risk':deal.deal_type==='Tender Offer'?'fast timeline, high completion rate':deal.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds complexity'}`},
         {label:'Time Pending',score:daysScore,color:getScoreColor(daysScore),desc:`${deal.days_old} days pending — ${deal.days_old<90?'fresh deal, minimal accumulated risk':deal.days_old<270?'normal deal progression':'extended timeline, monitor spread carefully'}`},
-        {label:'Overall Score',score:deal.score,color:getScoreColor(deal.score),desc:`Final composite score — ${deal.risk} Risk classification`},
+        {label:'Overall Score',score:deal.score,color:getScoreColor(deal.score),desc:`Base score — used as tiebreaker in 8-12% spread gray zone. Primary classification is spread-based.`},
     ];
 }
 
@@ -761,11 +769,11 @@ async function renderAnalysis(deal){
                 <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.38rem;letter-spacing:0.15em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.38rem;letter-spacing:0.15em;">LOSS</td></tr>
                 ${downsideRows}
             </table>
-            <div class="rr-note">Break price estimated from pre-announcement trading price of $${bp?bp.toFixed(2):'N/A'} on ${deal.filed}. Actual break price may vary depending on market conditions.</div>
+            <div class="rr-note">Break price estimated from pre-announcement trading price of $${bp?bp.toFixed(2):'N/A'} on ${deal.filed}. Actual break price may vary.</div>
         </div>
     `;
 
-    // Comps — cached in browser memory, never changes after first load
+    // Comps — browser cached, never changes after first load
     if(!compsCache[deal.ticker]){
         document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.48rem;color:var(--dim);letter-spacing:0.15em;">Loading comparable deals...</div>';
         try{
@@ -777,9 +785,9 @@ async function renderAnalysis(deal){
         }
     }
 
-    const compsData = compsCache[deal.ticker];
-    const comps = compsData.comps||[];
-    const summary = compsData.summary||{};
+    const compsData=compsCache[deal.ticker];
+    const comps=compsData.comps||[];
+    const summary=compsData.summary||{};
 
     if(comps.length===0){
         document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">No comparable deals found in our historical database for this deal type and spread range.</div>';
@@ -806,11 +814,10 @@ async function renderAnalysis(deal){
                 <thead><tr><th>Ticker</th><th>Acquirer</th><th>Type</th><th class="r">Spread at Ann.</th><th class="r">Outcome</th><th class="r">Days to Close</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
-            <div class="comps-note">Matched by deal type (${deal.deal_type}) and spread range from our 150+ deal historical database. ${summary.close_rate}% of comparable deals closed successfully. Average time to completion: ${summary.avg_days} days. Historical data from 2020–2025.</div>
+            <div class="comps-note">Matched by deal type (${deal.deal_type}) and spread range from our 159-deal historical database. ${summary.close_rate}% of comparable deals closed successfully. Average time to completion: ${summary.avg_days} days. Historical data from 2020–2025.</div>
         `;
     }
 
-    // Regulatory risk
     let regTags=[];
     try{ regTags=deal.reg_tags?JSON.parse(deal.reg_tags):[]; }catch(e){ regTags=[]; }
     document.getElementById('da-reg-risk').innerHTML=regTags.length>0
@@ -951,7 +958,7 @@ function renderDeals(deals){
                 <div class="dp-metric"><div class="dp-ml">Transaction Value</div><div class="dp-mv sm">${txVal}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Deal Type</div><div class="dp-mv sm">${d.deal_type}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Score</div><div class="dp-mv sm">${d.score}/100</div></div>
-                <div class="dp-metric"><div class="dp-ml">Spread Range</div><div class="dp-mv sm">-10% to +20%</div></div>
+                <div class="dp-metric"><div class="dp-ml">V2 Risk</div><div class="dp-mv sm">${d.risk}</div></div>
               </div>
               ${bp||bd?`
               <div class="break-banner">
@@ -974,7 +981,7 @@ function renderDeals(deals){
               <button class="analysis-btn" onclick="event.stopPropagation();showAnalysis(allDeals.find(x=>x.ticker==='${d.ticker}'))">
                 View Full Analysis →
               </button>
-              <div class="analysis-btn-label">Full risk/reward · Comparable deals · Regulatory risk · Score breakdown</div>
+              <div class="analysis-btn-label">Full risk/reward · Comparable deals · Regulatory risk · V2 score breakdown</div>
             </div>`;
         });
         html+='</div></div>';
