@@ -830,6 +830,11 @@ async def get_deals():
         deals = fetch_deals_from_edgar()
     return JSONResponse(content={"deals": deals})
 
+@app.get("/api/comps/all")
+async def get_all_comps():
+    """Return the full 159-deal historical database for the Compare page."""
+    return JSONResponse(content={"comps": COMPS_DATA, "total": len(COMPS_DATA)})
+
 @app.get("/api/comps/{ticker}")
 async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.0):
     comps  = get_comparable_deals(deal_type, spread, ticker)
@@ -845,11 +850,6 @@ async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.
             "avg_days":   round(sum(c['days_to_close'] for c in comps) / len(comps)) if comps else 0,
         }
     })
-
-@app.get("/api/comps/all")
-async def get_all_comps():
-    """Return the full 159-deal historical database for the Compare page."""
-    return JSONResponse(content={"comps": COMPS_DATA, "total": len(COMPS_DATA)})
 
 @app.get("/api/refresh-stream")
 async def refresh_stream():
