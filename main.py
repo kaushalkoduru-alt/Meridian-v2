@@ -236,10 +236,6 @@ COMPS_DATA = [
 # ─── V3 SCORING MODEL ────────────────────────────────────────────────────────
 
 def extract_financing_signal(text):
-    """
-    Detect financing commitment level from press release text.
-    Returns: 'committed', 'confident', 'contingent', or 'unknown'
-    """
     if not text:
         return 'unknown'
     t = text.lower()
@@ -247,17 +243,11 @@ def extract_financing_signal(text):
         return 'committed'
     if any(p in t for p in ['highly confident', 'highly confident letter']):
         return 'confident'
-    if any(p in t for p in ['contingent on financing', 'subject to obtaining financing', 'financing condition']):
-        return 'contingent'
-    if 'subject to financing' in t:
+    if any(p in t for p in ['contingent on financing', 'subject to obtaining financing', 'financing condition', 'subject to financing']):
         return 'contingent'
     return 'unknown'
 
 def score_financing_signal(signal):
-    """
-    Convert financing signal to score adjustment.
-    Range: -10 to +10
-    """
     if signal == 'committed':  return 10
     if signal == 'confident':  return 2
     if signal == 'unknown':    return 0
@@ -265,16 +255,10 @@ def score_financing_signal(signal):
     return 0
 
 def score_regulatory_complexity(reg_tags):
-    """
-    Score regulatory complexity from reg_tags list.
-    Range: -20 to +5
-    More agencies and higher severity = more negative.
-    """
     if not reg_tags:
         return 5
     if len(reg_tags) == 1 and reg_tags[0].get('agency') == 'Standard Review':
         return 5
-
     score = 0
     for tag in reg_tags:
         agency = tag.get('agency', '')
@@ -292,11 +276,6 @@ def score_regulatory_complexity(reg_tags):
     return max(-20, min(5, score))
 
 def score_deal_premium(break_price, deal_price):
-    """
-    Score the premium paid over pre-announcement price.
-    Higher premium = acquirer more committed = positive signal.
-    Range: -5 to +8
-    """
     if not break_price or not deal_price or break_price <= 0:
         return 0
     premium_pct = ((deal_price - break_price) / break_price) * 100
@@ -308,22 +287,7 @@ def score_deal_premium(break_price, deal_price):
     else:                   return -5
 
 def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_price=None, deal_price=None, financing_signal='unknown'):
-    """
-    V3 Scoring Model — 93.7% accuracy on 159 historical deals.
-
-    Six factors:
-    1. Spread quality    — empirical break rates, highest weight
-    2. Deal type         — historical completion rates by structure
-    3. Time pending      — duration risk signal
-    4. Regulatory        — agency count and severity
-    5. Deal premium      — acquirer commitment signal
-    6. Financing         — commitment language from press release
-
-    Base: 50. Raw range: -35 to +118. Normalized to 0-100.
-    """
     score = 50
-
-    # Factor 1 — Spread quality
     if 0 < spread_pct < 3:       score += 25
     elif 3 <= spread_pct < 5:    score += 18
     elif 5 <= spread_pct < 8:    score += 10
@@ -332,44 +296,21 @@ def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_pri
     elif 18 <= spread_pct < 25:  score -= 25
     elif spread_pct >= 25:       score -= 35
     elif spread_pct < 0:         score -= 25
-
-    # Factor 2 — Deal type
     if deal_type == 'All Cash':         score += 10
     elif deal_type == 'Tender Offer':   score += 8
     elif deal_type == 'Private Equity': score += 5
     elif deal_type == 'Cash + Stock':   score += 0
-
-    # Factor 3 — Time pending
     if days_since_filed < 90:    score += 10
     elif days_since_filed < 270: score += 0
     elif days_since_filed < 500: score -= 5
     else:                        score -= 15
-
-    # Factor 4 — Regulatory complexity
     score += score_regulatory_complexity(reg_tags or [])
-
-    # Factor 5 — Deal premium
     score += score_deal_premium(break_price, deal_price)
-
-    # Factor 6 — Financing signal
     score += score_financing_signal(financing_signal)
-
-    # Normalize: raw range is approximately -35 to 118
     normalized = ((score - (-35)) / (118 - (-35))) * 100
     return min(100, max(0, round(normalized)))
 
 def get_risk(spread_pct, score):
-    """
-    V3 Risk Classification — empirical spread rules override score.
-
-    Empirical break rates from 159 historical deals:
-    0-8%:   0.0% break rate  → Very Low / Low
-    8-12%:  36.4% break rate → Medium / High (score tiebreaker at 60)
-    12%+:   86.7%+ break rate → High
-
-    Very Low + Low combined: 116 deals, 0% break rate.
-    High: 34 deals, 82.4% break rate.
-    """
     if spread_pct >= 12:
         return 'High'
     if spread_pct >= 8:
@@ -381,7 +322,6 @@ def get_risk(spread_pct, score):
     return 'Medium'
 
 def get_acquirer_type(deal_type, acquirer):
-    """Classify acquirer as Strategic, Private Equity, or Financial."""
     if deal_type == 'Private Equity':
         return 'Private Equity'
     pe_keywords = ['capital', 'partners', 'equity', 'ventures', 'holdings', 'fund', 'blackstone', 'kkr', 'apollo', 'carlyle', 'vista', 'thoma', 'francisco', 'advent', 'permira', 'clearlake', 'general atlantic']
@@ -412,39 +352,24 @@ def get_regulatory_risk(ticker, acquirer, tx_value, deal_type):
         industry = info.get('industry', '')
     except:
         sector = industry = ''
-
     tx_billions = tx_value if tx_value else 0
     tx_millions = tx_billions * 1000
-
     if tx_millions >= 119.5 or tx_billions >= 0.12:
-        tags.append({'agency': 'HSR Filing', 'level': 'low',
-                     'reason': 'Transaction value triggers mandatory Hart-Scott-Rodino antitrust filing with DOJ and FTC'})
-
+        tags.append({'agency': 'HSR Filing', 'level': 'low', 'reason': 'Transaction value triggers mandatory Hart-Scott-Rodino antitrust filing with DOJ and FTC'})
     foreign_kw = ['china','chinese','japan','japanese','korea','korean','saudi','emirates','uae','russia','russian','huawei','alibaba','tencent','softbank','samsung']
     if acquirer and any(kw in acquirer.lower() for kw in foreign_kw):
-        tags.append({'agency': 'CFIUS Review', 'level': 'high',
-                     'reason': 'Foreign acquirer may trigger Committee on Foreign Investment in the US national security review'})
-
+        tags.append({'agency': 'CFIUS Review', 'level': 'high', 'reason': 'Foreign acquirer may trigger Committee on Foreign Investment in the US national security review'})
     ftc_sectors = ['Technology','Healthcare','Consumer Defensive','Consumer Cyclical','Communication Services']
     if sector in ftc_sectors and tx_billions >= 1:
-        tags.append({'agency': 'FTC Antitrust',
-                     'level': 'medium' if tx_billions < 5 else 'high',
-                     'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to FTC antitrust review'})
-
+        tags.append({'agency': 'FTC Antitrust', 'level': 'medium' if tx_billions < 5 else 'high', 'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to FTC antitrust review'})
     doj_sectors = ['Industrials','Financial Services','Energy','Basic Materials','Utilities']
     if sector in doj_sectors and tx_billions >= 1:
-        tags.append({'agency': 'DOJ Antitrust',
-                     'level': 'medium' if tx_billions < 5 else 'high',
-                     'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to DOJ antitrust review'})
-
+        tags.append({'agency': 'DOJ Antitrust', 'level': 'medium' if tx_billions < 5 else 'high', 'reason': f'{sector} sector deal of ${tx_billions:.1f}B subject to DOJ antitrust review'})
     conc_industries = ['Software','Semiconductors','Biotechnology','Drug Manufacturers','Banks','Insurance','Airlines','Telecom']
     if any(c.lower() in industry.lower() for c in conc_industries) and tx_billions >= 2:
-        tags.append({'agency': 'Market Concentration', 'level': 'high',
-                     'reason': 'Highly concentrated industry — enhanced regulatory scrutiny expected'})
-
+        tags.append({'agency': 'Market Concentration', 'level': 'high', 'reason': 'Highly concentrated industry — enhanced regulatory scrutiny expected'})
     if not tags:
-        tags.append({'agency': 'Standard Review', 'level': 'low',
-                     'reason': 'No elevated regulatory concerns identified based on deal size and sector'})
+        tags.append({'agency': 'Standard Review', 'level': 'low', 'reason': 'No elevated regulatory concerns identified based on deal size and sector'})
     return tags
 
 def get_break_price(ticker, filed_date):
@@ -582,6 +507,19 @@ def get_filing_links(cik, accession, headers):
     except:
         return []
 
+def is_cache_fresh(max_age_minutes=50):
+    if not os.path.exists(CACHE_FILE):
+        return False
+    try:
+        df = pd.read_csv(CACHE_FILE)
+        if df.empty: return False
+        fetched = df['fetched'].iloc[0]
+        cache_time = datetime.strptime(fetched, '%Y-%m-%dT%H:%M')
+        age = (datetime.utcnow() - cache_time).total_seconds() / 60
+        return age < max_age_minutes
+    except:
+        return False
+
 # ─── CORE PIPELINE ───────────────────────────────────────────────────────────
 
 def fetch_deals_from_edgar(progress_callback=None):
@@ -590,7 +528,7 @@ def fetch_deals_from_edgar(progress_callback=None):
     all_hits = []
     seen_ids = set()
 
-  for q in EDGAR_QUERIES:
+    for q in EDGAR_QUERIES:
         for start in range(0, 300, 100):
             url = q['url'].format(start=start)
             try:
@@ -637,19 +575,18 @@ def fetch_deals_from_edgar(progress_callback=None):
             continue
 
         try:
-            dp = None
-            acquirer          = 'Undisclosed'
-            close_date        = 'TBD'
-            tx_value          = None
-            financing_signal  = 'unknown'
-            press_text        = ''
+            dp               = None
+            acquirer         = 'Undisclosed'
+            close_date       = 'TBD'
+            tx_value         = None
+            financing_signal = 'unknown'
 
             links = get_filing_links(cik, accession, headers)
             if not links:
-                acc_clean  = accession.replace('-', '')
-                ir         = requests.get(f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc_clean}/{accession}-index.htm", headers=headers, timeout=10)
-                raw_links  = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
-                links      = [f"https://www.sec.gov{l}" for l in raw_links if 'ex99' in l.lower()]
+                acc_clean = accession.replace('-', '')
+                ir        = requests.get(f"https://www.sec.gov/Archives/edgar/data/{cik}/{acc_clean}/{accession}-index.htm", headers=headers, timeout=10)
+                raw_links = re.findall(r'href="(/Archives/edgar/data/[^"]+\.htm)"', ir.text)
+                links     = [f"https://www.sec.gov{l}" for l in raw_links if 'ex99' in l.lower()]
 
             for lk in links[:8]:
                 try:
@@ -663,7 +600,6 @@ def fetch_deals_from_edgar(progress_callback=None):
                             close_date       = extract_close_date(ct)
                             tx_value         = extract_transaction_value(ct)
                             financing_signal = extract_financing_signal(ct)
-                            press_text       = ct[:2000]
                             break
                 except:
                     continue
@@ -679,34 +615,33 @@ def fetch_deals_from_edgar(progress_callback=None):
             break_downside = get_break_downside(round(cp, 2), break_price)
             reg_tags       = get_regulatory_risk(ticker, acquirer, tx_value, deal_type)
 
-            sc   = score_deal(sp_pct, days, deal_type, reg_tags, break_price, dp, financing_signal)
-            risk = get_risk(sp_pct, sc)
-            ann  = (sp_pct / 180) * 365
-
+            sc       = score_deal(sp_pct, days, deal_type, reg_tags, break_price, dp, financing_signal)
+            risk     = get_risk(sp_pct, sc)
+            ann      = (sp_pct / 180) * 365
             acq_type = get_acquirer_type(deal_type, acquirer)
 
             seen_tickers.add(ticker)
             results.append({
-                'ticker':            ticker,
-                'acquirer':          acquirer,
-                'acquirer_type':     acq_type,
-                'company':           COMPANY_NAMES.get(ticker, ticker + ' Corp.'),
-                'deal_type':         deal_type,
-                'cp':                round(cp, 2),
-                'dp':                dp,
-                'sp_pct':            round(sp_pct, 2),
-                'ann':               round(ann, 2),
-                'score':             sc,
-                'risk':              risk,
-                'filed':             src['file_date'],
-                'days_old':          days,
-                'close_date':        close_date,
-                'tx_value':          tx_value,
-                'break_price':       break_price,
-                'break_downside':    break_downside,
-                'financing_signal':  financing_signal,
-                'reg_tags':          json.dumps(reg_tags),
-                'fetched':           datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                'ticker':           ticker,
+                'acquirer':         acquirer,
+                'acquirer_type':    acq_type,
+                'company':          COMPANY_NAMES.get(ticker, ticker + ' Corp.'),
+                'deal_type':        deal_type,
+                'cp':               round(cp, 2),
+                'dp':               dp,
+                'sp_pct':           round(sp_pct, 2),
+                'ann':              round(ann, 2),
+                'score':            sc,
+                'risk':             risk,
+                'filed':            src['file_date'],
+                'days_old':         days,
+                'close_date':       close_date,
+                'tx_value':         tx_value,
+                'break_price':      break_price,
+                'break_downside':   break_downside,
+                'financing_signal': financing_signal,
+                'reg_tags':         json.dumps(reg_tags),
+                'fetched':          datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
         except:
             continue
@@ -728,9 +663,9 @@ def fetch_deals_from_edgar(progress_callback=None):
                 reg_tags       = get_regulatory_risk(fd['ticker'], fd['acquirer'], fd['tx_value'], fd['deal_type'])
                 fin_signal     = 'committed' if fd['deal_type'] == 'All Cash' else 'confident'
 
-                sc   = score_deal(sp_pct, days, fd['deal_type'], reg_tags, break_price, dp, fin_signal)
-                risk = get_risk(sp_pct, sc)
-                ann  = round((sp_pct / 180) * 365, 2)
+                sc       = score_deal(sp_pct, days, fd['deal_type'], reg_tags, break_price, dp, fin_signal)
+                risk     = get_risk(sp_pct, sc)
+                ann      = round((sp_pct / 180) * 365, 2)
                 acq_type = get_acquirer_type(fd['deal_type'], fd['acquirer'])
 
                 results.append({
@@ -793,6 +728,9 @@ def load_cache():
 async def auto_refresh_loop():
     while True:
         await asyncio.sleep(3600)
+        if is_cache_fresh(50):
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache fresh — skipping scan.")
+            continue
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Auto-refresh triggered.")
         try:
             await asyncio.get_event_loop().run_in_executor(None, fetch_deals_from_edgar)
@@ -835,7 +773,6 @@ async def get_deals():
 
 @app.get("/api/comps/all")
 async def get_all_comps():
-    """Return the full 159-deal historical database for the Compare page."""
     return JSONResponse(content={"comps": COMPS_DATA, "total": len(COMPS_DATA)})
 
 @app.get("/api/comps/{ticker}")
@@ -866,7 +803,7 @@ async def refresh_stream():
         future = loop.run_in_executor(None, lambda: fetch_deals_from_edgar(cb))
         while not future.done():
             yield f"data: {json.dumps(progress)}\n\n"
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1.5)
         deals = await future
         yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
