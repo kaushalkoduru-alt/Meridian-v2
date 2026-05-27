@@ -760,7 +760,7 @@ def fetch_deals_from_edgar(progress_callback=None):
     if results:
         df = pd.DataFrame(results).drop_duplicates(subset=['ticker'])
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
-        if len(df) >= 10:
+        if len(df) >= 20:
             try:
                 tmp = CACHE_FILE + '.tmp'
                 df.to_csv(tmp, index=False)

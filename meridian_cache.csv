@@ -1,5 +1,4 @@
-ticker,acquirer,cp,dp,sp_pct,ann,score,risk,filed,days_old,fetched
-OGN,Sun Pharma,13.41,14.0,4.4,8.92,100,Very Low,2026-04-27,29,2026-05-26 21:26
-AVNS,Undisclosed,24.75,25.0,1.01,2.05,90,Very Low,2026-04-14,42,2026-05-26 21:27
-KALV,Chiesi,26.81,27.0,0.71,1.44,100,Very Low,2026-04-29,27,2026-05-26 21:27
-ASRT,Undisclosed,23.46,23.5,0.17,0.35,100,Very Low,2026-05-13,13,2026-05-26 21:26
+ticker,acquirer,company,deal_type,cp,dp,sp_pct,ann,score,risk,filed,days_old,close_date,tx_value,fetched
+B,Undisclosed,B Corp.,All Cash,42.1,47.5,12.83,26.01,65,Low,2024-10-07,596,TBD,,2026-05-27T02:28
+ASRT,Paratek Pharmaceuticals,Assertio Holdings,All Cash,23.46,23.5,0.17,0.35,100,Very Low,2026-05-13,13,"of
+2026",,2026-05-27T02:28
