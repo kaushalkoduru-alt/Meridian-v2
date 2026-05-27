@@ -7,312 +7,442 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23050d08'/><text x='50' y='72' font-family='Georgia,serif' font-size='72' font-weight='400' fill='%23e8e0c8' text-anchor='middle'>M</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
-:root{--bg:#050d08;--bg2:#080f0a;--bg3:#0a1410;--bdr:#0f1f14;--bdr2:#162a1c;--cream:#e8e0c8;--bone:#c8c0a0;--muted:#6a7a6a;--dim:#2a3a2a;--green:#5a9e6a;--green2:#3a6a4a;--red:#9e5a4a;--gold:#a89060;}
+:root{
+  --bg:#050d08;--bg2:#080f0a;--bg3:#0a1410;
+  --bdr:#0f1f14;--bdr2:#162a1c;
+  --cream:#e8e0c8;--bone:#c8c0a0;--muted:#6a7a6a;--dim:#2a3a2a;
+  --green:#5a9e6a;--green2:#3a6a4a;
+  --red:#9e5a4a;--gold:#a89060;
+  --teal:#4a9e8a;--teal2:#2a5a4a;
+  --sky:#6ab8cc;--sky2:#3a7a8a;
+  --amber:#c8945a;--amber2:#8a5a2a;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:var(--bg);color:var(--cream);font-family:'DM Sans',sans-serif;min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(232,224,200,0.008) 3px,rgba(232,224,200,0.008) 4px);pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;inset:0;background-image:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(232,224,200,0.006) 3px,rgba(232,224,200,0.006) 4px);pointer-events:none;z-index:0;}
 .page{display:none;}.page.active{display:block;}
+
+/* ── TICKER ── */
 .ticker-wrap{background:var(--bg3);border-bottom:1px solid var(--bdr);overflow:hidden;padding:0.4rem 0;position:relative;z-index:10;}
-.ticker-track{display:inline-flex;gap:0;animation:scroll 22s linear infinite;white-space:nowrap;}
+.ticker-track{display:inline-flex;animation:scroll 26s linear infinite;white-space:nowrap;}
 @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .ti{display:inline-flex;align-items:center;gap:0.4rem;padding:0 1.25rem;border-right:1px solid var(--bdr2);font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.1em;}
-.ti-sym{color:var(--cream);font-weight:500;}.ti-pos{color:var(--green);}.ti-neg{color:var(--red);}
-.land-nav{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 3rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
+.ti-sym{color:var(--cream);font-weight:500;}
+.ti-pos{color:var(--green);}
+.ti-neg{color:var(--red);}
+
+/* ── LANDING ── */
+.land-nav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 3rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
 .land-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1.2rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);}
 .land-logo em{font-style:italic;color:var(--green);}
-.land-tag{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
+.land-tag{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
+.land-nav-enter{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--green);border:1px solid var(--green2);padding:0.5rem 1.25rem;background:rgba(90,158,106,0.06);cursor:pointer;transition:all 0.2s;}
+.land-nav-enter:hover{background:rgba(90,158,106,0.14);color:var(--cream);}
 .hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:5rem 2rem 4rem;position:relative;z-index:10;min-height:80vh;justify-content:center;}
-.edition{font-family:'DM Mono',monospace;font-size:0.45rem;letter-spacing:0.35em;color:var(--dim);text-transform:uppercase;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;}
+.edition{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.35em;color:var(--dim);text-transform:uppercase;margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;}
 .edition::before,.edition::after{content:'';width:50px;height:1px;background:var(--bdr2);}
 .hero-title{font-family:'Playfair Display',serif;font-weight:300;font-size:clamp(5rem,12vw,10rem);letter-spacing:0.3em;text-transform:uppercase;color:var(--cream);line-height:0.9;margin-bottom:1.25rem;animation:fadeUp 0.8s ease both;}
 .hero-title em{font-style:italic;color:var(--green);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
 .divider{display:flex;align-items:center;justify-content:center;gap:0.75rem;margin:0.5rem 0 1.75rem;}
 .divider::before,.divider::after{content:'';width:80px;height:1px;background:var(--bdr2);}
-.divider-text{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
-.hero-desc{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:1.1rem;color:var(--muted);max-width:520px;line-height:1.9;margin-bottom:2.5rem;animation:fadeUp 0.8s ease 0.15s both;}
+.divider-sym{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--teal);letter-spacing:0.25em;text-transform:uppercase;}
+.hero-desc{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:1.1rem;color:var(--muted);max-width:540px;line-height:1.9;margin-bottom:2.5rem;animation:fadeUp 0.8s ease 0.15s both;}
 .hero-desc b{color:var(--bone);font-weight:400;}
-.stats{display:flex;border:1px solid var(--bdr2);max-width:500px;margin:0 auto 2.5rem;animation:fadeUp 0.8s ease 0.25s both;}
+.stats{display:flex;border:1px solid var(--bdr2);max-width:520px;margin:0 auto 2.5rem;animation:fadeUp 0.8s ease 0.25s both;}
 .stat{flex:1;text-align:center;padding:0.9rem;border-right:1px solid var(--bdr2);}
 .stat:last-child{border-right:none;}
 .stat-v{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:var(--cream);line-height:1;}
+.stat-v.accent-teal{color:var(--teal);}
+.stat-v.accent-sky{color:var(--sky);}
+.stat-v.accent-amber{color:var(--amber);}
 .stat-l{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.15em;text-transform:uppercase;margin-top:0.3rem;}
-.enter-btn{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--green);border:1px solid var(--green2);padding:0.85rem 2.5rem;background:rgba(90,158,106,0.04);display:inline-block;transition:all 0.2s;cursor:pointer;animation:fadeUp 0.8s ease 0.35s both;}
-.enter-btn:hover{background:rgba(90,158,106,0.08);color:var(--cream);}
-.methodology-banner{background:rgba(90,158,106,0.06);border:1px solid var(--green2);border-left:3px solid var(--green);padding:1.25rem 2rem;max-width:700px;margin:0 auto 2.5rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;animation:fadeUp 0.8s ease 0.45s both;cursor:pointer;transition:background 0.2s;}
-.methodology-banner:hover{background:rgba(90,158,106,0.1);}
-.methodology-banner-title{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--green);margin-bottom:0.35rem;}
+.enter-btn{font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--bg);border:none;padding:1rem 3rem;background:var(--green);display:inline-block;transition:all 0.2s;cursor:pointer;animation:fadeUp 0.8s ease 0.35s both;}
+.enter-btn:hover{background:var(--teal);transform:translateY(-1px);}
+.methodology-banner{background:rgba(74,158,138,0.06);border:1px solid var(--teal2);border-left:3px solid var(--teal);padding:1.25rem 2rem;max-width:700px;margin:0 auto 2.5rem;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;animation:fadeUp 0.8s ease 0.45s both;cursor:pointer;transition:background 0.2s;}
+.methodology-banner:hover{background:rgba(74,158,138,0.1);}
+.methodology-banner-title{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--teal);margin-bottom:0.35rem;}
 .methodology-banner-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);font-weight:300;}
-.methodology-banner-arrow{font-family:'DM Mono',monospace;font-size:1.2rem;color:var(--green);flex-shrink:0;}
+.methodology-banner-arrow{font-family:'DM Mono',monospace;font-size:1.2rem;color:var(--teal);flex-shrink:0;}
+
+/* ── SCORING SECTION ── */
 .scoring{background:var(--bg2);border-top:1px solid var(--bdr);padding:5rem 4rem;position:relative;z-index:10;}
 .s-title{font-family:'Playfair Display',serif;font-weight:300;font-size:2rem;color:var(--cream);text-align:center;margin-bottom:0.4rem;}
-.s-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.22em;text-transform:uppercase;text-align:center;margin-bottom:3rem;}
+.s-sub{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.22em;text-transform:uppercase;text-align:center;margin-bottom:3rem;}
 .s-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);max-width:1100px;margin:0 auto 2rem;}
 .s-card{background:var(--bg3);padding:1.75rem;position:relative;transition:background 0.2s;}
-.s-card:hover{background:var(--bg2);}
+.s-card:hover{background:rgba(255,255,255,0.02);}
 .s-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .s-card.vl::before{background:var(--green);}
-.s-card.lo::before{background:var(--gold);}
-.s-card.md::before{background:#8a6040;}
+.s-card.lo::before{background:var(--teal);}
+.s-card.md::before{background:var(--amber);}
 .s-card.hi::before{background:var(--red);}
-.s-range{font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:300;margin-bottom:0.3rem;}
+.s-range{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:300;margin-bottom:0.3rem;}
 .s-card.vl .s-range{color:var(--green);}
-.s-card.lo .s-range{color:var(--gold);}
-.s-card.md .s-range{color:#8a6040;}
+.s-card.lo .s-range{color:var(--teal);}
+.s-card.md .s-range{color:var(--amber);}
 .s-card.hi .s-range{color:var(--red);}
-.s-name{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;}
-.s-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.75;font-weight:300;}
+.s-name{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;}
+.s-stat{font-family:'DM Mono',monospace;font-size:0.6rem;font-weight:500;margin-bottom:0.75rem;}
+.s-card.vl .s-stat{color:var(--green);}
+.s-card.lo .s-stat{color:var(--teal);}
+.s-card.md .s-stat{color:var(--amber);}
+.s-card.hi .s-stat{color:var(--red);}
+.s-desc{font-family:'Cormorant Garamond',serif;font-size:0.9rem;color:var(--muted);line-height:1.75;font-weight:300;}
 .s-methodology-link{max-width:1100px;margin:0 auto 4rem;display:flex;justify-content:center;}
-.s-methodology-btn{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--green);border:1px solid var(--green2);padding:0.7rem 2rem;background:rgba(90,158,106,0.04);cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:0.75rem;}
-.s-methodology-btn:hover{background:rgba(90,158,106,0.1);color:var(--cream);}
+.s-methodology-btn{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--teal);border:1px solid var(--teal2);padding:0.7rem 2rem;background:rgba(74,158,138,0.04);cursor:pointer;transition:all 0.2s;}
+.s-methodology-btn:hover{background:rgba(74,158,138,0.1);color:var(--cream);}
 .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;max-width:1100px;margin:0 auto;}
 .how-card{padding:1.5rem 1.5rem 1.5rem 2rem;border-left:1px solid var(--bdr2);}
 .how-n{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;color:var(--bdr2);line-height:1;margin-bottom:1rem;}
 .how-t{font-family:'DM Sans',sans-serif;font-size:0.9rem;font-weight:500;color:var(--cream);margin-bottom:0.5rem;}
-.how-d{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.7;font-weight:300;}
-.dnav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
-.dnav-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1.1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;transition:color 0.2s;}
+.how-d{font-family:'Cormorant Garamond',serif;font-size:0.92rem;color:var(--muted);line-height:1.7;font-weight:300;}
+
+/* ── NAV ── */
+.dnav{display:flex;justify-content:space-between;align-items:center;padding:0.9rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.97);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+.dnav-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;transition:color 0.2s;}
 .dnav-logo:hover{color:var(--green);}
 .dnav-logo em{font-style:italic;color:var(--green);}
-.dnav-r{display:flex;align-items:center;gap:2rem;}
-.dlive{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--green);letter-spacing:0.2em;text-transform:uppercase;}
+.dnav-links{display:flex;align-items:center;gap:1.5rem;}
+.dnav-link{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;transition:color 0.2s;padding:0.25rem 0;}
+.dnav-link:hover{color:var(--green);}
+.dnav-link.active{color:var(--teal);border-bottom:1px solid var(--teal);}
+.dnav-r{display:flex;align-items:center;gap:1.5rem;}
+.dlive{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--green);letter-spacing:0.18em;text-transform:uppercase;}
 .ddot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
-.dts{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.1em;}
-.toolbar{display:flex;align-items:center;gap:0.75rem;padding:0.55rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);position:relative;z-index:10;}
-.btn{font-family:'DM Mono',monospace;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.4rem 1rem;cursor:pointer;transition:all 0.2s;}
+.dts{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--dim);letter-spacing:0.1em;}
+
+/* ── TOOLBAR ── */
+.toolbar{display:flex;align-items:center;gap:0.75rem;padding:0.5rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);position:relative;z-index:10;}
+.btn{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.18em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.38rem 1rem;cursor:pointer;transition:all 0.2s;}
 .btn:hover{border-color:var(--green2);color:var(--green);background:rgba(90,158,106,0.04);}
+.btn.active{border-color:var(--teal2);color:var(--teal);background:rgba(74,158,138,0.06);}
+
+/* ── PROGRESS ── */
 .progress-wrap{display:none;padding:0.6rem 2.5rem;background:var(--bg2);border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
 .progress-wrap.active{display:block;}
-.progress-label{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);letter-spacing:0.15em;margin-bottom:0.4rem;display:flex;justify-content:space-between;}
+.progress-label{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);letter-spacing:0.15em;margin-bottom:0.4rem;display:flex;justify-content:space-between;}
 .progress-bar-bg{height:2px;background:var(--bdr2);}
-.progress-bar-fill{height:100%;background:var(--green);transition:width 0.3s ease;width:0%;}
-.progress-deals{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--green);letter-spacing:0.1em;margin-top:0.35rem;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));transition:width 0.3s ease;width:0%;}
+.progress-deals{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--teal);letter-spacing:0.1em;margin-top:0.35rem;}
+
+/* ── METRICS STRIP ── */
 .mstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:1.25rem 2.5rem;position:relative;z-index:10;}
-.mc{background:var(--bg2);padding:1.25rem 1.75rem;position:relative;}
-.mc::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--green2),transparent);}
-.mc-l{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;margin-bottom:0.6rem;}
+.mc{background:var(--bg2);padding:1.25rem 1.75rem;position:relative;overflow:hidden;}
+.mc::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;}
+.mc:nth-child(1)::after{background:linear-gradient(90deg,var(--green),transparent);}
+.mc:nth-child(2)::after{background:linear-gradient(90deg,var(--teal),transparent);}
+.mc:nth-child(3)::after{background:linear-gradient(90deg,var(--sky),transparent);}
+.mc:nth-child(4)::after{background:linear-gradient(90deg,var(--amber),transparent);}
+.mc-l{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--dim);letter-spacing:0.22em;text-transform:uppercase;margin-bottom:0.6rem;}
 .mc-v{font-family:'Playfair Display',serif;font-weight:300;font-size:1.9rem;line-height:1;color:var(--cream);}
 .mc-v.gr{color:var(--green);}
-.mc-h{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);margin-top:0.4rem;letter-spacing:0.1em;}
-.data-note{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.12em;padding:0.4rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg);position:relative;z-index:10;}
+.mc-v.te{color:var(--teal);}
+.mc-v.sk{color:var(--sky);}
+.mc-h{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);margin-top:0.4rem;letter-spacing:0.1em;}
+.data-note{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;padding:0.35rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg);position:relative;z-index:10;}
+
+/* ── SECTIONS ── */
 .section-sep{display:flex;align-items:center;margin:1.5rem 2.5rem 0;position:relative;z-index:10;cursor:pointer;user-select:none;}
 .section-sep-line{flex:1;height:1px;background:var(--bdr2);}
-.section-sep-label{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);padding:0 1.25rem;white-space:nowrap;display:flex;align-items:center;gap:0.75rem;}
-.section-sep-meta{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;}
-.section-sep-toggle{font-family:'DM Mono',monospace;font-size:0.55rem;color:var(--dim);margin-left:0.5rem;transition:transform 0.2s;display:inline-block;}
+.section-sep-label{font-family:'DM Mono',monospace;font-size:0.46rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--muted);padding:0 1.25rem;white-space:nowrap;display:flex;align-items:center;gap:0.75rem;transition:color 0.2s;}
+.section-sep-meta{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;}
+.section-sep-toggle{font-size:0.55rem;color:var(--dim);margin-left:0.5rem;transition:transform 0.2s;display:inline-block;}
 .section-sep-toggle.collapsed{transform:rotate(-90deg);}
-.section-sep:hover .section-sep-label{color:var(--green);}
+.section-sep:hover .section-sep-label{color:var(--teal);}
 .section-body{overflow:hidden;transition:max-height 0.3s ease;}
 .section-body.collapsed{max-height:0!important;}
+
+/* ── TABLE ── */
 .tbl-wrap{margin:0 2.5rem;border:1px solid var(--bdr);border-top:none;position:relative;z-index:10;}
 .tbl-header{display:grid;grid-template-columns:80px 70px 170px 1fr 110px 110px 110px 130px 90px;padding:0.6rem 1.5rem;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
-.th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;}
+.th{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.22em;text-transform:uppercase;}
 .th.r{text-align:right;}
 .deal-row{display:grid;grid-template-columns:80px 70px 170px 1fr 110px 110px 110px 130px 90px;padding:0.85rem 1.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);align-items:center;cursor:pointer;transition:background 0.15s;}
 .deal-row:hover{background:var(--bg3);}
-.deal-row.expanded{background:rgba(90,158,106,0.04);border-left:2px solid var(--green2);padding-left:calc(1.5rem - 2px);}
+.deal-row.expanded{background:rgba(74,158,138,0.04);border-left:2px solid var(--teal2);padding-left:calc(1.5rem - 2px);}
 .r-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;color:var(--cream);}
-.r-type{font-family:'DM Mono',monospace;font-size:0.38rem;letter-spacing:0.1em;text-transform:uppercase;padding:2px 5px;border:1px solid;display:inline-block;white-space:nowrap;}
+.r-type{font-family:'DM Mono',monospace;font-size:0.36rem;letter-spacing:0.1em;text-transform:uppercase;padding:2px 5px;border:1px solid;display:inline-block;white-space:nowrap;}
 .r-type.cash{color:var(--green);border-color:rgba(90,158,106,0.3);background:rgba(90,158,106,0.05);}
-.r-type.mixed{color:var(--gold);border-color:rgba(168,144,96,0.3);background:rgba(168,144,96,0.05);}
+.r-type.mixed{color:var(--amber);border-color:rgba(200,148,90,0.3);background:rgba(200,148,90,0.05);}
 .r-type.pe{color:#8a7acc;border-color:rgba(138,122,204,0.3);background:rgba(138,122,204,0.05);}
-.r-type.tender{color:#6ab8cc;border-color:rgba(106,184,204,0.3);background:rgba(106,184,204,0.05);}
-.r-acq{font-family:'DM Sans',sans-serif;font-size:0.7rem;color:var(--muted);font-weight:300;padding-right:0.75rem;}
-.r-co{font-family:'DM Sans',sans-serif;font-size:0.65rem;color:var(--dim);font-style:italic;}
-.r-num{font-family:'DM Mono',monospace;font-size:0.72rem;text-align:right;color:var(--muted);padding-left:0.75rem;}
-.r-spread{font-family:'DM Mono',monospace;font-size:0.85rem;font-weight:500;text-align:right;}
+.r-type.tender{color:var(--sky);border-color:rgba(106,184,204,0.3);background:rgba(106,184,204,0.05);}
+.r-acq{font-family:'DM Sans',sans-serif;font-size:0.68rem;color:var(--muted);font-weight:300;padding-right:0.75rem;}
+.r-co{font-family:'DM Sans',sans-serif;font-size:0.62rem;color:var(--dim);font-style:italic;}
+.r-num{font-family:'DM Mono',monospace;font-size:0.7rem;text-align:right;color:var(--muted);padding-left:0.75rem;}
+.r-spread{font-family:'DM Mono',monospace;font-size:0.82rem;font-weight:500;text-align:right;}
 .r-badge-wrap{text-align:right;}
-.badge{font-family:'DM Mono',monospace;font-size:0.4rem;letter-spacing:0.12em;text-transform:uppercase;padding:2px 5px;border:1px solid;display:inline-block;white-space:nowrap;}
-.badge-vl{color:var(--green);border-color:rgba(90,158,106,0.35);background:rgba(90,158,106,0.05);}
-.badge-lo{color:var(--gold);border-color:rgba(168,144,96,0.35);background:rgba(168,144,96,0.05);}
-.badge-md{color:#8a6040;border-color:rgba(138,96,64,0.35);background:rgba(138,96,64,0.05);}
-.badge-hi{color:var(--red);border-color:rgba(158,90,74,0.35);background:rgba(158,90,74,0.05);}
-.detail-panel{display:none;background:var(--bg3);border-bottom:1px solid var(--bdr2);border-left:2px solid var(--green2);padding:1.75rem 2rem 1.5rem;animation:slideDown 0.2s ease;}
+.badge{font-family:'DM Mono',monospace;font-size:0.38rem;letter-spacing:0.1em;text-transform:uppercase;padding:2px 6px;border:1px solid;display:inline-block;white-space:nowrap;}
+.badge-vl{color:var(--green);border-color:rgba(90,158,106,0.4);background:rgba(90,158,106,0.07);}
+.badge-lo{color:var(--teal);border-color:rgba(74,158,138,0.4);background:rgba(74,158,138,0.07);}
+.badge-md{color:var(--amber);border-color:rgba(200,148,90,0.4);background:rgba(200,148,90,0.07);}
+.badge-hi{color:var(--red);border-color:rgba(158,90,74,0.4);background:rgba(158,90,74,0.07);}
+
+/* ── DETAIL PANEL ── */
+.detail-panel{display:none;background:var(--bg3);border-bottom:1px solid var(--bdr2);border-left:2px solid var(--teal2);padding:1.75rem 2rem 1.5rem;animation:slideDown 0.2s ease;}
 .detail-panel.open{display:block;}
 @keyframes slideDown{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
 .dp-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;}
 .dp-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:2.5rem;color:var(--cream);line-height:1;}
-.dp-acq-lbl{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.4rem;}
+.dp-acq-lbl{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.4rem;}
 .dp-acq-name{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);font-weight:300;margin-top:0.15rem;}
 .dp-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin-bottom:1rem;}
 .dp-metric{background:var(--bg2);padding:1rem 1.25rem;}
-.dp-metric.hi{border-top:1px solid var(--green2);}
-.dp-ml{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.4rem;}
+.dp-metric.hi{border-top:1px solid var(--teal2);}
+.dp-ml{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.4rem;}
 .dp-mv{font-family:'Playfair Display',serif;font-weight:300;font-size:1.4rem;line-height:1;}
-.dp-mv.sm{font-family:'DM Mono',monospace;font-size:0.85rem;color:var(--cream);}
-.break-banner{background:rgba(158,90,74,0.06);border:1px solid rgba(158,90,74,0.3);border-left:3px solid var(--red);padding:1rem 1.25rem;margin-bottom:1.25rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;}
-.break-banner-cell{padding:0.75rem 1rem;}
-.break-banner-label{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.4rem;}
-.break-banner-value{font-family:'Playfair Display',serif;font-weight:300;font-size:1.3rem;color:var(--red);line-height:1;}
-.break-banner-sub{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--muted);margin-top:0.2rem;}
-.analysis-btn{display:block;width:100%;padding:1rem;background:rgba(90,158,106,0.06);border:1px solid var(--green2);color:var(--green);font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;text-align:center;cursor:pointer;transition:all 0.2s;}
-.analysis-btn:hover{background:rgba(90,158,106,0.12);color:var(--cream);letter-spacing:0.35em;}
-.analysis-btn-label{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.15em;text-align:center;margin-top:0.4rem;}
+.dp-mv.sm{font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--cream);}
+.break-banner{background:rgba(158,90,74,0.06);border:1px solid rgba(158,90,74,0.25);border-left:3px solid var(--red);padding:1rem 0;margin-bottom:1.25rem;display:grid;grid-template-columns:1fr 1fr 1fr;}
+.break-banner-cell{padding:0.65rem 1.25rem;border-right:1px solid rgba(158,90,74,0.15);}
+.break-banner-cell:last-child{border-right:none;}
+.break-banner-label{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.35rem;}
+.break-banner-value{font-family:'Playfair Display',serif;font-weight:300;font-size:1.25rem;color:var(--red);line-height:1;}
+.break-banner-sub{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--muted);margin-top:0.2rem;}
+.fin-badge{display:inline-flex;align-items:center;gap:0.4rem;font-family:'DM Mono',monospace;font-size:0.42rem;letter-spacing:0.12em;text-transform:uppercase;padding:3px 8px;border:1px solid;margin-bottom:1rem;}
+.fin-badge.committed{color:var(--green);border-color:rgba(90,158,106,0.3);background:rgba(90,158,106,0.06);}
+.fin-badge.confident{color:var(--sky);border-color:rgba(106,184,204,0.3);background:rgba(106,184,204,0.06);}
+.fin-badge.contingent{color:var(--red);border-color:rgba(158,90,74,0.3);background:rgba(158,90,74,0.06);}
+.fin-badge.unknown{color:var(--muted);border-color:var(--bdr2);background:transparent;}
+.analysis-btn{display:block;width:100%;padding:1rem;background:rgba(74,158,138,0.07);border:1px solid var(--teal2);color:var(--teal);font-family:'DM Mono',monospace;font-size:0.56rem;letter-spacing:0.28em;text-transform:uppercase;text-align:center;cursor:pointer;transition:all 0.2s;margin-top:0.25rem;}
+.analysis-btn:hover{background:rgba(74,158,138,0.14);color:var(--cream);}
+.analysis-btn-label{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.12em;text-align:center;margin-top:0.4rem;}
+
+/* ── LOADING ── */
 .loading-wrap{display:flex;flex-direction:column;justify-content:center;align-items:center;padding:4rem;text-align:center;}
 .loading-title{font-family:'Playfair Display',serif;font-weight:300;font-size:1.4rem;color:var(--cream);margin-bottom:0.75rem;}
-.loading-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.15em;}
-.spinner{width:28px;height:28px;border:1px solid var(--bdr2);border-top-color:var(--green);border-radius:50%;animation:spin 0.8s linear infinite;margin:1.5rem auto;}
+.loading-sub{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.15em;}
+.spinner{width:28px;height:28px;border:1px solid var(--bdr2);border-top-color:var(--teal);border-radius:50%;animation:spin 0.8s linear infinite;margin:1.5rem auto;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── FOOTER ── */
 footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:10;margin-top:1.5rem;}
-.footer-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:0.85rem;letter-spacing:0.3em;color:var(--dim);}
-.footer-links{display:flex;gap:2rem;align-items:center;}
-.footer-link{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;transition:color 0.2s;background:none;border:none;}
-.footer-link:hover{color:var(--green);}
-.footer-info{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;text-align:right;line-height:2;}
-.footer-disclaimer{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.08em;padding:0.75rem 2.5rem;border-top:1px solid var(--bdr);text-align:center;line-height:1.8;position:relative;z-index:10;}
-.da-nav{display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.96);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
-.da-back{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;transition:color 0.2s;}
-.da-back:hover{color:var(--green);}
-.da-hero{padding:3rem 2.5rem 2rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;}
+.footer-logo{font-family:'Playfair Display',serif;font-weight:300;font-size:0.82rem;letter-spacing:0.3em;color:var(--dim);}
+.footer-links{display:flex;gap:2rem;}
+.footer-link{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;transition:color 0.2s;background:none;border:none;}
+.footer-link:hover{color:var(--teal);}
+.footer-info{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.08em;text-align:right;line-height:2;}
+.footer-disclaimer{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.06em;padding:0.65rem 2.5rem;border-top:1px solid var(--bdr);text-align:center;line-height:1.8;position:relative;z-index:10;}
+
+/* ── DEAL ANALYSIS ── */
+.da-nav{display:flex;justify-content:space-between;align-items:center;padding:0.9rem 2.5rem;border-bottom:1px solid var(--bdr);background:rgba(5,13,8,0.97);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+.da-back{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;transition:color 0.2s;}
+.da-back:hover{color:var(--teal);}
+.da-hero{padding:3rem 2.5rem 2rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;background:linear-gradient(180deg,rgba(74,158,138,0.03) 0%,transparent 100%);}
 .da-hero-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2rem;}
 .da-ticker{font-family:'Playfair Display',serif;font-weight:300;font-size:4rem;color:var(--cream);line-height:1;}
 .da-company{font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--muted);font-weight:300;margin-top:0.25rem;}
-.da-acquirer-lbl{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.75rem;}
+.da-acquirer-lbl{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.75rem;}
 .da-acquirer{font-family:'DM Sans',sans-serif;font-size:0.9rem;color:var(--bone);font-weight:300;margin-top:0.15rem;}
-.da-badges{display:flex;gap:0.5rem;margin-top:1rem;}
+.da-badges{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem;}
 .da-spread-block{text-align:right;}
 .da-spread-num{font-family:'Playfair Display',serif;font-size:3.5rem;font-weight:300;line-height:1;}
-.da-spread-lbl{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.25rem;}
-.da-ann{font-family:'DM Mono',monospace;font-size:0.75rem;margin-top:0.25rem;}
+.da-spread-lbl{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-top:0.25rem;}
+.da-ann{font-family:'DM Mono',monospace;font-size:0.72rem;margin-top:0.25rem;}
 .da-metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:0 2.5rem 2rem;position:relative;z-index:10;}
 .da-metric{background:var(--bg2);padding:1.25rem;}
-.da-metric.hi{border-top:1px solid var(--green2);}
-.da-ml{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:0.5rem;}
+.da-metric.hi{border-top:1px solid var(--teal2);}
+.da-ml{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.5rem;}
 .da-mv{font-family:'Playfair Display',serif;font-weight:300;font-size:1.5rem;line-height:1;}
-.da-mv.sm{font-family:'DM Mono',monospace;font-size:0.9rem;color:var(--cream);}
+.da-mv.sm{font-family:'DM Mono',monospace;font-size:0.88rem;color:var(--cream);}
 .da-section{margin:0 2.5rem 2rem;position:relative;z-index:10;}
-.da-section-title{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--dim);margin-bottom:1rem;display:flex;align-items:center;gap:1rem;}
-.da-section-title::after{content:'';flex:1;height:1px;background:var(--bdr);}
+.da-section-title{font-family:'DM Mono',monospace;font-size:0.46rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--teal);margin-bottom:1rem;display:flex;align-items:center;gap:1rem;}
+.da-section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--teal2),transparent);}
+
+/* ── RR GRID ── */
 .rr-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
 .rr-col{background:var(--bg2);padding:1.5rem;}
 .rr-col.upside{border-top:2px solid var(--green);}
 .rr-col.downside{border-top:2px solid var(--red);}
-.rr-title{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1rem;}
+.rr-title{font-family:'DM Mono',monospace;font-size:0.46rem;letter-spacing:0.18em;text-transform:uppercase;margin-bottom:1rem;}
 .rr-col.upside .rr-title{color:var(--green);}
 .rr-col.downside .rr-title{color:var(--red);}
 .rr-big{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;line-height:1;margin-bottom:0.5rem;}
 .rr-col.upside .rr-big{color:var(--green);}
 .rr-col.downside .rr-big{color:var(--red);}
-.rr-sub{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--muted);margin-bottom:1.25rem;}
+.rr-sub{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);margin-bottom:1.25rem;}
 .rr-table{width:100%;border-collapse:collapse;}
 .rr-table tr{border-bottom:1px solid var(--bdr);}
 .rr-table tr:last-child{border-bottom:none;}
-.rr-table td{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.5rem 0;color:var(--cream);}
+.rr-table td{font-family:'DM Mono',monospace;font-size:0.64rem;padding:0.5rem 0;color:var(--cream);}
 .rr-table td.r{text-align:right;}
 .rr-table td.pos{color:var(--green);}
 .rr-table td.neg{color:var(--red);}
 .rr-note{font-family:'Cormorant Garamond',serif;font-size:0.82rem;color:var(--dim);margin-top:1rem;line-height:1.6;font-weight:300;font-style:italic;}
+
+/* ── ACQUIRER INTELLIGENCE ── */
+.acq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
+.acq-cell{background:var(--bg2);padding:1.25rem 1.5rem;}
+.acq-cell.highlight{border-top:1px solid var(--sky2);}
+.acq-label{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.5rem;}
+.acq-value{font-family:'Playfair Display',serif;font-weight:300;font-size:1.3rem;color:var(--cream);line-height:1;margin-bottom:0.25rem;}
+.acq-sub{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--muted);font-weight:300;line-height:1.5;}
+.fin-signal-row{display:flex;align-items:center;gap:0.75rem;margin-top:0.5rem;}
+.fin-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.fin-dot.committed{background:var(--green);}
+.fin-dot.confident{background:var(--sky);}
+.fin-dot.contingent{background:var(--red);}
+.fin-dot.unknown{background:var(--dim);}
+.fin-label{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.12em;text-transform:uppercase;}
+.fin-label.committed{color:var(--green);}
+.fin-label.confident{color:var(--sky);}
+.fin-label.contingent{color:var(--red);}
+.fin-label.unknown{color:var(--muted);}
+
+/* ── REG RISK ── */
 .reg-risk-list{background:var(--bg2);border:1px solid var(--bdr);padding:0;}
 .reg-risk-item{display:flex;align-items:flex-start;gap:1.25rem;padding:1rem 1.5rem;border-bottom:1px solid var(--bdr);}
 .reg-risk-item:last-child{border-bottom:none;}
 .reg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:0.35rem;}
 .reg-dot.low{background:var(--green);}
-.reg-dot.medium{background:var(--gold);}
+.reg-dot.medium{background:var(--amber);}
 .reg-dot.high{background:var(--red);}
-.reg-agency{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--cream);min-width:160px;flex-shrink:0;}
+.reg-agency{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--cream);min-width:160px;flex-shrink:0;}
 .reg-reason{font-family:'Cormorant Garamond',serif;font-size:0.92rem;color:var(--muted);line-height:1.6;font-weight:300;}
+
+/* ── COMPS ── */
 .comps-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin-bottom:1px;}
 .comp-stat{background:var(--bg2);padding:1rem 1.25rem;text-align:center;}
 .comp-stat-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:300;line-height:1;margin-bottom:0.2rem;}
 .comp-stat-val.green{color:var(--green);}
 .comp-stat-val.red{color:var(--red);}
-.comp-stat-lbl{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
+.comp-stat-val.sky{color:var(--sky);}
+.comp-stat-lbl{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;}
 .comps-table{width:100%;border:1px solid var(--bdr);border-top:none;border-collapse:collapse;}
-.comps-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
+.comps-table th{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
 .comps-table th.r{text-align:right;}
-.comps-table td{font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);color:var(--cream);}
+.comps-table td{font-family:'DM Mono',monospace;font-size:0.66rem;padding:0.75rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);color:var(--cream);}
 .comps-table td.r{text-align:right;}
 .comps-table tr:last-child td{border-bottom:none;}
 .comp-outcome-closed{color:var(--green);}
 .comp-outcome-broken{color:var(--red);}
 .comps-note{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);margin-top:0.75rem;line-height:1.6;font-weight:300;font-style:italic;padding:0.75rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);border-top:none;}
-.score-bars{display:flex;flex-direction:column;gap:1rem;background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;}
-.score-bar-header{display:flex;justify-content:space-between;margin-bottom:0.4rem;}
-.score-bar-label{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;}
-.score-bar-val{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--cream);}
-.score-bar-desc{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);margin-top:0.25rem;font-weight:300;}
-.score-bar-track{height:2px;background:var(--bdr2);margin-top:0.4rem;}
-.score-bar-fill{height:100%;transition:width 0.6s ease;}
+
+/* ── SCORE BARS ── */
+.score-bars{display:flex;flex-direction:column;gap:1.25rem;background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;}
+.score-bar-header{display:flex;justify-content:space-between;margin-bottom:0.35rem;}
+.score-bar-label{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--muted);letter-spacing:0.14em;text-transform:uppercase;}
+.score-bar-val{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--cream);}
+.score-bar-desc{font-family:'Cormorant Garamond',serif;font-size:0.84rem;color:var(--dim);margin-top:0.2rem;font-weight:300;}
+.score-bar-track{height:2px;background:var(--bdr2);margin-top:0.4rem;border-radius:1px;}
+.score-bar-fill{height:100%;transition:width 0.8s ease;border-radius:1px;}
+
+/* ── RISK FACTORS ── */
 .risk-factors{background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;}
 .risk-factor{display:flex;gap:1rem;padding:0.75rem 0;border-bottom:1px solid var(--bdr);}
 .risk-factor:last-child{border-bottom:none;}
 .risk-dot{width:6px;height:6px;border-radius:50%;margin-top:0.35rem;flex-shrink:0;}
 .risk-dot.hi{background:var(--red);}
-.risk-dot.md{background:var(--gold);}
+.risk-dot.md{background:var(--amber);}
 .risk-dot.lo{background:var(--green);}
-.risk-text{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.6;font-weight:300;}
+.risk-text{font-family:'Cormorant Garamond',serif;font-size:0.92rem;color:var(--muted);line-height:1.6;font-weight:300;}
+
+/* ── TIMELINE ── */
 .timeline{background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem 2rem;}
-.timeline-track{display:flex;align-items:center;gap:0;margin:1rem 0;}
+.timeline-track{display:flex;align-items:center;margin:1rem 0;}
 .timeline-dot{width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;}
 .timeline-dot.end{background:var(--dim);}
-.timeline-line{flex:1;height:1px;background:var(--bdr2);position:relative;}
-.timeline-line-fill{height:100%;background:var(--green);}
+.timeline-line{flex:1;height:1px;background:var(--bdr2);}
+.timeline-line-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));}
 .timeline-labels{display:flex;justify-content:space-between;margin-top:0.5rem;}
-.timeline-label{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.1em;}
-.timeline-days{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--muted);text-align:center;margin-top:0.75rem;}
-.meth-hero{padding:4rem 2.5rem 3rem;border-bottom:1px solid var(--bdr);text-align:center;position:relative;z-index:10;}
+.timeline-label{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;}
+.timeline-days{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--muted);text-align:center;margin-top:0.75rem;}
+
+/* ── METHODOLOGY ── */
+.meth-hero{padding:4rem 2.5rem 3rem;border-bottom:1px solid var(--bdr);text-align:center;position:relative;z-index:10;background:linear-gradient(180deg,rgba(74,158,138,0.04) 0%,transparent 100%);}
 .meth-title{font-family:'Playfair Display',serif;font-weight:300;font-size:3rem;color:var(--cream);margin-bottom:0.75rem;}
-.meth-title em{font-style:italic;color:var(--green);}
-.meth-sub{font-family:'DM Mono',monospace;font-size:0.52rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;margin-bottom:1.5rem;}
-.meth-desc{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted);max-width:600px;margin:0 auto;line-height:1.9;font-weight:300;}
+.meth-title em{font-style:italic;color:var(--teal);}
+.meth-sub{font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.25em;text-transform:uppercase;margin-bottom:1.5rem;}
+.meth-desc{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--muted);max-width:620px;margin:0 auto;line-height:1.9;font-weight:300;}
 .backtest-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:2rem 2.5rem;position:relative;z-index:10;}
 .bt-cell{background:var(--bg2);padding:1.5rem;text-align:center;position:relative;}
-.bt-cell::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green2),transparent);}
-.bt-val{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;color:var(--green);line-height:1;margin-bottom:0.35rem;}
-.bt-label{font-family:'DM Mono',monospace;font-size:0.44rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;}
-.bt-sub{font-family:'Cormorant Garamond',serif;font-size:0.82rem;color:var(--muted);margin-top:0.25rem;font-weight:300;}
-.base-rate-banner{background:rgba(90,158,106,0.05);border:1px solid var(--green2);border-left:3px solid var(--green);padding:1.25rem 1.75rem;margin:0 2.5rem 2rem;position:relative;z-index:10;}
-.base-rate-title{font-family:'DM Mono',monospace;font-size:0.48rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--green);margin-bottom:0.75rem;}
+.bt-cell::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.bt-cell:nth-child(1)::after{background:linear-gradient(90deg,var(--green),transparent);}
+.bt-cell:nth-child(2)::after{background:linear-gradient(90deg,var(--teal),transparent);}
+.bt-cell:nth-child(3)::after{background:linear-gradient(90deg,var(--sky),transparent);}
+.bt-cell:nth-child(4)::after{background:linear-gradient(90deg,var(--amber),transparent);}
+.bt-val{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:300;line-height:1;margin-bottom:0.35rem;}
+.bt-cell:nth-child(1) .bt-val{color:var(--green);}
+.bt-cell:nth-child(2) .bt-val{color:var(--teal);}
+.bt-cell:nth-child(3) .bt-val{color:var(--sky);}
+.bt-cell:nth-child(4) .bt-val{color:var(--amber);}
+.bt-label{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;}
+.bt-sub{font-family:'Cormorant Garamond',serif;font-size:0.8rem;color:var(--muted);margin-top:0.25rem;font-weight:300;}
+.base-rate-banner{background:rgba(74,158,138,0.05);border:1px solid var(--teal2);border-left:3px solid var(--teal);padding:1.25rem 1.75rem;margin:0 2.5rem 2rem;position:relative;z-index:10;}
+.base-rate-title{font-family:'DM Mono',monospace;font-size:0.46rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--teal);margin-bottom:0.75rem;}
 .base-rate-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;}
 .base-rate-item{text-align:center;}
 .base-rate-val{font-family:'Playfair Display',serif;font-size:1.75rem;font-weight:300;color:var(--cream);line-height:1;margin-bottom:0.25rem;}
-.base-rate-lbl{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.15em;text-transform:uppercase;}
+.base-rate-lbl{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.14em;text-transform:uppercase;}
 .base-rate-note{font-family:'Cormorant Garamond',serif;font-size:0.88rem;color:var(--muted);margin-top:0.75rem;font-weight:300;line-height:1.6;}
 .meth-section{margin:0 2.5rem 2.5rem;position:relative;z-index:10;}
 .meth-section-header{display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem;padding-bottom:0.75rem;border-bottom:1px solid var(--bdr2);}
-.meth-section-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:300;color:var(--green);line-height:1;}
+.meth-section-num{font-family:'Playfair Display',serif;font-size:2rem;font-weight:300;color:var(--teal);line-height:1;}
 .meth-section-title{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:300;color:var(--cream);}
-.meth-section-weight{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--gold);letter-spacing:0.15em;text-transform:uppercase;margin-top:0.2rem;}
+.meth-section-weight{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--amber);letter-spacing:0.14em;text-transform:uppercase;margin-top:0.2rem;}
 .factor-table{width:100%;border:1px solid var(--bdr);border-collapse:collapse;margin-bottom:1rem;}
-.factor-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
-.factor-table td{font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.7rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
+.factor-table th{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
+.factor-table td{font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.7rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
 .factor-table tr:last-child td{border-bottom:none;}
 .factor-table td.pts{text-align:right;font-weight:500;}
 .factor-table td.pts.pos{color:var(--green);}
 .factor-table td.pts.neg{color:var(--red);}
 .factor-table td.pts.neu{color:var(--muted);}
-.factor-note{font-family:'Cormorant Garamond',serif;font-size:0.9rem;color:var(--muted);line-height:1.7;font-weight:300;background:var(--bg2);border:1px solid var(--bdr);border-left:2px solid var(--green2);padding:1rem 1.25rem;}
+.factor-note{font-family:'Cormorant Garamond',serif;font-size:0.9rem;color:var(--muted);line-height:1.7;font-weight:300;background:var(--bg2);border:1px solid var(--bdr);border-left:2px solid var(--teal2);padding:1rem 1.25rem;}
+.spread-rules{width:100%;border:1px solid var(--bdr);border-collapse:collapse;margin-bottom:1rem;}
+.spread-rules th{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
+.spread-rules td{font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.7rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
+.spread-rules tr:last-child td{border-bottom:none;}
+.spread-rules td.rate{text-align:right;font-weight:500;}
+.spread-rules td.rate.safe{color:var(--green);}
+.spread-rules td.rate.warn{color:var(--amber);}
+.spread-rules td.rate.danger{color:var(--red);}
 .threshold-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
 .threshold-cell{background:var(--bg2);padding:1.25rem;position:relative;}
 .threshold-cell::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
 .threshold-cell.vl::before{background:var(--green);}
-.threshold-cell.lo::before{background:var(--gold);}
-.threshold-cell.md::before{background:#8a6040;}
+.threshold-cell.lo::before{background:var(--teal);}
+.threshold-cell.md::before{background:var(--amber);}
 .threshold-cell.hi::before{background:var(--red);}
-.threshold-range{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:300;margin-bottom:0.25rem;}
+.threshold-range{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:300;margin-bottom:0.25rem;}
 .threshold-cell.vl .threshold-range{color:var(--green);}
-.threshold-cell.lo .threshold-range{color:var(--gold);}
-.threshold-cell.md .threshold-range{color:#8a6040;}
+.threshold-cell.lo .threshold-range{color:var(--teal);}
+.threshold-cell.md .threshold-range{color:var(--amber);}
 .threshold-cell.hi .threshold-range{color:var(--red);}
-.threshold-name{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
-.threshold-desc{font-family:'Cormorant Garamond',serif;font-size:0.85rem;color:var(--dim);line-height:1.6;font-weight:300;}
-.spread-rules{width:100%;border:1px solid var(--bdr);border-collapse:collapse;margin-bottom:1rem;}
-.spread-rules th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1.25rem;text-align:left;background:var(--bg3);border-bottom:1px solid var(--bdr);}
-.spread-rules td{font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.7rem 1.25rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
-.spread-rules tr:last-child td{border-bottom:none;}
-.spread-rules td.rate{text-align:right;font-weight:500;}
-.spread-rules td.rate.safe{color:var(--green);}
-.spread-rules td.rate.warn{color:var(--gold);}
-.spread-rules td.rate.danger{color:var(--red);}
+.threshold-name{font-family:'DM Mono',monospace;font-size:0.42rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
+.threshold-desc{font-family:'Cormorant Garamond',serif;font-size:0.84rem;color:var(--dim);line-height:1.6;font-weight:300;}
 .sample-table{width:100%;border:1px solid var(--bdr);border-collapse:collapse;}
-.sample-table th{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;padding:0.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--bdr);text-align:left;}
-.sample-table td{font-family:'DM Mono',monospace;font-size:0.65rem;padding:0.65rem 1rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
+.sample-table th{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;padding:0.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--bdr);text-align:left;}
+.sample-table td{font-family:'DM Mono',monospace;font-size:0.64rem;padding:0.65rem 1rem;border-bottom:1px solid var(--bdr);background:var(--bg2);}
 .sample-table tr:last-child td{border-bottom:none;}
 .outcome-closed{color:var(--green);}
 .outcome-broken{color:var(--red);}
 .correct-yes{color:var(--green);}
 .correct-no{color:var(--red);}
+
+/* ── COMPARE PAGE ── */
+.compare-hero{padding:3rem 2.5rem 2rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;background:linear-gradient(180deg,rgba(106,184,204,0.04) 0%,transparent 100%);}
+.compare-title{font-family:'Playfair Display',serif;font-weight:300;font-size:2.5rem;color:var(--cream);margin-bottom:0.5rem;}
+.compare-title em{font-style:italic;color:var(--sky);}
+.compare-sub{font-family:'DM Mono',monospace;font-size:0.48rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1rem;}
+.compare-desc{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);font-weight:300;line-height:1.7;max-width:700px;}
+.compare-filters{display:flex;gap:0.75rem;padding:0.75rem 2.5rem;border-bottom:1px solid var(--bdr);background:var(--bg2);flex-wrap:wrap;position:relative;z-index:10;}
+.filter-btn{font-family:'DM Mono',monospace;font-size:0.46rem;letter-spacing:0.16em;text-transform:uppercase;border:1px solid var(--bdr2);background:transparent;color:var(--muted);padding:0.35rem 0.85rem;cursor:pointer;transition:all 0.2s;}
+.filter-btn:hover{border-color:var(--sky2);color:var(--sky);}
+.filter-btn.active{border-color:var(--sky2);color:var(--sky);background:rgba(106,184,204,0.06);}
+.compare-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin:1.25rem 2.5rem;position:relative;z-index:10;}
+.cs-cell{background:var(--bg2);padding:1rem 1.25rem;text-align:center;}
+.cs-val{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:300;line-height:1;margin-bottom:0.2rem;}
+.cs-lbl{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;}
+.compare-table-wrap{margin:0 2.5rem 2rem;border:1px solid var(--bdr);position:relative;z-index:10;}
+.compare-table{width:100%;border-collapse:collapse;}
+.compare-table th{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;padding:0.6rem 1rem;background:var(--bg3);border-bottom:1px solid var(--bdr);text-align:left;cursor:pointer;user-select:none;white-space:nowrap;}
+.compare-table th:hover{color:var(--sky);}
+.compare-table th.r{text-align:right;}
+.compare-table td{font-family:'DM Mono',monospace;font-size:0.64rem;padding:0.7rem 1rem;border-bottom:1px solid var(--bdr);background:var(--bg2);color:var(--cream);}
+.compare-table td.r{text-align:right;}
+.compare-table tr:last-child td{border-bottom:none;}
+.compare-table tr:hover td{background:var(--bg3);}
 </style>
 </head>
 <body>
@@ -350,71 +480,111 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
 </div>
 
-<!-- LANDING -->
+<!-- ═══════════════════════════════ LANDING ═══════════════════════════════ -->
 <div id="page-landing" class="page active">
   <nav class="land-nav">
     <div class="land-logo">MERI<em>DIAN</em></div>
     <div class="land-tag">◈ Near Real-Time M&A Arbitrage Intelligence</div>
+    <button class="land-nav-enter" onclick="showDashboard()">Enter Meridian →</button>
   </nav>
   <div class="hero">
     <div class="edition">M&A Arbitrage Intelligence · Sourced from SEC EDGAR</div>
     <h1 class="hero-title">MERI<em>DIAN</em></h1>
-    <div class="divider"><span class="divider-text">◈ Deal Intelligence ◈</span></div>
+    <div class="divider"><span class="divider-sym">◈ V3 Intelligence ◈</span></div>
     <p class="hero-desc">Institutional-grade merger arbitrage intelligence, sourced directly from SEC EDGAR. Every active deal <b>tracked, scored, and updated hourly</b> so you can act with conviction.</p>
     <div class="stats">
       <div class="stat"><div class="stat-v" id="landing-deal-count">--</div><div class="stat-l">Active Deals Tracked</div></div>
-      <div class="stat"><div class="stat-v">93%</div><div class="stat-l">Deal Close Prediction</div></div>
-      <div class="stat"><div class="stat-v">1hr</div><div class="stat-l">Data Refresh Cycle</div></div>
-      <div class="stat"><div class="stat-v">SEC</div><div class="stat-l">Primary Data Source</div></div>
+      <div class="stat"><div class="stat-v accent-teal">93.7%</div><div class="stat-l">Deal Close Prediction</div></div>
+      <div class="stat"><div class="stat-v accent-sky">1hr</div><div class="stat-l">Data Refresh Cycle</div></div>
+      <div class="stat"><div class="stat-v accent-amber">SEC</div><div class="stat-l">Primary Data Source</div></div>
     </div>
     <div class="methodology-banner" onclick="showMethodology()">
       <div>
-        <div class="methodology-banner-title">◈ Proprietary Scoring Model · V2</div>
-        <div class="methodology-banner-desc">93.1% accuracy at predicting whether a deal closes or breaks — backtested on 159 historical deals from 2020–2025. Read the full methodology.</div>
+        <div class="methodology-banner-title">◈ Proprietary V3 Scoring Model</div>
+        <div class="methodology-banner-desc">93.7% accuracy on 159 historical deals · 6 factors including financing signal, regulatory complexity, and deal premium · Very Low + Low Risk buckets: 0% break rate across 116 deals</div>
       </div>
       <div class="methodology-banner-arrow">→</div>
     </div>
-    <button class="enter-btn" onclick="showDashboard()">Enter Dashboard</button>
+    <button class="enter-btn" onclick="showDashboard()">Enter Meridian</button>
   </div>
   <div class="scoring">
-    <div class="s-title">The Scoring System</div>
-    <div class="s-sub">◈ How Meridian evaluates every deal</div>
+    <div class="s-title">The V3 Scoring System</div>
+    <div class="s-sub">◈ Empirical break rates from 159 historical deals · 2020–2025</div>
     <div class="s-grid">
-      <div class="s-card vl"><div class="s-range">Very Low</div><div class="s-name">0–8% Spread · Score 80+</div><div class="s-desc">0% break rate across 116 historical deals. Market has high conviction. These are the positions institutional arb funds hold with maximum confidence.</div></div>
-      <div class="s-card lo"><div class="s-range">Low</div><div class="s-name">0–8% Spread · Score 65–79</div><div class="s-desc">Tight spread with minor score uncertainty. Still strong risk-adjusted returns. Monitor for any change in deal terms or regulatory news.</div></div>
-      <div class="s-card md"><div class="s-range">Medium</div><div class="s-name">8–12% Spread · Score 75+</div><div class="s-desc">36% historical break rate in this spread range. Meaningful market skepticism priced in. Proceed with careful position sizing.</div></div>
-      <div class="s-card hi"><div class="s-range">High</div><div class="s-name">12%+ Spread · or Score Below 75</div><div class="s-desc">87% break rate above 12% spread. Market is pricing in near-certain deal failure. Approach only with full understanding of downside risk.</div></div>
+      <div class="s-card vl">
+        <div class="s-range">Very Low</div>
+        <div class="s-name">Spread under 8% · Score 75+</div>
+        <div class="s-stat">0% break rate · 80 historical deals</div>
+        <div class="s-desc">Market has maximum conviction. These are the positions institutional arb funds hold with full sizing. Zero breaks in our 159-deal backtest.</div>
+      </div>
+      <div class="s-card lo">
+        <div class="s-range">Low</div>
+        <div class="s-name">Spread under 8% · Score 55–74</div>
+        <div class="s-stat">0% break rate · 36 historical deals</div>
+        <div class="s-desc">Tight spread with minor score uncertainty from deal structure or regulatory complexity. Still strong risk-adjusted returns historically.</div>
+      </div>
+      <div class="s-card md">
+        <div class="s-range">Medium</div>
+        <div class="s-name">Spread 8–12% · Score 60+</div>
+        <div class="s-stat">44% break rate · 9 historical deals</div>
+        <div class="s-desc">Gray zone. Market skepticism is meaningful. Size positions carefully and monitor spread direction for signals of deterioration.</div>
+      </div>
+      <div class="s-card hi">
+        <div class="s-range">High</div>
+        <div class="s-name">Spread 12%+ · or Score below 60</div>
+        <div class="s-stat">82% break rate · 34 historical deals</div>
+        <div class="s-desc">Market pricing in near-certain failure. 82% of High Risk deals in our dataset broke. Approach only with full understanding of downside.</div>
+      </div>
     </div>
     <div class="s-methodology-link">
-      <button class="s-methodology-btn" onclick="showMethodology()">View Full Methodology & Backtest Results →</button>
+      <button class="s-methodology-btn" onclick="showMethodology()">View Full V3 Methodology & Backtest Results →</button>
     </div>
     <div class="how-grid">
-      <div class="how-card"><div class="how-n">01</div><div class="how-t">SEC EDGAR Monitoring</div><div class="how-d">Every hour, Meridian scans 8-K filings for definitive merger agreements, automatically extracting deal price, acquirer, and terms directly from SEC filings.</div></div>
-      <div class="how-card"><div class="how-n">02</div><div class="how-t">Near Real-Time Spread Calculation</div><div class="how-d">Market prices updated hourly via Yahoo Finance. The spread is the gap between market price and deal price — your potential return if the deal closes.</div></div>
-      <div class="how-card"><div class="how-n">03</div><div class="how-t">V2 Scoring Model</div><div class="how-d">Our model uses empirical spread-based break rates from 159 historical deals. Deals under 8% spread have shown a 0% break rate. Above 12%, break rate exceeds 87%.</div></div>
+      <div class="how-card">
+        <div class="how-n">01</div>
+        <div class="how-t">SEC EDGAR Monitoring</div>
+        <div class="how-d">Every hour, Meridian scans 8-K filings for definitive merger agreements, extracting deal price, acquirer name, transaction value, and expected close date directly from SEC filings.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-n">02</div>
+        <div class="how-t">6-Factor V3 Scoring</div>
+        <div class="how-d">Spread quality, deal type, time pending, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use — not a black box.</div>
+      </div>
+      <div class="how-card">
+        <div class="how-n">03</div>
+        <div class="how-t">Break Price Intelligence</div>
+        <div class="how-d">Pre-announcement stock price pulled for every deal. If this deal breaks, you see exactly where the stock falls — down to the dollar and percentage — before you invest a single cent.</div>
+      </div>
     </div>
   </div>
   <footer>
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
-    <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+      <button class="footer-link" onclick="showCompare()">Historical Deals</button>
+    </div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 159 historical deals · 2020–2025</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Spreads reflect Yahoo Finance data which may be delayed up to 15 minutes. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
 
-<!-- DASHBOARD -->
+<!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
 <div id="page-dashboard" class="page">
   <nav class="dnav">
     <button class="dnav-logo" onclick="showLanding()">MERI<em>DIAN</em></button>
+    <div class="dnav-links">
+      <button class="dnav-link active" onclick="showDashboard()">Deals</button>
+      <button class="dnav-link" onclick="showCompare()">Historical</button>
+      <button class="dnav-link" onclick="showMethodology()">Methodology</button>
+    </div>
     <div class="dnav-r">
-      <div class="dlive"><span class="ddot"></span>Updated Hourly · SEC EDGAR</div>
+      <div class="dlive"><span class="ddot"></span>Updated Hourly</div>
       <div class="dts" id="timestamp"></div>
     </div>
   </nav>
   <div class="toolbar">
-    <button class="btn" onclick="showLanding()">Back</button>
-    <button class="btn" id="refresh-btn" onclick="refreshData()">Refresh</button>
-    <button class="btn" onclick="showMethodology()" style="margin-left:auto">Methodology</button>
+    <button class="btn" onclick="showLanding()">← Home</button>
+    <button class="btn" id="refresh-btn" onclick="refreshData()">Refresh Data</button>
   </div>
   <div class="progress-wrap" id="progress-wrap">
     <div class="progress-label">
@@ -426,8 +596,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="mstrip">
     <div class="mc"><div class="mc-l">Active Deals</div><div class="mc-v" id="m-deals">--</div><div class="mc-h">tracked from SEC EDGAR</div></div>
-    <div class="mc"><div class="mc-l">Avg Spread</div><div class="mc-v gr" id="m-spread">--</div><div class="mc-h">across all positions</div></div>
-    <div class="mc"><div class="mc-l">Avg Score</div><div class="mc-v" id="m-score">--</div><div class="mc-h">proprietary v2 model</div></div>
+    <div class="mc"><div class="mc-l">Avg Spread</div><div class="mc-v te" id="m-spread">--</div><div class="mc-h">across all positions</div></div>
+    <div class="mc"><div class="mc-l">Avg V3 Score</div><div class="mc-v sk" id="m-score">--</div><div class="mc-h">6-factor model</div></div>
     <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
   </div>
   <div class="data-note">◈ Prices via Yahoo Finance · May be delayed up to 15 minutes · For informational purposes only · Not financial advice</div>
@@ -436,17 +606,27 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <footer>
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
-    <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Spread range -10% to +20%</div>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showCompare()">Historical Deals</button>
+      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+    </div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>V3 Model · 159 deals backtested</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Spreads reflect Yahoo Finance data which may be delayed up to 15 minutes. Past model performance does not guarantee future results.</div>
 </div>
 
-<!-- DEAL ANALYSIS -->
+<!-- ═══════════════════════════════ DEAL ANALYSIS ═══════════════════════════════ -->
 <div id="page-analysis" class="page">
-  <nav class="da-nav">
-    <button class="da-back" onclick="showDashboard()">← Back to Dashboard</button>
-    <button class="dnav-logo" onclick="showLanding()" style="font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;">MERI<em style="font-style:italic;color:var(--green);">DIAN</em></button>
+  <nav class="dnav">
+    <button class="dnav-logo" onclick="showLanding()">MERI<em>DIAN</em></button>
+    <div class="dnav-links">
+      <button class="dnav-link" onclick="showDashboard()">Deals</button>
+      <button class="dnav-link" onclick="showCompare()">Historical</button>
+      <button class="dnav-link" onclick="showMethodology()">Methodology</button>
+    </div>
+    <div class="dnav-r">
+      <button class="da-back" onclick="showDashboard()">← Back to Deals</button>
+    </div>
   </nav>
   <div class="da-hero">
     <div class="da-hero-top">
@@ -466,55 +646,122 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="da-metrics" id="da-metrics"></div>
   <div class="da-section"><div class="da-section-title">Risk / Reward Analysis</div><div class="rr-grid" id="da-rr-grid"></div></div>
+  <div class="da-section"><div class="da-section-title">Acquirer Intelligence</div><div class="acq-grid" id="da-acq-grid"></div></div>
   <div class="da-section"><div class="da-section-title">Comparable Deals</div><div id="da-comps"></div></div>
   <div class="da-section"><div class="da-section-title">Regulatory Risk</div><div class="reg-risk-list" id="da-reg-risk"></div></div>
-  <div class="da-section"><div class="da-section-title">Score Breakdown</div><div class="score-bars" id="da-score-bars"></div></div>
+  <div class="da-section"><div class="da-section-title">V3 Score Breakdown</div><div class="score-bars" id="da-score-bars"></div></div>
   <div class="da-section"><div class="da-section-title">Risk Factors</div><div class="risk-factors" id="da-risk-factors"></div></div>
   <div class="da-section"><div class="da-section-title">Deal Timeline</div><div class="timeline" id="da-timeline"></div></div>
   <footer style="margin-top:2rem;">
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
-    <div class="footer-links"><button class="footer-link" onclick="showMethodology()">Methodology</button></div>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showCompare()">Historical Deals</button>
+      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+    </div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Spreads reflect Yahoo Finance data which may be delayed up to 15 minutes. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
 
-<!-- METHODOLOGY -->
+<!-- ═══════════════════════════════ COMPARE ═══════════════════════════════ -->
+<div id="page-compare" class="page">
+  <nav class="dnav">
+    <button class="dnav-logo" onclick="showLanding()">MERI<em>DIAN</em></button>
+    <div class="dnav-links">
+      <button class="dnav-link" onclick="showDashboard()">Deals</button>
+      <button class="dnav-link active" onclick="showCompare()">Historical</button>
+      <button class="dnav-link" onclick="showMethodology()">Methodology</button>
+    </div>
+    <div class="dnav-r">
+      <div class="dlive"><span class="ddot"></span>159 Historical Deals</div>
+    </div>
+  </nav>
+  <div class="compare-hero">
+    <div class="compare-title">Historical <em>Deal</em> Database</div>
+    <div class="compare-sub">◈ 159 Closed and Broken Deals · 2020–2025 · V3 Backtest Dataset</div>
+    <p class="compare-desc">Every deal used to build and validate the V3 scoring model. Filter by deal type, outcome, or spread range. Sort any column. This is the data behind the 93.7% accuracy claim.</p>
+  </div>
+  <div class="compare-filters">
+    <button class="filter-btn active" onclick="filterCompare('all',this)">All Deals</button>
+    <button class="filter-btn" onclick="filterCompare('All Cash',this)">All Cash</button>
+    <button class="filter-btn" onclick="filterCompare('Private Equity',this)">Private Equity</button>
+    <button class="filter-btn" onclick="filterCompare('Cash + Stock',this)">Cash + Stock</button>
+    <button class="filter-btn" onclick="filterCompare('Tender Offer',this)">Tender Offer</button>
+    <button class="filter-btn" onclick="filterCompare('Closed',this)">Closed Only</button>
+    <button class="filter-btn" onclick="filterCompare('Broken',this)">Broken Only</button>
+    <button class="filter-btn" onclick="filterCompare('tight',this)">Spread 0–8%</button>
+    <button class="filter-btn" onclick="filterCompare('wide',this)">Spread 12%+</button>
+  </div>
+  <div class="compare-stats" id="compare-stats"></div>
+  <div class="compare-table-wrap">
+    <table class="compare-table" id="compare-table">
+      <thead>
+        <tr>
+          <th onclick="sortCompare('ticker')">Ticker</th>
+          <th onclick="sortCompare('acquirer')">Acquirer</th>
+          <th onclick="sortCompare('deal_type')">Type</th>
+          <th class="r" onclick="sortCompare('spread_at_announce')">Spread at Ann.</th>
+          <th class="r" onclick="sortCompare('outcome')">Outcome</th>
+          <th class="r" onclick="sortCompare('days_to_close')">Days to Close</th>
+        </tr>
+      </thead>
+      <tbody id="compare-tbody"></tbody>
+    </table>
+  </div>
+  <footer style="margin-top:2rem;">
+    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showDashboard()">Live Deals</button>
+      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+    </div>
+    <div class="footer-info">159 historical deals · 2020–2025<br>V3 Backtest Dataset</div>
+  </footer>
+  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Past model performance does not guarantee future results.</div>
+</div>
+
+<!-- ═══════════════════════════════ METHODOLOGY ═══════════════════════════════ -->
 <div id="page-methodology" class="page">
-  <nav class="da-nav">
-    <button class="da-back" onclick="showLanding()">← Back</button>
-    <button class="dnav-logo" onclick="showLanding()" style="font-family:'Playfair Display',serif;font-weight:300;font-size:1rem;letter-spacing:0.35em;text-transform:uppercase;color:var(--cream);cursor:pointer;background:none;border:none;">MERI<em style="font-style:italic;color:var(--green);">DIAN</em></button>
+  <nav class="dnav">
+    <button class="dnav-logo" onclick="showLanding()">MERI<em>DIAN</em></button>
+    <div class="dnav-links">
+      <button class="dnav-link" onclick="showDashboard()">Deals</button>
+      <button class="dnav-link" onclick="showCompare()">Historical</button>
+      <button class="dnav-link active" onclick="showMethodology()">Methodology</button>
+    </div>
+    <div class="dnav-r">
+      <div class="dlive"><span class="ddot" style="background:var(--teal)"></span>V3 Model</div>
+    </div>
   </nav>
   <div class="meth-hero">
-    <div class="meth-title">The <em>Scoring</em> Model</div>
-    <div class="meth-sub">◈ V2 Methodology & Backtest Results</div>
-    <p class="meth-desc">Meridian's V2 scoring model combines a base score with empirical spread-based break rates derived from 159 historical deals. The key insight: spread range alone predicts deal outcomes with remarkable accuracy.</p>
+    <div class="meth-title">The V3 <em>Scoring</em> Model</div>
+    <div class="meth-sub">◈ Methodology · Backtest Results · 159 Historical Deals</div>
+    <p class="meth-desc">Meridian's V3 model combines empirical spread-based break rates with five additional factors that real merger arb traders use. The result: 93.7% overall accuracy, 0% break rate in the Very Low and Low Risk buckets, and 82% break identification in the High Risk bucket.</p>
   </div>
   <div class="backtest-strip">
-    <div class="bt-cell"><div class="bt-val">93.1%</div><div class="bt-label">Overall Accuracy</div><div class="bt-sub">Predicting deal close or break · 159 deals</div></div>
-    <div class="bt-cell"><div class="bt-val">159</div><div class="bt-label">Deals Backtested</div><div class="bt-sub">Historical deals from 2020 through 2025</div></div>
-    <div class="bt-cell"><div class="bt-val">94.5%</div><div class="bt-label">Closed Deal Accuracy</div><div class="bt-sub">120 of 127 closed deals correctly predicted</div></div>
-    <div class="bt-cell"><div class="bt-val">87.5%</div><div class="bt-label">Broken Deal Accuracy</div><div class="bt-sub">28 of 32 broken deals correctly predicted</div></div>
+    <div class="bt-cell"><div class="bt-val">93.7%</div><div class="bt-label">Overall Accuracy</div><div class="bt-sub">Predicting close or break · 159 deals · 2020–2025</div></div>
+    <div class="bt-cell"><div class="bt-val">0%</div><div class="bt-label">Very Low + Low Break Rate</div><div class="bt-sub">116 deals in these buckets · zero broke</div></div>
+    <div class="bt-cell"><div class="bt-val">82.4%</div><div class="bt-label">High Risk Break Rate</div><div class="bt-sub">28 of 34 High Risk deals broke correctly identified</div></div>
+    <div class="bt-cell"><div class="bt-val">+8.2%</div><div class="bt-label">Avg Ann. Return</div><div class="bt-sub">On correctly predicted closed deals</div></div>
   </div>
   <div class="base-rate-banner">
-    <div class="base-rate-title">◈ Model Lift Over Base Rate · Average Annualized Return</div>
+    <div class="base-rate-title">◈ Model Lift Over Base Rate</div>
     <div class="base-rate-grid">
       <div class="base-rate-item"><div class="base-rate-val">~73%</div><div class="base-rate-lbl">Historical M&A Close Rate</div></div>
-      <div class="base-rate-item"><div class="base-rate-val">100%</div><div class="base-rate-lbl">Very Low Risk Close Rate · 0–8% Spread</div></div>
-      <div class="base-rate-item"><div class="base-rate-val">+8.2%</div><div class="base-rate-lbl">Avg Annualized Return on Closed Deals</div></div>
+      <div class="base-rate-item"><div class="base-rate-val">100%</div><div class="base-rate-lbl">Very Low + Low Risk Close Rate</div></div>
+      <div class="base-rate-item"><div class="base-rate-val">+27pts</div><div class="base-rate-lbl">Lift Over Base Rate</div></div>
     </div>
-    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low Risk bucket — deals with spreads under 8% — showed a 0% break rate across 116 historical deals. The average annualized return on correctly predicted closed deals was 8.2%. These numbers reflect historical backtesting and do not guarantee future performance.</div>
+    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low and Low Risk buckets combined showed a 0% break rate across 116 historical deals — 27 percentage points above the market baseline. These numbers reflect backtesting on historical data and do not guarantee future performance.</div>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight — Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates from 159 Historical Deals</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The V2 model is built on a simple but powerful empirical finding: the spread range at deal announcement is the strongest predictor of whether a deal closes or breaks. Below 8%, no deals in our dataset broke. Above 12%, 87% broke.</p>
+    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight — Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates · 159 Historical Deals · Primary Classification Rule</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The most important discovery in building V3: spread range alone predicts deal outcomes with remarkable accuracy. Below 8%, no deals in our 159-deal dataset broke. Above 12%, 87% broke. These empirical rates form the primary classification rule — the score is a secondary tiebreaker.</p>
     <table class="spread-rules">
-      <thead><tr><th>Spread Range</th><th>Deals in Dataset</th><th>Broken</th><th class="r">Break Rate</th><th class="r">V2 Classification</th></tr></thead>
+      <thead><tr><th>Spread Range</th><th>Deals</th><th>Broken</th><th class="r">Break Rate</th><th class="r">V3 Classification</th></tr></thead>
       <tbody>
         <tr><td>0% to 3%</td><td>33 deals</td><td>0 broken</td><td class="rate safe r">0.0%</td><td class="rate safe r">Very Low Risk</td></tr>
         <tr><td>3% to 5%</td><td>62 deals</td><td>0 broken</td><td class="rate safe r">0.0%</td><td class="rate safe r">Very Low / Low Risk</td></tr>
         <tr><td>5% to 8%</td><td>21 deals</td><td>0 broken</td><td class="rate safe r">0.0%</td><td class="rate safe r">Very Low / Low Risk</td></tr>
-        <tr><td>8% to 12%</td><td>11 deals</td><td>4 broken</td><td class="rate warn r">36.4%</td><td class="rate warn r">Medium / High Risk</td></tr>
+        <tr><td>8% to 12%</td><td>11 deals</td><td>4 broken</td><td class="rate warn r">36.4%</td><td class="rate warn r">Medium / High · Score tiebreaker</td></tr>
         <tr><td>12% to 18%</td><td>15 deals</td><td>13 broken</td><td class="rate danger r">86.7%</td><td class="rate danger r">High Risk</td></tr>
         <tr><td>18% to 25%</td><td>12 deals</td><td>11 broken</td><td class="rate danger r">91.7%</td><td class="rate danger r">High Risk</td></tr>
         <tr><td>25%+</td><td>5 deals</td><td>4 broken</td><td class="rate danger r">80.0%</td><td class="rate danger r">High Risk</td></tr>
@@ -522,63 +769,80 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </table>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Base Score Calculation</div><div class="meth-section-weight">Three Factors · Base Score 70 · Used as Tiebreaker in Gray Zone</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The base score starts at 70 and is adjusted by three factors. For deals with spreads under 8%, the score determines whether risk is Very Low or Low. For deals in the 8-12% gray zone, the score determines whether risk is Medium or High.</p>
+    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Six-Factor Base Score</div><div class="meth-section-weight">Base 50 · Normalized to 0–100 · Used as Secondary Tiebreaker in 8–12% Gray Zone</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The V3 score starts at 50 and is adjusted by six factors. For deals under 8% spread, the score separates Very Low from Low risk. For deals in the 8-12% gray zone, score above 60 gives Medium, below 60 gives High. The score alone produced 88.7% accuracy. Combined with spread rules it reaches 93.7%.</p>
     <table class="factor-table">
-      <thead><tr><th>Factor</th><th>Condition</th><th class="r">Adjustment</th></tr></thead>
+      <thead><tr><th>Factor</th><th>Condition</th><th>Signal</th><th class="r">Adjustment</th></tr></thead>
       <tbody>
-        <tr><td>Deal Type</td><td>All Cash</td><td class="pts pos r">+10 points</td></tr>
-        <tr><td>Deal Type</td><td>Tender Offer</td><td class="pts pos r">+8 points</td></tr>
-        <tr><td>Deal Type</td><td>Private Equity</td><td class="pts pos r">+5 points</td></tr>
-        <tr><td>Deal Type</td><td>Cash + Stock</td><td class="pts neu r">+0 points</td></tr>
-        <tr><td>Spread Quality</td><td>0% to 3%</td><td class="pts pos r">+25 points</td></tr>
-        <tr><td>Spread Quality</td><td>3% to 5%</td><td class="pts pos r">+18 points</td></tr>
-        <tr><td>Spread Quality</td><td>5% to 8%</td><td class="pts pos r">+10 points</td></tr>
-        <tr><td>Spread Quality</td><td>8% to 12%</td><td class="pts neu r">+0 points</td></tr>
-        <tr><td>Spread Quality</td><td>12% to 18%</td><td class="pts neg r">-15 points</td></tr>
-        <tr><td>Spread Quality</td><td>18% to 25%</td><td class="pts neg r">-25 points</td></tr>
-        <tr><td>Spread Quality</td><td>25%+</td><td class="pts neg r">-35 points</td></tr>
-        <tr><td>Time Pending</td><td>Under 90 days</td><td class="pts pos r">+10 points</td></tr>
-        <tr><td>Time Pending</td><td>90 to 270 days</td><td class="pts neu r">+0 points</td></tr>
-        <tr><td>Time Pending</td><td>270 to 500 days</td><td class="pts neg r">-5 points</td></tr>
-        <tr><td>Time Pending</td><td>500+ days</td><td class="pts neg r">-15 points</td></tr>
+        <tr><td>1. Spread Quality</td><td>0% to 3%</td><td>Market fully confident</td><td class="pts pos r">+25 pts</td></tr>
+        <tr><td></td><td>3% to 5%</td><td>Healthy spread</td><td class="pts pos r">+18 pts</td></tr>
+        <tr><td></td><td>5% to 8%</td><td>Moderate spread</td><td class="pts pos r">+10 pts</td></tr>
+        <tr><td></td><td>8% to 12%</td><td>Wide spread, skepticism</td><td class="pts neu r">+0 pts</td></tr>
+        <tr><td></td><td>12% to 18%</td><td>Very wide, serious concern</td><td class="pts neg r">-15 pts</td></tr>
+        <tr><td></td><td>18% to 25%</td><td>Extreme, high break risk</td><td class="pts neg r">-25 pts</td></tr>
+        <tr><td></td><td>25%+</td><td>Near-certain break</td><td class="pts neg r">-35 pts</td></tr>
+        <tr><td>2. Deal Type</td><td>All Cash</td><td>Highest certainty, financing secured</td><td class="pts pos r">+10 pts</td></tr>
+        <tr><td></td><td>Tender Offer</td><td>Fast timeline, high completion rate</td><td class="pts pos r">+8 pts</td></tr>
+        <tr><td></td><td>Private Equity</td><td>Financing dependent, moderate risk</td><td class="pts pos r">+5 pts</td></tr>
+        <tr><td></td><td>Cash + Stock</td><td>Stock component adds complexity</td><td class="pts neu r">+0 pts</td></tr>
+        <tr><td>3. Time Pending</td><td>Under 90 days</td><td>Fresh deal, low accumulated risk</td><td class="pts pos r">+10 pts</td></tr>
+        <tr><td></td><td>90 to 270 days</td><td>Normal progression</td><td class="pts neu r">+0 pts</td></tr>
+        <tr><td></td><td>270 to 500 days</td><td>Extended, possible complications</td><td class="pts neg r">-5 pts</td></tr>
+        <tr><td></td><td>500+ days</td><td>Very extended, serious concern</td><td class="pts neg r">-15 pts</td></tr>
+        <tr><td>4. Regulatory</td><td>Standard Review only</td><td>No elevated concerns</td><td class="pts pos r">+5 pts</td></tr>
+        <tr><td></td><td>HSR Filing</td><td>Mandatory threshold filing</td><td class="pts neg r">-3 pts</td></tr>
+        <tr><td></td><td>FTC / DOJ Medium</td><td>Sector antitrust review</td><td class="pts neg r">-8 pts</td></tr>
+        <tr><td></td><td>FTC / DOJ High</td><td>Large deal antitrust scrutiny</td><td class="pts neg r">-15 pts</td></tr>
+        <tr><td></td><td>Market Concentration</td><td>Highly concentrated industry</td><td class="pts neg r">-10 pts</td></tr>
+        <tr><td></td><td>CFIUS Review</td><td>Foreign acquirer national security</td><td class="pts neg r">-18 pts</td></tr>
+        <tr><td>5. Deal Premium</td><td>50%+ over pre-announcement</td><td>Acquirer paid up, very committed</td><td class="pts pos r">+8 pts</td></tr>
+        <tr><td></td><td>35–50% premium</td><td>Strong commitment signal</td><td class="pts pos r">+6 pts</td></tr>
+        <tr><td></td><td>25–35% premium</td><td>Healthy premium</td><td class="pts pos r">+4 pts</td></tr>
+        <tr><td></td><td>15–25% premium</td><td>Modest premium</td><td class="pts pos r">+2 pts</td></tr>
+        <tr><td></td><td>Under 5% premium</td><td>Low premium, acquirer can walk</td><td class="pts neg r">-5 pts</td></tr>
+        <tr><td>6. Financing Signal</td><td>Committed / Cash on hand</td><td>Financing locked, deal can close</td><td class="pts pos r">+10 pts</td></tr>
+        <tr><td></td><td>Highly confident</td><td>PE standard language, likely fine</td><td class="pts pos r">+2 pts</td></tr>
+        <tr><td></td><td>Unknown</td><td>No signal detected</td><td class="pts neu r">+0 pts</td></tr>
+        <tr><td></td><td>Contingent / Subject to financing</td><td>Deal can break on financing</td><td class="pts neg r">-10 pts</td></tr>
       </tbody>
     </table>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">03</div><div><div class="meth-section-title">Risk Classification Logic</div><div class="meth-section-weight">V2 Model · Spread Rules Override Score</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">Spread range determines the risk bucket first. The base score is used as a secondary tiebreaker within the 8-12% gray zone. This approach produced 93.1% accuracy versus 88.7% with score-only classification.</p>
+    <div class="meth-section-header"><div class="meth-section-num">03</div><div><div class="meth-section-title">Risk Classification Logic</div><div class="meth-section-weight">V3 · Spread Rules First · Score as Tiebreaker</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">Spread determines the bucket. Score refines within bucket. This two-layer system is what pushed accuracy from 88.7% to 93.7%.</p>
     <div class="threshold-grid">
-      <div class="threshold-cell vl"><div class="threshold-range">Very Low</div><div class="threshold-name">Spread under 8% · Score 80+</div><div class="threshold-desc">0% break rate across 116 historical deals. Market has maximum conviction this deal closes.</div></div>
-      <div class="threshold-cell lo"><div class="threshold-range">Low</div><div class="threshold-name">Spread under 8% · Score 65–79</div><div class="threshold-desc">0% break rate historically. Minor score uncertainty. Still strong risk-adjusted returns.</div></div>
-      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 75+</div><div class="threshold-desc">36% break rate in this range. Some confidence from score but meaningful market skepticism.</div></div>
-      <div class="threshold-cell hi"><div class="threshold-range">High</div><div class="threshold-name">Spread 12%+ · or Score below 75 with 8–12% spread</div><div class="threshold-desc">87%+ break rate above 12%. Market pricing in near-certain deal failure.</div></div>
+      <div class="threshold-cell vl"><div class="threshold-range">Very Low</div><div class="threshold-name">Spread under 8% · Score 75+</div><div class="threshold-desc">0% break rate across 80 historical deals. Maximum conviction bucket.</div></div>
+      <div class="threshold-cell lo"><div class="threshold-range">Low</div><div class="threshold-name">Spread under 8% · Score 55–74</div><div class="threshold-desc">0% break rate across 36 historical deals. Minor score uncertainty.</div></div>
+      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 60+</div><div class="threshold-desc">44% break rate. Gray zone — monitor spread direction carefully.</div></div>
+      <div class="threshold-cell hi"><div class="threshold-range">High</div><div class="threshold-name">Spread 12%+ · or 8–12% Score below 60</div><div class="threshold-desc">82% break rate. Market pricing in near-certain failure.</div></div>
     </div>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">04</div><div><div class="meth-section-title">Sample Backtest Results</div><div class="meth-section-weight">Selected deals · 2020–2025 · V2 Model</div></div></div>
+    <div class="meth-section-header"><div class="meth-section-num">04</div><div><div class="meth-section-title">Sample Backtest Results</div><div class="meth-section-weight">Selected deals · V3 Model · 2020–2025</div></div></div>
     <table class="sample-table">
-      <thead><tr><th>Ticker</th><th>Spread</th><th>Score</th><th>V2 Risk</th><th>Outcome</th><th>Ann. Return</th><th>Correct</th></tr></thead>
+      <thead><tr><th>Ticker</th><th>Spread</th><th>V3 Score</th><th>V3 Risk</th><th>Outcome</th><th>Ann. Return</th><th>Correct</th></tr></thead>
       <tbody>
-        <tr><td>CACC</td><td>4.0%</td><td>98</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+8.7%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>GTES</td><td>3.0%</td><td>98</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+9.4%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>NUAN</td><td>2.0%</td><td>95</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+2.0%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>SGEN</td><td>5.0%</td><td>85</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.6%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>PING</td><td>3.0%</td><td>93</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+5.5%</td><td class="correct-yes">✓</td></tr>
-        <tr><td>SAVE</td><td>35.0%</td><td>30</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
-        <tr><td>SGFY</td><td>12.0%</td><td>60</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
-        <tr><td>CHNG</td><td>22.0%</td><td>40</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
-        <tr><td>SGMO</td><td>19.0%</td><td>40</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
-        <tr><td>ATVI</td><td>25.0%</td><td>30</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+3.8%</td><td class="correct-no">✗</td></tr>
-        <tr><td>ACI</td><td>15.0%</td><td>50</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.2%</td><td class="correct-no">✗</td></tr>
+        <tr><td>CACC</td><td>4.0%</td><td>72</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+8.7%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>GTES</td><td>3.0%</td><td>74</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+9.4%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>NUAN</td><td>2.0%</td><td>71</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+2.0%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SGEN</td><td>5.0%</td><td>75</td><td class="outcome-closed">Very Low</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.6%</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SAVE</td><td>35.0%</td><td>28</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>SGFY</td><td>12.0%</td><td>42</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>CHNG</td><td>22.0%</td><td>25</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>IRBT</td><td>22.0%</td><td>29</td><td class="outcome-broken">High</td><td class="outcome-broken">Broken</td><td>N/A</td><td class="correct-yes">✓</td></tr>
+        <tr><td>ATVI</td><td>25.0%</td><td>41</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+3.8%</td><td class="correct-no">✗</td></tr>
+        <tr><td>ACI</td><td>15.0%</td><td>52</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.2%</td><td class="correct-no">✗</td></tr>
       </tbody>
     </table>
-    <p class="factor-note" style="margin-top:1rem;">The V2 model's primary limitation is the same as V1 — it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close. ATVI and ACI both had wide spreads driven by antitrust risk, were correctly flagged as High Risk, but ultimately closed after prolonged battles. Notably, both still returned positive annualized returns to investors who held through the uncertainty. The model's purpose is risk identification, not absolute prediction.</p>
+    <p class="factor-note" style="margin-top:1rem;">The V3 model's primary limitation is the same as every arb model — it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close after 18-24 months. ATVI and ACI are the canonical examples. Both were correctly identified as High Risk. Both closed. Both still returned positive annualized returns to investors who held through the uncertainty. The model identifies risk — it does not predict every outcome.</p>
   </div>
   <footer style="margin-top:2rem;">
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
-    <div class="footer-links"><button class="footer-link" onclick="showDashboard()">Dashboard</button></div>
-    <div class="footer-info">Backtested · 159 historical deals · 2020–2025<br>Model V2 · May 2026</div>
+    <div class="footer-links">
+      <button class="footer-link" onclick="showDashboard()">Live Deals</button>
+      <button class="footer-link" onclick="showCompare()">Historical Deals</button>
+    </div>
+    <div class="footer-info">Backtested · 159 historical deals · 2020–2025<br>Model V3 · June 2026</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
@@ -589,150 +853,176 @@ let expandedIndex = null;
 let dealsLoaded = false;
 const collapsedSections = new Set();
 const compsCache = {};
+let compareData = [];
+let compareSortCol = 'spread_at_announce';
+let compareSortDir = -1;
+let compareFilter = 'all';
 
-function showLanding(){
-    document.getElementById('page-landing').classList.add('active');
-    document.getElementById('page-dashboard').classList.remove('active');
-    document.getElementById('page-analysis').classList.remove('active');
-    document.getElementById('page-methodology').classList.remove('active');
+// ── PAGE NAVIGATION ──────────────────────────────────────────────────────────
+function showPage(id){
+    ['page-landing','page-dashboard','page-analysis','page-compare','page-methodology']
+        .forEach(p => document.getElementById(p).classList.remove('active'));
+    document.getElementById(id).classList.add('active');
     window.scrollTo(0,0);
 }
-function showDashboard(){
-    document.getElementById('page-landing').classList.remove('active');
-    document.getElementById('page-dashboard').classList.add('active');
-    document.getElementById('page-analysis').classList.remove('active');
-    document.getElementById('page-methodology').classList.remove('active');
-    window.scrollTo(0,0);
-    if(!dealsLoaded) loadDeals();
-}
-function showAnalysis(deal){
-    document.getElementById('page-landing').classList.remove('active');
-    document.getElementById('page-dashboard').classList.remove('active');
-    document.getElementById('page-analysis').classList.add('active');
-    document.getElementById('page-methodology').classList.remove('active');
-    window.scrollTo(0,0);
-    renderAnalysis(deal);
-}
-function showMethodology(){
-    document.getElementById('page-landing').classList.remove('active');
-    document.getElementById('page-dashboard').classList.remove('active');
-    document.getElementById('page-analysis').classList.remove('active');
-    document.getElementById('page-methodology').classList.add('active');
-    window.scrollTo(0,0);
-}
+function showLanding()    { showPage('page-landing'); }
+function showMethodology(){ showPage('page-methodology'); }
+function showDashboard()  { showPage('page-dashboard'); if(!dealsLoaded) loadDeals(); }
+function showAnalysis(d)  { showPage('page-analysis'); renderAnalysis(d); }
+function showCompare()    { showPage('page-compare'); loadCompare(); }
 
+// ── UTILITIES ─────────────────────────────────────────────────────────────────
+function sign(v){ return v>=0?'+':''; }
+function spColor(v){ return v>=0?'var(--green)':'var(--red)'; }
+function getBadgeClass(r){
+    if(r==='Very Low') return 'badge-vl';
+    if(r==='Low')      return 'badge-lo';
+    if(r==='Medium')   return 'badge-md';
+    return 'badge-hi';
+}
+function getRiskColor(r){
+    if(r==='Very Low') return 'var(--green)';
+    if(r==='Low')      return 'var(--teal)';
+    if(r==='Medium')   return 'var(--amber)';
+    return 'var(--red)';
+}
+function getScoreColor(s){
+    if(s>=75) return 'var(--green)';
+    if(s>=55) return 'var(--teal)';
+    if(s>=40) return 'var(--amber)';
+    return 'var(--red)';
+}
+function getTypeClass(dt){
+    if(dt==='All Cash')      return 'cash';
+    if(dt==='Cash + Stock')  return 'mixed';
+    if(dt==='Private Equity')return 'pe';
+    if(dt==='Tender Offer')  return 'tender';
+    return 'cash';
+}
+function getTypeLabel(dt){
+    if(dt==='All Cash')      return 'Cash';
+    if(dt==='Cash + Stock')  return 'Cash+Stock';
+    if(dt==='Private Equity')return 'PE';
+    if(dt==='Tender Offer')  return 'Tender';
+    return dt;
+}
+function updateLocalTime(f){
+    if(!f) return 'Unknown';
+    try{
+        const d = new Date(f+':00Z');
+        return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
+    }catch(e){ return f; }
+}
 function formatDate(){
-    const now = new Date();
+    const n = new Date();
     const el = document.getElementById('timestamp');
-    if(el) el.textContent = now.toISOString().slice(0,10)+' · '+now.toTimeString().slice(0,5)+' UTC';
+    if(el) el.textContent = n.toISOString().slice(0,10)+' · '+n.toTimeString().slice(0,5)+' UTC';
 }
 formatDate();
 setInterval(formatDate, 60000);
 
 async function updateLandingStats(){
     try{
-        const res = await fetch('/api/deals');
-        const data = await res.json();
-        const count = data.deals?data.deals.length:'--';
+        const d = await fetch('/api/deals').then(r=>r.json());
         const el = document.getElementById('landing-deal-count');
-        if(el) el.textContent = count+'+';
+        if(el) el.textContent = (d.deals?.length||'--')+'+';
     }catch(e){}
 }
 
-function getBadgeClass(risk){
-    if(risk==='Very Low') return 'badge-vl';
-    if(risk==='Low') return 'badge-lo';
-    if(risk==='Medium') return 'badge-md';
-    return 'badge-hi';
+// ── FINANCING HELPERS ─────────────────────────────────────────────────────────
+function finLabel(sig){
+    if(sig==='committed')  return 'Committed Financing';
+    if(sig==='confident')  return 'Highly Confident';
+    if(sig==='contingent') return 'Contingent on Financing';
+    return 'Signal Unknown';
 }
-function getScoreColor(score){
-    if(score>=80) return 'var(--green)';
-    if(score>=65) return 'var(--gold)';
-    if(score>=50) return '#8a6040';
-    return 'var(--red)';
-}
-function getTypeClass(dt){
-    if(dt==='All Cash') return 'cash';
-    if(dt==='Cash + Stock') return 'mixed';
-    if(dt==='Private Equity') return 'pe';
-    if(dt==='Tender Offer') return 'tender';
-    return 'cash';
-}
-function getTypeLabel(dt){
-    if(dt==='All Cash') return 'Cash';
-    if(dt==='Cash + Stock') return 'Cash+Stock';
-    if(dt==='Private Equity') return 'PE';
-    if(dt==='Tender Offer') return 'Tender';
-    return dt;
-}
-function sign(val){ return val>=0?'+':''; }
-function spColor(val){ return val>=0?'var(--green)':'var(--red)'; }
-
-function updateLocalTime(fetched){
-    if(!fetched) return 'Unknown';
-    try{
-        const d = new Date(fetched+':00Z');
-        return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
-    }catch(e){ return fetched; }
+function finDesc(sig){
+    if(sig==='committed')  return 'Acquirer has secured committed financing or is using cash on hand. Deal is not contingent on financing. Strongest positive signal.';
+    if(sig==='confident')  return 'Banks have issued highly confident letters, standard in PE deals. Financing is expected to close but not formally committed. Mild positive signal.';
+    if(sig==='contingent') return 'Deal is explicitly contingent on obtaining financing. If credit markets tighten or lenders pull back, this deal can break. Meaningful risk factor.';
+    return 'No clear financing language detected in the press release. Unable to assess commitment level from available text.';
 }
 
-function getRiskFactors(deal){
-    const factors=[];
-    if(deal.sp_pct>=12) factors.push({level:'hi',text:`Spread of ${deal.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. Historically 87% of deals with spreads above 12% have broken. The market is pricing in near-certain deal failure.`});
-    if(deal.sp_pct>=8&&deal.sp_pct<12) factors.push({level:'md',text:`Spread of ${deal.sp_pct.toFixed(2)}% is in the gray zone. Historically 36% of deals in the 8-12% spread range have broken. Monitor closely for regulatory or financing developments.`});
-    if(deal.sp_pct<0) factors.push({level:'hi',text:'Negative spread — the stock is trading above the deal price. This may indicate a broken deal or an incoming competing bid. Extreme caution warranted.'});
-    if(deal.days_old>270) factors.push({level:'md',text:`Deal has been pending for ${deal.days_old} days. Extended timelines can indicate regulatory complexity. Some legitimate deals take 18-24 months and still close — watch the spread for signals.`});
-    if(deal.deal_type==='Cash + Stock') factors.push({level:'md',text:"Mixed consideration deals add complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk beyond the deal itself."});
-    if(deal.deal_type==='Tender Offer') factors.push({level:'lo',text:'Tender offers typically close faster than mergers and have higher completion rates due to direct shareholder approach and predetermined acceptance thresholds.'});
-    if(deal.deal_type==='Private Equity') factors.push({level:'md',text:'Private equity acquisitions depend on financing conditions. Rising interest rates or tightening credit markets can increase deal break risk for leveraged buyouts.'});
-    if(deal.close_date==='TBD') factors.push({level:'md',text:'No expected close date publicly disclosed. Annualized return calculations are approximate. Timeline uncertainty adds risk to position sizing decisions.'});
-    if(factors.length===0) factors.push({level:'lo',text:'Deal spread is under 8% — historically a 0% break rate across 116 deals in our dataset. Standard merger completion risks apply including regulatory review and shareholder approval.'});
-    return factors.slice(0,4);
+// ── RISK FACTORS ──────────────────────────────────────────────────────────────
+function getRiskFactors(d){
+    const f=[];
+    if(d.sp_pct>=12)  f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. In our 159-deal backtest, 87% of deals with spreads above 12% broke. The market is pricing in near-certain deal failure.`});
+    if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the gray zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
+    if(d.sp_pct<0)    f.push({l:'hi',t:'Negative spread — stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
+    if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
+    if(d.days_old>270) f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
+    if(d.deal_type==='Cash + Stock') f.push({l:'md',t:"Mixed consideration deals add complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk beyond the deal itself."});
+    if(d.deal_type==='Tender Offer') f.push({l:'lo',t:'Tender offers typically close faster than mergers and have higher completion rates. The direct shareholder approach bypasses board resistance and accelerates timeline.'});
+    if(d.deal_type==='Private Equity') f.push({l:'md',t:'PE acquisitions depend on financing conditions. Rising rates or tightening credit markets can increase break risk for leveraged buyouts. Watch the financing signal.'});
+    if(d.close_date==='TBD') f.push({l:'md',t:'No expected close date publicly disclosed. Annualized return calculations are approximate. Timeline uncertainty adds risk to position sizing decisions.'});
+    if(f.length===0) f.push({l:'lo',t:'Spread under 8% — 0% break rate across 116 historical deals in our dataset. Standard merger completion risks apply: regulatory review and shareholder approval.'});
+    return f.slice(0,4);
 }
 
-function getScoreBreakdown(deal){
-    let spreadScore=70;
-    if(deal.sp_pct>0&&deal.sp_pct<3) spreadScore=95;
-    else if(deal.sp_pct>=3&&deal.sp_pct<5) spreadScore=88;
-    else if(deal.sp_pct>=5&&deal.sp_pct<8) spreadScore=80;
-    else if(deal.sp_pct>=8&&deal.sp_pct<12) spreadScore=65;
-    else if(deal.sp_pct>=12&&deal.sp_pct<18) spreadScore=45;
-    else if(deal.sp_pct>=18&&deal.sp_pct<25) spreadScore=30;
-    else if(deal.sp_pct>=25) spreadScore=15;
-    else if(deal.sp_pct<0) spreadScore=25;
-    const typeScore=deal.deal_type==='All Cash'?90:deal.deal_type==='Tender Offer'?85:deal.deal_type==='Private Equity'?75:65;
-    const daysScore=deal.days_old<90?95:deal.days_old<270?80:deal.days_old<500?65:45;
-    const spreadLabel=deal.sp_pct<8?'under 8% — 0% historical break rate':deal.sp_pct<12?'8-12% gray zone — 36% historical break rate':'above 12% — 87%+ historical break rate';
+// ── SCORE BREAKDOWN ───────────────────────────────────────────────────────────
+function getScoreBreakdown(d){
+    let sq=50;
+    if(d.sp_pct>0&&d.sp_pct<3)       sq=95;
+    else if(d.sp_pct>=3&&d.sp_pct<5) sq=88;
+    else if(d.sp_pct>=5&&d.sp_pct<8) sq=80;
+    else if(d.sp_pct>=8&&d.sp_pct<12)sq=60;
+    else if(d.sp_pct>=12&&d.sp_pct<18)sq=38;
+    else if(d.sp_pct>=18&&d.sp_pct<25)sq=25;
+    else if(d.sp_pct>=25)              sq=12;
+    else if(d.sp_pct<0)               sq=20;
+
+    const ds = d.deal_type==='All Cash'?88:d.deal_type==='Tender Offer'?84:d.deal_type==='Private Equity'?74:62;
+
+    let ts=75;
+    if(d.days_old<90)       ts=92;
+    else if(d.days_old<270) ts=75;
+    else if(d.days_old<500) ts=60;
+    else                    ts=40;
+
+    const rs = d.score; // overall V3 score
+
+    const finScore = d.financing_signal==='committed'?95:d.financing_signal==='confident'?65:d.financing_signal==='contingent'?20:50;
+
+    const spreadLabel = d.sp_pct<8?`under 8% — 0% historical break rate`:d.sp_pct<12?`8-12% gray zone — 36% break rate`:`above 12% — 87%+ break rate`;
+
     return [
-        {label:'Spread Quality',score:spreadScore,color:getScoreColor(spreadScore),desc:`${deal.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
-        {label:'Deal Structure',score:typeScore,color:getScoreColor(typeScore),desc:`${deal.deal_type} — ${deal.deal_type==='All Cash'?'highest reliability, no stock price risk':deal.deal_type==='Tender Offer'?'fast timeline, high completion rate':deal.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds complexity'}`},
-        {label:'Time Pending',score:daysScore,color:getScoreColor(daysScore),desc:`${deal.days_old} days pending — ${deal.days_old<90?'fresh deal, minimal accumulated risk':deal.days_old<270?'normal deal progression':'extended timeline, monitor spread carefully'}`},
-        {label:'Overall Score',score:deal.score,color:getScoreColor(deal.score),desc:`Base score — used as tiebreaker in 8-12% spread gray zone. Primary classification is spread-based.`},
+        {label:'Spread Quality',score:sq,color:getScoreColor(sq),desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
+        {label:'Deal Structure',score:ds,color:getScoreColor(ds),desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
+        {label:'Time Pending',score:ts,color:getScoreColor(ts),desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
+        {label:'Financing Signal',score:finScore,color:getScoreColor(finScore),desc:`${finLabel(d.financing_signal)} — ${finScore>=80?'strong positive signal, financing secured':finScore>=60?'mild positive signal':finScore>=40?'no clear signal detected':'negative signal, deal contingent on financing'}`},
+        {label:'V3 Overall Score',score:rs,color:getScoreColor(rs),desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% gray zone`},
     ];
 }
 
+// ── RENDER ANALYSIS ───────────────────────────────────────────────────────────
 async function renderAnalysis(deal){
-    const bc=getBadgeClass(deal.risk);
-    const tc=getTypeClass(deal.deal_type);
-    const tl=getTypeLabel(deal.deal_type);
-    const company=deal.company||deal.ticker+' Corp.';
-    const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:'TBD';
-    const txVal=deal.tx_value&&!isNaN(deal.tx_value)?'$'+parseFloat(deal.tx_value).toFixed(1)+'B':'N/A';
-    const bp=deal.break_price;
-    const bd=deal.break_downside;
+    const bc = getBadgeClass(deal.risk);
+    const tc = getTypeClass(deal.deal_type);
+    const tl = getTypeLabel(deal.deal_type);
+    const company   = deal.company||deal.ticker+' Corp.';
+    const closeDate = deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:'TBD';
+    const txVal     = deal.tx_value&&!isNaN(deal.tx_value)?'$'+parseFloat(deal.tx_value).toFixed(1)+'B':'N/A';
+    const bp = deal.break_price;
+    const bd = deal.break_downside;
+    const fin = deal.financing_signal||'unknown';
 
-    document.getElementById('da-ticker').textContent=deal.ticker;
-    document.getElementById('da-company').textContent=company;
-    document.getElementById('da-acquirer').textContent=deal.acquirer||'Undisclosed';
-    document.getElementById('da-spread').textContent=sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
-    document.getElementById('da-spread').style.color=spColor(deal.sp_pct);
-    document.getElementById('da-ann').textContent='Ann. Return: '+sign(deal.ann)+deal.ann.toFixed(2)+'%';
-    document.getElementById('da-ann').style.color=spColor(deal.ann);
+    document.getElementById('da-ticker').textContent  = deal.ticker;
+    document.getElementById('da-company').textContent = company;
+    document.getElementById('da-acquirer').textContent= deal.acquirer||'Undisclosed';
+    const spreadEl = document.getElementById('da-spread');
+    spreadEl.textContent  = sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
+    spreadEl.style.color  = spColor(deal.sp_pct);
+    const annEl = document.getElementById('da-ann');
+    annEl.textContent = 'Ann. Return: '+sign(deal.ann)+deal.ann.toFixed(2)+'%';
+    annEl.style.color = spColor(deal.ann);
+
     document.getElementById('da-badges').innerHTML=`
         <span class="badge ${tc}" style="font-size:0.48rem;padding:3px 8px">${tl}</span>
         <span class="badge ${bc}" style="font-size:0.48rem;padding:3px 8px">${deal.risk} Risk</span>
-        <span class="badge" style="font-size:0.48rem;padding:3px 8px;color:var(--dim);border-color:var(--bdr2)">${deal.score}/100</span>
+        <span class="badge" style="font-size:0.48rem;padding:3px 8px;color:var(--dim);border-color:var(--bdr2)">V3 Score ${deal.score}/100</span>
+        <span class="badge fin-badge ${fin}" style="font-size:0.44rem;padding:2px 7px">${finLabel(fin)}</span>
     `;
+
     document.getElementById('da-metrics').innerHTML=`
         <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">$${deal.cp.toFixed(2)}</div></div>
         <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
@@ -742,13 +1032,14 @@ async function renderAnalysis(deal){
         <div class="da-metric"><div class="da-ml">Transaction Value</div><div class="da-mv sm">${txVal}</div></div>
     `;
 
-    const investments=[1000,5000,10000,50000,100000];
-    let upsideRows='',downsideRows='';
-    investments.forEach(inv=>{
-        const upProfit=(deal.sp_pct/100)*inv;
-        const downLoss=bd?((bd/100)*inv):null;
-        upsideRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r pos">+$${Math.abs(upProfit).toLocaleString('en-US',{maximumFractionDigits:0})}</td></tr>`;
-        downsideRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r neg">${downLoss!==null?'-$'+Math.abs(downLoss).toLocaleString('en-US',{maximumFractionDigits:0}):'N/A'}</td></tr>`;
+    // Risk/Reward
+    const invs=[1000,5000,10000,50000,100000];
+    let upRows='',dnRows='';
+    invs.forEach(inv=>{
+        const up=(deal.sp_pct/100)*inv;
+        const dn=bd?((bd/100)*inv):null;
+        upRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r pos">+$${Math.abs(up).toLocaleString('en-US',{maximumFractionDigits:0})}</td></tr>`;
+        dnRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r neg">${dn!==null?'-$'+Math.abs(dn).toLocaleString('en-US',{maximumFractionDigits:0}):'N/A'}</td></tr>`;
     });
     document.getElementById('da-rr-grid').innerHTML=`
         <div class="rr-col upside">
@@ -756,92 +1047,106 @@ async function renderAnalysis(deal){
             <div class="rr-big">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div>
             <div class="rr-sub">Spread return · Ann. ${sign(deal.ann)}${deal.ann.toFixed(2)}%</div>
             <table class="rr-table">
-                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.38rem;letter-spacing:0.15em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.38rem;letter-spacing:0.15em;">PROFIT</td></tr>
-                ${upsideRows}
+                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">PROFIT</td></tr>
+                ${upRows}
             </table>
             <div class="rr-note">Based on current spread of ${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}% at deal price $${deal.dp.toFixed(2)}. Prices may be delayed up to 15 minutes.</div>
         </div>
         <div class="rr-col downside">
             <div class="rr-title">If Deal Breaks</div>
             <div class="rr-big">${bd!==null?bd.toFixed(2)+'%':'N/A'}</div>
-            <div class="rr-sub">Estimated downside · Break price: ${bp?'$'+bp.toFixed(2):'Calculating...'}</div>
+            <div class="rr-sub">Est. downside · Break price: ${bp?'$'+bp.toFixed(2):'Calculating...'}</div>
             <table class="rr-table">
-                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.38rem;letter-spacing:0.15em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.38rem;letter-spacing:0.15em;">LOSS</td></tr>
-                ${downsideRows}
+                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">LOSS</td></tr>
+                ${dnRows}
             </table>
-            <div class="rr-note">Break price estimated from pre-announcement trading price of $${bp?bp.toFixed(2):'N/A'} on ${deal.filed}. Actual break price may vary.</div>
+            <div class="rr-note">Break price estimated from pre-announcement trading on ${deal.filed}. Actual break price may vary with market conditions.</div>
         </div>
     `;
 
-    // Comps — browser cached, never changes after first load
+    // Acquirer Intelligence
+    const acqType = deal.acquirer_type||'Strategic';
+    const premium = bp&&deal.dp?Math.round(((deal.dp-bp)/bp)*100):null;
+    document.getElementById('da-acq-grid').innerHTML=`
+        <div class="acq-cell highlight">
+            <div class="acq-label">Acquirer</div>
+            <div class="acq-value" style="font-size:1rem">${deal.acquirer||'Undisclosed'}</div>
+            <div class="acq-sub" style="margin-top:0.4rem">${acqType} buyer · ${deal.deal_type}</div>
+        </div>
+        <div class="acq-cell highlight">
+            <div class="acq-label">Deal Premium</div>
+            <div class="acq-value" style="color:${premium&&premium>=25?'var(--green)':premium&&premium>=10?'var(--teal)':'var(--muted)'}">${premium!==null?'+'+premium+'%':'N/A'}</div>
+            <div class="acq-sub">Premium paid over pre-announcement price of ${bp?'$'+bp.toFixed(2):'N/A'}. ${premium&&premium>=35?'Very high premium signals strong acquirer conviction.':premium&&premium>=20?'Healthy premium, acquirer committed.':premium!==null?'Modest premium — acquirer can walk more easily.':'Break price unavailable for premium calculation.'}</div>
+        </div>
+        <div class="acq-cell highlight">
+            <div class="acq-label">Financing Commitment</div>
+            <div class="fin-signal-row">
+                <div class="fin-dot ${fin}"></div>
+                <div class="fin-label ${fin}">${finLabel(fin)}</div>
+            </div>
+            <div class="acq-sub" style="margin-top:0.5rem">${finDesc(fin)}</div>
+        </div>
+    `;
+
+    // Comps
     if(!compsCache[deal.ticker]){
-        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.48rem;color:var(--dim);letter-spacing:0.15em;">Loading comparable deals...</div>';
+        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.46rem;color:var(--dim);letter-spacing:0.14em;">Loading comparable deals...</div>';
         try{
-            const compsRes = await fetch(`/api/comps/${deal.ticker}?deal_type=${encodeURIComponent(deal.deal_type)}&spread=${deal.sp_pct}`);
-            const compsData = await compsRes.json();
-            compsCache[deal.ticker] = compsData;
+            const cd = await fetch(`/api/comps/${deal.ticker}?deal_type=${encodeURIComponent(deal.deal_type)}&spread=${deal.sp_pct}`).then(r=>r.json());
+            compsCache[deal.ticker] = cd;
         }catch(e){
-            compsCache[deal.ticker] = {comps:[],summary:{total:0,closed:0,broken:0,close_rate:0,avg_days:0}};
+            compsCache[deal.ticker]={comps:[],summary:{total:0,closed:0,broken:0,close_rate:0,avg_days:0}};
         }
     }
-
-    const compsData=compsCache[deal.ticker];
-    const comps=compsData.comps||[];
-    const summary=compsData.summary||{};
-
+    const cd=compsCache[deal.ticker];
+    const comps=cd.comps||[];
+    const summary=cd.summary||{};
     if(comps.length===0){
-        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">No comparable deals found in our historical database for this deal type and spread range.</div>';
+        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">No comparable deals found in our 159-deal historical database for this deal type and spread range.</div>';
     } else {
-        const closeColor=summary.close_rate>=70?'var(--green)':summary.close_rate>=50?'var(--gold)':'var(--red)';
-        const rows=comps.map(c=>`
-            <tr>
-                <td>${c.ticker}</td>
-                <td>${c.acquirer}</td>
-                <td>${c.deal_type}</td>
-                <td class="r">${c.spread_at_announce.toFixed(1)}%</td>
-                <td class="r ${c.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${c.outcome}</td>
-                <td class="r">${c.days_to_close} days</td>
-            </tr>
-        `).join('');
+        const cc=summary.close_rate>=70?'var(--green)':summary.close_rate>=50?'var(--amber)':'var(--red)';
         document.getElementById('da-comps').innerHTML=`
             <div class="comps-summary">
                 <div class="comp-stat"><div class="comp-stat-val">${summary.total}</div><div class="comp-stat-lbl">Comparable Deals</div></div>
                 <div class="comp-stat"><div class="comp-stat-val green">${summary.closed}</div><div class="comp-stat-lbl">Closed</div></div>
                 <div class="comp-stat"><div class="comp-stat-val red">${summary.broken}</div><div class="comp-stat-lbl">Broken</div></div>
-                <div class="comp-stat"><div class="comp-stat-val" style="color:${closeColor}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
+                <div class="comp-stat"><div class="comp-stat-val sky" style="color:${cc}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
             </div>
             <table class="comps-table">
                 <thead><tr><th>Ticker</th><th>Acquirer</th><th>Type</th><th class="r">Spread at Ann.</th><th class="r">Outcome</th><th class="r">Days to Close</th></tr></thead>
-                <tbody>${rows}</tbody>
+                <tbody>${comps.map(c=>`<tr><td>${c.ticker}</td><td>${c.acquirer}</td><td>${c.deal_type}</td><td class="r">${c.spread_at_announce.toFixed(1)}%</td><td class="r ${c.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${c.outcome}</td><td class="r">${c.days_to_close} days</td></tr>`).join('')}</tbody>
             </table>
-            <div class="comps-note">Matched by deal type (${deal.deal_type}) and spread range from our 159-deal historical database. ${summary.close_rate}% of comparable deals closed successfully. Average time to completion: ${summary.avg_days} days. Historical data from 2020–2025.</div>
+            <div class="comps-note">Matched by deal type (${deal.deal_type}) and spread range from our 159-deal historical database. ${summary.close_rate}% of comparable deals closed. Avg time to completion: ${summary.avg_days} days. Historical data 2020–2025.</div>
         `;
     }
 
-    let regTags=[];
-    try{ regTags=deal.reg_tags?JSON.parse(deal.reg_tags):[]; }catch(e){ regTags=[]; }
-    document.getElementById('da-reg-risk').innerHTML=regTags.length>0
-        ?regTags.map(t=>`<div class="reg-risk-item"><div class="reg-dot ${t.level}"></div><div class="reg-agency">${t.agency}</div><div class="reg-reason">${t.reason}</div></div>`).join('')
+    // Regulatory
+    let rt=[];
+    try{ rt=deal.reg_tags?JSON.parse(deal.reg_tags):[]; }catch(e){}
+    document.getElementById('da-reg-risk').innerHTML=rt.length>0
+        ?rt.map(t=>`<div class="reg-risk-item"><div class="reg-dot ${t.level}"></div><div class="reg-agency">${t.agency}</div><div class="reg-reason">${t.reason}</div></div>`).join('')
         :'<div class="reg-risk-item"><div class="reg-dot low"></div><div class="reg-agency">Standard Review</div><div class="reg-reason">No elevated regulatory concerns identified based on deal size and sector.</div></div>';
 
-    const breakdown=getScoreBreakdown(deal);
-    document.getElementById('da-score-bars').innerHTML=breakdown.map(b=>`
-        <div class="score-bar-item">
+    // Score bars
+    document.getElementById('da-score-bars').innerHTML=getScoreBreakdown(deal).map(b=>`
+        <div>
             <div class="score-bar-header"><span class="score-bar-label">${b.label}</span><span class="score-bar-val">${b.score}/100</span></div>
             <div class="score-bar-desc">${b.desc}</div>
             <div class="score-bar-track"><div class="score-bar-fill" style="width:${b.score}%;background:${b.color}"></div></div>
         </div>
     `).join('');
 
+    // Risk factors
     document.getElementById('da-risk-factors').innerHTML=getRiskFactors(deal).map(f=>`
-        <div class="risk-factor"><div class="risk-dot ${f.level}"></div><div class="risk-text">${f.text}</div></div>
+        <div class="risk-factor"><div class="risk-dot ${f.l}"></div><div class="risk-text">${f.t}</div></div>
     `).join('');
 
-    const progress=Math.min(100,(deal.days_old/180)*100);
+    // Timeline
+    const prog=Math.min(100,(deal.days_old/180)*100);
     document.getElementById('da-timeline').innerHTML=`
         <div class="timeline-track">
             <div class="timeline-dot"></div>
-            <div class="timeline-line"><div class="timeline-line-fill" style="width:${progress}%"></div></div>
+            <div class="timeline-line"><div class="timeline-line-fill" style="width:${prog}%"></div></div>
             <div class="timeline-dot end"></div>
         </div>
         <div class="timeline-labels">
@@ -852,18 +1157,85 @@ async function renderAnalysis(deal){
     `;
 }
 
-function toggleSection(sectionId){
-    const body=document.getElementById('body-'+sectionId);
-    const toggle=document.getElementById('toggle-'+sectionId);
-    if(collapsedSections.has(sectionId)){
-        collapsedSections.delete(sectionId);
+// ── COMPARE PAGE ──────────────────────────────────────────────────────────────
+async function loadCompare(){
+    if(compareData.length>0){ renderCompare(); return; }
+    document.getElementById('compare-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.5rem;letter-spacing:0.15em;">Loading historical deals...</td></tr>';
+    try{
+        const d = await fetch('/api/comps/all').then(r=>r.json());
+        compareData = d.comps||[];
+        renderCompare();
+    }catch(e){
+        document.getElementById('compare-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--red);font-family:\'DM Mono\',monospace;font-size:0.5rem;">Error loading data</td></tr>';
+    }
+}
+
+function filterCompare(f, btn){
+    compareFilter=f;
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCompare();
+}
+
+function sortCompare(col){
+    if(compareSortCol===col) compareSortDir*=-1;
+    else{ compareSortCol=col; compareSortDir=-1; }
+    renderCompare();
+}
+
+function renderCompare(){
+    let data=[...compareData];
+    if(compareFilter==='Closed')   data=data.filter(d=>d.outcome==='Closed');
+    else if(compareFilter==='Broken')  data=data.filter(d=>d.outcome==='Broken');
+    else if(compareFilter==='tight')   data=data.filter(d=>d.spread_at_announce<8);
+    else if(compareFilter==='wide')    data=data.filter(d=>d.spread_at_announce>=12);
+    else if(compareFilter!=='all')     data=data.filter(d=>d.deal_type===compareFilter);
+
+    data.sort((a,b)=>{
+        const av=a[compareSortCol], bv=b[compareSortCol];
+        if(typeof av==='string') return compareSortDir*(av.localeCompare(bv));
+        return compareSortDir*(av-bv);
+    });
+
+    const closed=data.filter(d=>d.outcome==='Closed').length;
+    const broken=data.filter(d=>d.outcome==='Broken').length;
+    const avgSpread=data.length?Math.round(data.reduce((s,d)=>s+d.spread_at_announce,0)/data.length*10)/10:0;
+    const avgDays=data.length?Math.round(data.reduce((s,d)=>s+d.days_to_close,0)/data.length):0;
+    const closeRate=data.length?Math.round(closed/data.length*100):0;
+
+    document.getElementById('compare-stats').innerHTML=`
+        <div class="cs-cell"><div class="cs-val" style="color:var(--sky)">${data.length}</div><div class="cs-lbl">Total Deals</div></div>
+        <div class="cs-cell"><div class="cs-val" style="color:var(--green)">${closed}</div><div class="cs-lbl">Closed</div></div>
+        <div class="cs-cell"><div class="cs-val" style="color:var(--red)">${broken}</div><div class="cs-lbl">Broken</div></div>
+        <div class="cs-cell"><div class="cs-val" style="color:${closeRate>=70?'var(--green)':closeRate>=50?'var(--amber)':'var(--red)'}">${closeRate}%</div><div class="cs-lbl">Close Rate</div></div>
+        <div class="cs-cell"><div class="cs-val" style="color:var(--teal)">${avgSpread}%</div><div class="cs-lbl">Avg Spread</div></div>
+    `;
+
+    document.getElementById('compare-tbody').innerHTML=data.map(d=>`
+        <tr>
+            <td>${d.ticker}</td>
+            <td>${d.acquirer}</td>
+            <td><span class="r-type ${getTypeClass(d.deal_type)}" style="font-size:0.34rem">${getTypeLabel(d.deal_type)}</span></td>
+            <td class="r">${d.spread_at_announce.toFixed(1)}%</td>
+            <td class="r ${d.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${d.outcome}</td>
+            <td class="r">${d.days_to_close} days</td>
+        </tr>
+    `).join('');
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function toggleSection(id){
+    const body=document.getElementById('body-'+id);
+    const tog=document.getElementById('toggle-'+id);
+    if(collapsedSections.has(id)){
+        collapsedSections.delete(id);
         body.classList.remove('collapsed');
         body.style.maxHeight='9999px';
-        toggle.classList.remove('collapsed');
+        tog.classList.remove('collapsed');
     } else {
-        collapsedSections.add(sectionId);
+        collapsedSections.add(id);
         body.classList.add('collapsed');
-        toggle.classList.add('collapsed');
+        tog.classList.add('collapsed');
     }
 }
 
@@ -873,11 +1245,11 @@ function renderDeals(deals){
         list.innerHTML='<div class="loading-wrap"><div class="loading-title">No deals available</div><div class="loading-sub">Data refreshes automatically every hour</div></div>';
         return;
     }
-    const avgSpread=deals.reduce((s,d)=>s+d.sp_pct,0)/deals.length;
-    const avgScore=deals.reduce((s,d)=>s+d.score,0)/deals.length;
+    const avgSp=deals.reduce((s,d)=>s+d.sp_pct,0)/deals.length;
+    const avgSc=deals.reduce((s,d)=>s+d.score,0)/deals.length;
     document.getElementById('m-deals').textContent=deals.length;
-    document.getElementById('m-spread').textContent=sign(avgSpread)+avgSpread.toFixed(2)+'%';
-    document.getElementById('m-score').textContent=Math.round(avgScore)+'/100';
+    document.getElementById('m-spread').textContent=sign(avgSp)+avgSp.toFixed(2)+'%';
+    document.getElementById('m-score').textContent=Math.round(avgSc)+'/100';
     document.getElementById('m-updated').textContent=updateLocalTime(deals[0].fetched);
 
     const sections=[
@@ -888,47 +1260,46 @@ function renderDeals(deals){
     ];
 
     let html='';
-    let globalIndex=0;
-
-    sections.forEach(section=>{
-        const sectionDeals=deals.filter(d=>d.deal_type===section.type);
-        if(sectionDeals.length===0) return;
-        const avgSp=sectionDeals.reduce((s,d)=>s+d.sp_pct,0)/sectionDeals.length;
-        const isCollapsed=collapsedSections.has(section.id);
+    let gi=0;
+    sections.forEach(sec=>{
+        const sd=deals.filter(d=>d.deal_type===sec.type);
+        if(!sd.length) return;
+        const asp=sd.reduce((s,d)=>s+d.sp_pct,0)/sd.length;
+        const ic=collapsedSections.has(sec.id);
         html+=`
-        <div class="section-sep" onclick="toggleSection('${section.id}')">
+        <div class="section-sep" onclick="toggleSection('${sec.id}')">
           <div class="section-sep-line"></div>
           <div class="section-sep-label">
-            ${section.label}
-            <span class="section-sep-meta">${sectionDeals.length} deals · avg ${sign(avgSp)}${avgSp.toFixed(2)}%</span>
-            <span class="section-sep-toggle ${isCollapsed?'collapsed':''}" id="toggle-${section.id}">▾</span>
+            ${sec.label}
+            <span class="section-sep-meta">${sd.length} deals · avg ${sign(asp)}${asp.toFixed(2)}%</span>
+            <span class="section-sep-toggle ${ic?'collapsed':''}" id="toggle-${sec.id}">▾</span>
           </div>
           <div class="section-sep-line"></div>
         </div>
-        <div class="section-body ${isCollapsed?'collapsed':''}" id="body-${section.id}" style="max-height:${isCollapsed?'0':'9999px'}">
+        <div class="section-body ${ic?'collapsed':''}" id="body-${sec.id}" style="max-height:${ic?'0':'9999px'}">
           <div class="tbl-wrap">
             <div class="tbl-header">
               <div class="th">Ticker</div><div class="th">Type</div><div class="th">Acquirer</div>
               <div class="th">Company</div><div class="th r">Current</div><div class="th r">Deal Price</div>
-              <div class="th r">Spread</div><div class="th r">Ann. Return</div><div class="th r">Risk</div>
+              <div class="th r">Spread</div><div class="th r">Ann. Return</div><div class="th r">V3 Risk</div>
             </div>`;
-        sectionDeals.forEach(d=>{
-            const i=globalIndex++;
+        sd.forEach(d=>{
+            const i=gi++;
             const bc=getBadgeClass(d.risk);
             const tc=getTypeClass(d.deal_type);
             const tl=getTypeLabel(d.deal_type);
             const isExp=expandedIndex===i;
-            const company=d.company||d.ticker+' Corp.';
-            const closeDate=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'?d.close_date:'TBD';
-            const txVal=d.tx_value&&!isNaN(d.tx_value)?'$'+parseFloat(d.tx_value).toFixed(1)+'B':'N/A';
-            const bp=d.break_price;
-            const bd=d.break_downside;
+            const co=d.company||d.ticker+' Corp.';
+            const cd=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'?d.close_date:'TBD';
+            const tv=d.tx_value&&!isNaN(d.tx_value)?'$'+parseFloat(d.tx_value).toFixed(1)+'B':'N/A';
+            const bp=d.break_price, bd=d.break_downside;
+            const fin=d.financing_signal||'unknown';
             html+=`
             <div class="deal-row ${isExp?'expanded':''}" onclick="toggleDeal(${i})">
               <div class="r-ticker">${d.ticker}</div>
               <div><span class="r-type ${tc}">${tl}</span></div>
               <div class="r-acq">${d.acquirer||'Undisclosed'}</div>
-              <div class="r-co">${company}</div>
+              <div class="r-co">${co}</div>
               <div class="r-num">$${d.cp.toFixed(2)}</div>
               <div class="r-num">$${d.dp.toFixed(2)}</div>
               <div class="r-spread" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
@@ -940,11 +1311,14 @@ function renderDeals(deals){
                 <div>
                   <div class="dp-ticker">${d.ticker}</div>
                   <div class="dp-acq-lbl">Target Company</div>
-                  <div class="dp-acq-name">${company}</div>
-                  <div class="dp-acq-lbl" style="margin-top:0.75rem">Being acquired by</div>
+                  <div class="dp-acq-name">${co}</div>
+                  <div class="dp-acq-lbl" style="margin-top:0.6rem">Being acquired by</div>
                   <div class="dp-acq-name">${d.acquirer||'Undisclosed'}</div>
                 </div>
-                <span class="badge ${bc}" style="font-size:0.52rem;padding:4px 10px">${d.risk} Risk</span>
+                <div style="text-align:right">
+                  <span class="badge ${bc}" style="font-size:0.48rem;padding:4px 10px">${d.risk} Risk</span>
+                  <div style="margin-top:0.5rem"><span class="fin-badge ${fin}" style="font-size:0.38rem">${finLabel(fin)}</span></div>
+                </div>
               </div>
               <div class="dp-metrics">
                 <div class="dp-metric hi"><div class="dp-ml">Spread</div><div class="dp-mv" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div></div>
@@ -952,13 +1326,13 @@ function renderDeals(deals){
                 <div class="dp-metric hi"><div class="dp-ml">Profit per $10k</div><div class="dp-mv" style="color:${spColor(d.sp_pct)}">$${Math.abs(d.sp_pct/100*10000).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Current Price</div><div class="dp-mv sm">$${d.cp.toFixed(2)}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Deal Price</div><div class="dp-mv sm">$${d.dp.toFixed(2)}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Expected Close</div><div class="dp-mv sm">${closeDate}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Expected Close</div><div class="dp-mv sm">${cd}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Filed</div><div class="dp-mv sm">${d.filed}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Days Old</div><div class="dp-mv sm">${d.days_old}d</div></div>
-                <div class="dp-metric"><div class="dp-ml">Transaction Value</div><div class="dp-mv sm">${txVal}</div></div>
+                <div class="dp-metric"><div class="dp-ml">Days Pending</div><div class="dp-mv sm">${d.days_old}d</div></div>
+                <div class="dp-metric"><div class="dp-ml">Transaction Value</div><div class="dp-mv sm">${tv}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Deal Type</div><div class="dp-mv sm">${d.deal_type}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Score</div><div class="dp-mv sm">${d.score}/100</div></div>
-                <div class="dp-metric"><div class="dp-ml">V2 Risk</div><div class="dp-mv sm">${d.risk}</div></div>
+                <div class="dp-metric"><div class="dp-ml">V3 Score</div><div class="dp-mv sm" style="color:${getScoreColor(d.score)}">${d.score}/100</div></div>
+                <div class="dp-metric"><div class="dp-ml">Acquirer Type</div><div class="dp-mv sm">${d.acquirer_type||'Strategic'}</div></div>
               </div>
               ${bp||bd?`
               <div class="break-banner">
@@ -981,7 +1355,7 @@ function renderDeals(deals){
               <button class="analysis-btn" onclick="event.stopPropagation();showAnalysis(allDeals.find(x=>x.ticker==='${d.ticker}'))">
                 View Full Analysis →
               </button>
-              <div class="analysis-btn-label">Full risk/reward · Comparable deals · Regulatory risk · V2 score breakdown</div>
+              <div class="analysis-btn-label">Risk/Reward · Acquirer Intelligence · Comps · Regulatory · V3 Score</div>
             </div>`;
         });
         html+='</div></div>';
@@ -996,9 +1370,8 @@ function toggleDeal(i){
 
 async function loadDeals(){
     try{
-        const res=await fetch('/api/deals');
-        const data=await res.json();
-        allDeals=data.deals||[];
+        const d=await fetch('/api/deals').then(r=>r.json());
+        allDeals=d.deals||[];
         dealsLoaded=true;
         renderDeals(allDeals);
     }catch(e){
@@ -1008,49 +1381,37 @@ async function loadDeals(){
 
 function refreshData(){
     const btn=document.getElementById('refresh-btn');
-    const progressWrap=document.getElementById('progress-wrap');
-    const progressBar=document.getElementById('progress-bar');
-    const progressText=document.getElementById('progress-text');
-    const progressCount=document.getElementById('progress-count');
-    const progressDeals=document.getElementById('progress-deals');
-    btn.disabled=true;
-    btn.textContent='Scanning...';
-    progressWrap.classList.add('active');
-    progressBar.style.width='0%';
-    progressText.textContent='Connecting to SEC EDGAR...';
-    progressCount.textContent='0 / 0';
-    progressDeals.textContent='0 candidates found · Filtering: spread -10% to +20%, active US listings only';
-    const evtSource=new EventSource('/api/refresh-stream');
-    evtSource.onmessage=function(e){
-        const data=JSON.parse(e.data);
-        if(data.done){
-            evtSource.close();
-            allDeals=data.deals||[];
-            renderDeals(allDeals);
-            updateLandingStats();
-            progressBar.style.width='100%';
-            progressText.textContent='Scan complete';
-            progressCount.textContent='';
-            progressDeals.textContent=allDeals.length+' deals loaded';
-            btn.disabled=false;
-            btn.textContent='Refresh';
-            setTimeout(()=>{progressWrap.classList.remove('active');},3000);
-            return;
+    const pw=document.getElementById('progress-wrap');
+    const pb=document.getElementById('progress-bar');
+    const pt=document.getElementById('progress-text');
+    const pc=document.getElementById('progress-count');
+    const pd=document.getElementById('progress-deals');
+    btn.disabled=true; btn.textContent='Scanning...';
+    pw.classList.add('active'); pb.style.width='0%';
+    pt.textContent='Connecting to SEC EDGAR...'; pc.textContent='0 / 0';
+    pd.textContent='0 candidates found';
+    const es=new EventSource('/api/refresh-stream');
+    es.onmessage=function(e){
+        const d=JSON.parse(e.data);
+        if(d.done){
+            es.close(); allDeals=d.deals||[]; renderDeals(allDeals); updateLandingStats();
+            pb.style.width='100%'; pt.textContent='Scan complete'; pc.textContent='';
+            pd.textContent=allDeals.length+' deals loaded';
+            btn.disabled=false; btn.textContent='Refresh Data';
+            setTimeout(()=>pw.classList.remove('active'),3000); return;
         }
-        if(data.total>0){
-            const pct=Math.round((data.current/data.total)*100);
-            progressBar.style.width=pct+'%';
-            progressText.textContent='Scanning SEC EDGAR filings...';
-            progressCount.textContent=data.current+' / '+data.total;
-            progressDeals.textContent=data.deals_found+' candidates found · Filtering: spread -10% to +20%, active US listings only';
+        if(d.total>0){
+            const pct=Math.round((d.current/d.total)*100);
+            pb.style.width=pct+'%';
+            pt.textContent='Scanning SEC EDGAR filings...';
+            pc.textContent=d.current+' / '+d.total;
+            pd.textContent=d.deals_found+' candidates found';
         }
     };
-    evtSource.onerror=function(){
-        evtSource.close();
-        btn.disabled=false;
-        btn.textContent='Refresh';
-        progressText.textContent='Error during scan. Try again.';
-        setTimeout(()=>{progressWrap.classList.remove('active');},3000);
+    es.onerror=function(){
+        es.close(); btn.disabled=false; btn.textContent='Refresh Data';
+        pt.textContent='Error during scan. Try again.';
+        setTimeout(()=>pw.classList.remove('active'),3000);
     };
 }
 

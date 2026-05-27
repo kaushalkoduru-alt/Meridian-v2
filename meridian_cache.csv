@@ -1,13 +1,5 @@
-ticker,acquirer,company,deal_type,cp,dp,sp_pct,ann,score,risk,filed,days_old,close_date,tx_value,fetched
-B,Apollo Global Management,Barnes Group,All Cash,40.68,47.5,16.76,34.0,65,Low,2024-10-07,596,TBD,3.6,2026-05-26T05:21
-EA,Undisclosed,EA Corp.,All Cash,200.97,210.0,4.49,9.11,80,Very Low,2025-09-29,239,TBD,,2026-05-26T05:22
-OGN,Sun Pharma,Organon & Co.,All Cash,13.43,14.0,4.24,8.61,100,Very Low,2026-04-27,29,TBD,,2026-05-26T05:21
-AVNS,Becton Dickinson,Avanos Medical,All Cash,24.61,25.0,1.58,3.21,90,Very Low,2026-04-14,42,TBD,1.27,2026-05-26T05:21
-KALV,Chiesi,KalVista Pharmaceuticals,All Cash,26.79,27.0,0.78,1.59,100,Very Low,2026-04-29,27,Q3 2026,,2026-05-26T05:21
-GBTG,Long Lake Management,Global Business Travel Group,All Cash,9.44,9.5,0.64,1.29,100,Very Low,2026-05-04,22,TBD,6.3,2026-05-26T05:22
-ASRT,Paratek Pharmaceuticals,Assertio Holdings,All Cash,23.44,23.5,0.26,0.52,100,Very Low,2026-05-13,13,"of
-2026",0.17,2026-05-26T05:21
-AFBI,Center Parc Credit Union,Affinity Bancshares,All Cash,22.49,22.5,0.04,0.09,80,Very Low,2024-05-30,726,TBD,0.87,2026-05-26T05:21
-JHG,Undisclosed,Janus Henderson Group,All Cash,51.81,49.0,-5.42,-11.0,50,Medium,2025-12-22,155,TBD,7.4,2026-05-26T05:22
-KW,Undisclosed,Kennedy-Wilson Holdings,All Cash,10.99,10.25,-6.73,-13.65,40,High,2025-11-04,203,TBD,,2026-05-26T05:21
-FONR,Undisclosed,FONR Corp.,All Cash,18.9,17.25,-8.73,-17.7,40,High,2025-07-21,309,TBD,,2026-05-26T05:22
+ticker,acquirer,cp,dp,sp_pct,ann,score,risk,filed,days_old,fetched
+OGN,Sun Pharma,13.41,14.0,4.4,8.92,100,Very Low,2026-04-27,29,2026-05-26 21:26
+AVNS,Undisclosed,24.75,25.0,1.01,2.05,90,Very Low,2026-04-14,42,2026-05-26 21:27
+KALV,Chiesi,26.81,27.0,0.71,1.44,100,Very Low,2026-04-29,27,2026-05-26 21:27
+ASRT,Undisclosed,23.46,23.5,0.17,0.35,100,Very Low,2026-05-13,13,2026-05-26 21:26
