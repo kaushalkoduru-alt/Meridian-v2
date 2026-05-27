@@ -12,6 +12,7 @@ import asyncio
 import json
 import math
 import random
+import time
 from contextlib import asynccontextmanager
 
 CACHE_FILE = "meridian_cache.csv"
@@ -589,11 +590,12 @@ def fetch_deals_from_edgar(progress_callback=None):
     all_hits = []
     seen_ids = set()
 
-    for q in EDGAR_QUERIES:
+  for q in EDGAR_QUERIES:
         for start in range(0, 300, 100):
             url = q['url'].format(start=start)
             try:
-                resp = requests.get(url, headers=headers, timeout=10)
+                time.sleep(2)
+                resp = requests.get(url, headers=headers, timeout=20)
                 hits = resp.json()['hits']['hits']
                 for h in hits:
                     if h['_id'] not in seen_ids:
@@ -603,6 +605,7 @@ def fetch_deals_from_edgar(progress_callback=None):
                 if len(hits) < 100:
                     break
             except:
+                time.sleep(3)
                 break
 
     total        = len(all_hits)
