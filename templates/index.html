@@ -24,7 +24,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 
 /* ── TICKER ── */
 .ticker-wrap{background:var(--bg3);border-bottom:1px solid var(--bdr);overflow:hidden;padding:0.4rem 0;position:relative;z-index:10;}
-.ticker-track{display:inline-flex;animation:scroll 26s linear infinite;white-space:nowrap;}
+.ticker-track{display:inline-flex;animation:scroll 40s linear infinite;white-space:nowrap;}
 @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .ti{display:inline-flex;align-items:center;gap:0.4rem;padding:0 1.25rem;border-right:1px solid var(--bdr2);font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.1em;}
 .ti-sym{color:var(--cream);font-weight:500;}
@@ -64,6 +64,26 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .methodology-banner-title{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--teal);margin-bottom:0.35rem;}
 .methodology-banner-desc{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);font-weight:300;}
 .methodology-banner-arrow{font-family:'DM Mono',monospace;font-size:1.2rem;color:var(--teal);flex-shrink:0;}
+
+/* ── WHAT IS MERGER ARB ── */
+.arb-explainer{background:var(--bg2);border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);padding:4rem;position:relative;z-index:10;}
+.arb-explainer-inner{max-width:900px;margin:0 auto;}
+.arb-title{font-family:'Playfair Display',serif;font-weight:300;font-size:1.8rem;color:var(--cream);margin-bottom:0.5rem;}
+.arb-title em{font-style:italic;color:var(--teal);}
+.arb-sub{font-family:'DM Mono',monospace;font-size:0.46rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:2.5rem;}
+.arb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;}
+.arb-card{padding:1.5rem;border:1px solid var(--bdr2);background:var(--bg3);position:relative;}
+.arb-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.arb-card:nth-child(1)::before{background:var(--green);}
+.arb-card:nth-child(2)::before{background:var(--teal);}
+.arb-card:nth-child(3)::before{background:var(--sky);}
+.arb-card-title{font-family:'DM Mono',monospace;font-size:0.52rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--cream);margin-bottom:0.75rem;}
+.arb-card-body{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);line-height:1.75;font-weight:300;}
+.arb-card-body b{color:var(--bone);font-weight:400;}
+.arb-example{margin-top:2.5rem;padding:1.5rem;background:var(--bg3);border:1px solid var(--bdr2);border-left:3px solid var(--amber);}
+.arb-example-label{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--amber);margin-bottom:0.75rem;}
+.arb-example-text{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);line-height:1.8;font-weight:300;}
+.arb-example-text b{color:var(--bone);font-weight:400;}
 
 /* ── SCORING SECTION ── */
 .scoring{background:var(--bg2);border-top:1px solid var(--bdr);padding:5rem 4rem;position:relative;z-index:10;}
@@ -448,35 +468,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 <body>
 
 <div class="ticker-wrap">
-  <div class="ticker-track">
-    <span class="ti"><span class="ti-sym">UNF</span><span class="ti-pos">+17.34%</span></span>
-    <span class="ti"><span class="ti-sym">UAC</span><span class="ti-pos">+16.40%</span></span>
-    <span class="ti"><span class="ti-sym">NATL</span><span class="ti-pos">+13.36%</span></span>
-    <span class="ti"><span class="ti-sym">CWAN</span><span class="ti-pos">+12.88%</span></span>
-    <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.40%</span></span>
-    <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.58%</span></span>
-    <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.32%</span></span>
-    <span class="ti"><span class="ti-sym">HPE</span><span class="ti-pos">+3.21%</span></span>
-    <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+2.95%</span></span>
-    <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.44%</span></span>
-    <span class="ti"><span class="ti-sym">SKYT</span><span class="ti-pos">+2.19%</span></span>
-    <span class="ti"><span class="ti-sym">SLNO</span><span class="ti-neg">-0.02%</span></span>
-    <span class="ti"><span class="ti-sym">JHG</span><span class="ti-neg">-5.41%</span></span>
-    <span class="ti"><span class="ti-sym">KW</span><span class="ti-neg">-6.82%</span></span>
-    <span class="ti"><span class="ti-sym">UNF</span><span class="ti-pos">+17.34%</span></span>
-    <span class="ti"><span class="ti-sym">UAC</span><span class="ti-pos">+16.40%</span></span>
-    <span class="ti"><span class="ti-sym">NATL</span><span class="ti-pos">+13.36%</span></span>
-    <span class="ti"><span class="ti-sym">CWAN</span><span class="ti-pos">+12.88%</span></span>
-    <span class="ti"><span class="ti-sym">KDP</span><span class="ti-pos">+10.40%</span></span>
-    <span class="ti"><span class="ti-sym">IMXI</span><span class="ti-pos">+4.58%</span></span>
-    <span class="ti"><span class="ti-sym">OGN</span><span class="ti-pos">+4.32%</span></span>
-    <span class="ti"><span class="ti-sym">HPE</span><span class="ti-pos">+3.21%</span></span>
-    <span class="ti"><span class="ti-sym">AES</span><span class="ti-pos">+2.95%</span></span>
-    <span class="ti"><span class="ti-sym">WBD</span><span class="ti-pos">+2.44%</span></span>
-    <span class="ti"><span class="ti-sym">SKYT</span><span class="ti-pos">+2.19%</span></span>
-    <span class="ti"><span class="ti-sym">SLNO</span><span class="ti-neg">-0.02%</span></span>
-    <span class="ti"><span class="ti-sym">JHG</span><span class="ti-neg">-5.41%</span></span>
-    <span class="ti"><span class="ti-sym">KW</span><span class="ti-neg">-6.82%</span></span>
+  <div class="ticker-track" id="ticker-track">
+    <span class="ti"><span class="ti-sym">MERIDIAN</span><span class="ti-pos">Loading live deals...</span></span>
   </div>
 </div>
 
@@ -501,12 +494,39 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="methodology-banner" onclick="showMethodology()">
       <div>
         <div class="methodology-banner-title">◈ Proprietary V3 Scoring Model</div>
-        <div class="methodology-banner-desc">93.7% accuracy on 159 historical deals · 6 factors including financing signal, regulatory complexity, and deal premium · Very Low + Low Risk buckets: 0% break rate across 116 deals</div>
+        <div class="methodology-banner-desc">93.7% accuracy on 159 historical deals · 6 factors including financing signal, regulatory complexity, and deal premium · Very Low + Low Risk: 0% break rate across 116 deals</div>
       </div>
       <div class="methodology-banner-arrow">→</div>
     </div>
     <button class="enter-btn" onclick="showDashboard()">Enter Meridian</button>
   </div>
+
+  <!-- WHAT IS MERGER ARB -->
+  <div class="arb-explainer">
+    <div class="arb-explainer-inner">
+      <div class="arb-title">What is <em>Merger Arbitrage</em>?</div>
+      <div class="arb-sub">◈ A 60-second primer for new readers</div>
+      <div class="arb-grid">
+        <div class="arb-card">
+          <div class="arb-card-title">The Setup</div>
+          <div class="arb-card-body">When Company A announces it will acquire Company B for <b>$50 per share</b>, Company B's stock immediately jumps — but rarely all the way to $50. It might trade at <b>$48.50</b>. That $1.50 gap is the merger arbitrage spread.</div>
+        </div>
+        <div class="arb-card">
+          <div class="arb-card-title">The Trade</div>
+          <div class="arb-card-body">An arb trader buys Company B at $48.50 and waits for the deal to close. When it does, they receive $50 per share — a <b>guaranteed $1.50 profit</b> per share regardless of where the broader market goes. Pure deal-driven return.</div>
+        </div>
+        <div class="arb-card">
+          <div class="arb-card-title">The Risk</div>
+          <div class="arb-card-body">If the deal breaks — blocked by regulators, financing falls through, or the buyer walks — the stock crashes back to its pre-announcement price. That's why <b>predicting deal outcomes</b> is the entire game. That's what Meridian does.</div>
+        </div>
+      </div>
+      <div class="arb-example">
+        <div class="arb-example-label">◈ A Real Example · How to Read the Dashboard</div>
+        <div class="arb-example-text">A deal shows <b>Spread: +4.2%</b> and <b>V3 Risk: Very Low</b>. That means the stock is trading 4.2% below the deal price. If the deal closes — which Meridian's model gives high confidence — you pocket that 4.2% return in roughly 6 months. Annualized, that's over 8%. With a break price of $32.10 shown below, you also know exactly where the stock falls if the deal breaks before risking a single dollar.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="scoring">
     <div class="s-title">The V3 Scoring System</div>
     <div class="s-sub">◈ Empirical break rates from 159 historical deals · 2020–2025</div>
@@ -565,7 +585,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 159 historical deals · 2020–2025</div>
   </footer>
-  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Spreads reflect Yahoo Finance data which may be delayed up to 15 minutes. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
+  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
 
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
@@ -600,7 +620,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="mc"><div class="mc-l">Avg V3 Score</div><div class="mc-v sk" id="m-score">--</div><div class="mc-h">6-factor model</div></div>
     <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
   </div>
-  <div class="data-note">◈ Prices via Yahoo Finance · May be delayed up to 15 minutes · For informational purposes only · Not financial advice</div>
+  <div class="data-note">◈ Prices refresh hourly alongside deal data · For informational purposes only · Not financial advice</div>
   <div id="deal-list">
     <div class="loading-wrap"><div class="spinner"></div><div class="loading-title">Loading deal feed</div><div class="loading-sub">Fetching from SEC EDGAR</div></div>
   </div>
@@ -612,7 +632,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>V3 Model · 159 deals backtested</div>
   </footer>
-  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Spreads reflect Yahoo Finance data which may be delayed up to 15 minutes. Past model performance does not guarantee future results.</div>
+  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results.</div>
 </div>
 
 <!-- ═══════════════════════════════ DEAL ANALYSIS ═══════════════════════════════ -->
@@ -660,7 +680,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
     <div class="footer-info">Data · SEC EDGAR / Yahoo Finance</div>
   </footer>
-  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Spreads reflect Yahoo Finance data which may be delayed up to 15 minutes. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
+  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
 
 <!-- ═══════════════════════════════ COMPARE ═══════════════════════════════ -->
@@ -740,7 +760,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <div class="backtest-strip">
     <div class="bt-cell"><div class="bt-val">93.7%</div><div class="bt-label">Overall Accuracy</div><div class="bt-sub">Predicting close or break · 159 deals · 2020–2025</div></div>
     <div class="bt-cell"><div class="bt-val">0%</div><div class="bt-label">Very Low + Low Break Rate</div><div class="bt-sub">116 deals in these buckets · zero broke</div></div>
-    <div class="bt-cell"><div class="bt-val">82.4%</div><div class="bt-label">High Risk Break Rate</div><div class="bt-sub">28 of 34 High Risk deals broke correctly identified</div></div>
+    <div class="bt-cell"><div class="bt-val">82.4%</div><div class="bt-label">High Risk Break Rate</div><div class="bt-sub">28 of 34 High Risk deals correctly identified</div></div>
     <div class="bt-cell"><div class="bt-val">+8.2%</div><div class="bt-label">Avg Ann. Return</div><div class="bt-sub">On correctly predicted closed deals</div></div>
   </div>
   <div class="base-rate-banner">
@@ -893,17 +913,17 @@ function getScoreColor(s){
     return 'var(--red)';
 }
 function getTypeClass(dt){
-    if(dt==='All Cash')      return 'cash';
-    if(dt==='Cash + Stock')  return 'mixed';
-    if(dt==='Private Equity')return 'pe';
-    if(dt==='Tender Offer')  return 'tender';
+    if(dt==='All Cash')       return 'cash';
+    if(dt==='Cash + Stock')   return 'mixed';
+    if(dt==='Private Equity') return 'pe';
+    if(dt==='Tender Offer')   return 'tender';
     return 'cash';
 }
 function getTypeLabel(dt){
-    if(dt==='All Cash')      return 'Cash';
-    if(dt==='Cash + Stock')  return 'Cash+Stock';
-    if(dt==='Private Equity')return 'PE';
-    if(dt==='Tender Offer')  return 'Tender';
+    if(dt==='All Cash')       return 'Cash';
+    if(dt==='Cash + Stock')   return 'Cash+Stock';
+    if(dt==='Private Equity') return 'PE';
+    if(dt==='Tender Offer')   return 'Tender';
     return dt;
 }
 function updateLocalTime(f){
@@ -921,9 +941,26 @@ function formatDate(){
 formatDate();
 setInterval(formatDate, 60000);
 
+// ── LIVE TICKER ───────────────────────────────────────────────────────────────
+async function buildTicker(){
+    try{
+        const res  = await fetch('/api/deals');
+        const data = await res.json();
+        const deals = data.deals||[];
+        if(!deals.length) return;
+        const items = deals.map(d=>{
+            const cls  = d.sp_pct>=0?'ti-pos':'ti-neg';
+            const s    = d.sp_pct>=0?'+':'';
+            return `<span class="ti"><span class="ti-sym">${d.ticker}</span><span class="${cls}">${s}${d.sp_pct.toFixed(2)}%</span></span>`;
+        }).join('');
+        const track = document.getElementById('ticker-track');
+        track.innerHTML = items + items;
+    }catch(e){}
+}
+
 async function updateLandingStats(){
     try{
-        const d = await fetch('/api/deals').then(r=>r.json());
+        const d  = await fetch('/api/deals').then(r=>r.json());
         const el = document.getElementById('landing-deal-count');
         if(el) el.textContent = (d.deals?.length||'--')+'+';
     }catch(e){}
@@ -938,7 +975,7 @@ function finLabel(sig){
 }
 function finDesc(sig){
     if(sig==='committed')  return 'Acquirer has secured committed financing or is using cash on hand. Deal is not contingent on financing. Strongest positive signal.';
-    if(sig==='confident')  return 'Banks have issued highly confident letters, standard in PE deals. Financing is expected to close but not formally committed. Mild positive signal.';
+    if(sig==='confident')  return 'Banks have issued highly confident letters, standard in PE deals. Financing expected to close but not formally committed. Mild positive signal.';
     if(sig==='contingent') return 'Deal is explicitly contingent on obtaining financing. If credit markets tighten or lenders pull back, this deal can break. Meaningful risk factor.';
     return 'No clear financing language detected in the press release. Unable to assess commitment level from available text.';
 }
@@ -946,83 +983,73 @@ function finDesc(sig){
 // ── RISK FACTORS ──────────────────────────────────────────────────────────────
 function getRiskFactors(d){
     const f=[];
-    if(d.sp_pct>=12)  f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. In our 159-deal backtest, 87% of deals with spreads above 12% broke. The market is pricing in near-certain deal failure.`});
+    if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. In our 159-deal backtest, 87% of deals with spreads above 12% broke. The market is pricing in near-certain deal failure.`});
     if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the gray zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
-    if(d.sp_pct<0)    f.push({l:'hi',t:'Negative spread — stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
+    if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread — stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
     if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
-    if(d.days_old>270) f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
+    if(d.days_old>270)            f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
     if(d.deal_type==='Cash + Stock') f.push({l:'md',t:"Mixed consideration deals add complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk beyond the deal itself."});
     if(d.deal_type==='Tender Offer') f.push({l:'lo',t:'Tender offers typically close faster than mergers and have higher completion rates. The direct shareholder approach bypasses board resistance and accelerates timeline.'});
     if(d.deal_type==='Private Equity') f.push({l:'md',t:'PE acquisitions depend on financing conditions. Rising rates or tightening credit markets can increase break risk for leveraged buyouts. Watch the financing signal.'});
-    if(d.close_date==='TBD') f.push({l:'md',t:'No expected close date publicly disclosed. Annualized return calculations are approximate. Timeline uncertainty adds risk to position sizing decisions.'});
-    if(f.length===0) f.push({l:'lo',t:'Spread under 8% — 0% break rate across 116 historical deals in our dataset. Standard merger completion risks apply: regulatory review and shareholder approval.'});
+    if(d.close_date==='TBD')      f.push({l:'md',t:'No expected close date publicly disclosed. Annualized return calculations are approximate. Timeline uncertainty adds risk to position sizing decisions.'});
+    if(f.length===0)              f.push({l:'lo',t:'Spread under 8% — 0% break rate across 116 historical deals in our dataset. Standard merger completion risks apply: regulatory review and shareholder approval.'});
     return f.slice(0,4);
 }
 
 // ── SCORE BREAKDOWN ───────────────────────────────────────────────────────────
 function getScoreBreakdown(d){
     let sq=50;
-    if(d.sp_pct>0&&d.sp_pct<3)       sq=95;
-    else if(d.sp_pct>=3&&d.sp_pct<5) sq=88;
-    else if(d.sp_pct>=5&&d.sp_pct<8) sq=80;
-    else if(d.sp_pct>=8&&d.sp_pct<12)sq=60;
+    if(d.sp_pct>0&&d.sp_pct<3)        sq=95;
+    else if(d.sp_pct>=3&&d.sp_pct<5)  sq=88;
+    else if(d.sp_pct>=5&&d.sp_pct<8)  sq=80;
+    else if(d.sp_pct>=8&&d.sp_pct<12) sq=60;
     else if(d.sp_pct>=12&&d.sp_pct<18)sq=38;
     else if(d.sp_pct>=18&&d.sp_pct<25)sq=25;
     else if(d.sp_pct>=25)              sq=12;
     else if(d.sp_pct<0)               sq=20;
-
-    const ds = d.deal_type==='All Cash'?88:d.deal_type==='Tender Offer'?84:d.deal_type==='Private Equity'?74:62;
-
+    const ds=d.deal_type==='All Cash'?88:d.deal_type==='Tender Offer'?84:d.deal_type==='Private Equity'?74:62;
     let ts=75;
     if(d.days_old<90)       ts=92;
     else if(d.days_old<270) ts=75;
     else if(d.days_old<500) ts=60;
     else                    ts=40;
-
-    const rs = d.score; // overall V3 score
-
-    const finScore = d.financing_signal==='committed'?95:d.financing_signal==='confident'?65:d.financing_signal==='contingent'?20:50;
-
-    const spreadLabel = d.sp_pct<8?`under 8% — 0% historical break rate`:d.sp_pct<12?`8-12% gray zone — 36% break rate`:`above 12% — 87%+ break rate`;
-
+    const finScore=d.financing_signal==='committed'?95:d.financing_signal==='confident'?65:d.financing_signal==='contingent'?20:50;
+    const spreadLabel=d.sp_pct<8?'under 8% — 0% historical break rate':d.sp_pct<12?'8-12% gray zone — 36% break rate':'above 12% — 87%+ break rate';
     return [
-        {label:'Spread Quality',score:sq,color:getScoreColor(sq),desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
-        {label:'Deal Structure',score:ds,color:getScoreColor(ds),desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
-        {label:'Time Pending',score:ts,color:getScoreColor(ts),desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
-        {label:'Financing Signal',score:finScore,color:getScoreColor(finScore),desc:`${finLabel(d.financing_signal)} — ${finScore>=80?'strong positive signal, financing secured':finScore>=60?'mild positive signal':finScore>=40?'no clear signal detected':'negative signal, deal contingent on financing'}`},
-        {label:'V3 Overall Score',score:rs,color:getScoreColor(rs),desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% gray zone`},
+        {label:'Spread Quality',   score:sq,      color:getScoreColor(sq),      desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
+        {label:'Deal Structure',   score:ds,      color:getScoreColor(ds),      desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
+        {label:'Time Pending',     score:ts,      color:getScoreColor(ts),      desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
+        {label:'Financing Signal', score:finScore,color:getScoreColor(finScore),desc:`${finLabel(d.financing_signal)} — ${finScore>=80?'strong positive signal, financing secured':finScore>=60?'mild positive signal':finScore>=40?'no clear signal detected':'negative signal, deal contingent on financing'}`},
+        {label:'V3 Overall Score', score:d.score, color:getScoreColor(d.score), desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% gray zone`},
     ];
 }
 
 // ── RENDER ANALYSIS ───────────────────────────────────────────────────────────
 async function renderAnalysis(deal){
-    const bc = getBadgeClass(deal.risk);
-    const tc = getTypeClass(deal.deal_type);
-    const tl = getTypeLabel(deal.deal_type);
-    const company   = deal.company||deal.ticker+' Corp.';
-    const closeDate = deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:'TBD';
-    const txVal     = deal.tx_value&&!isNaN(deal.tx_value)?'$'+parseFloat(deal.tx_value).toFixed(1)+'B':'N/A';
-    const bp = deal.break_price;
-    const bd = deal.break_downside;
-    const fin = deal.financing_signal||'unknown';
+    const bc=getBadgeClass(deal.risk);
+    const tc=getTypeClass(deal.deal_type);
+    const tl=getTypeLabel(deal.deal_type);
+    const company  =deal.company||deal.ticker+' Corp.';
+    const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:'TBD';
+    const txVal    =deal.tx_value&&!isNaN(deal.tx_value)?'$'+parseFloat(deal.tx_value).toFixed(1)+'B':'N/A';
+    const bp=deal.break_price, bd=deal.break_downside;
+    const fin=deal.financing_signal||'unknown';
 
-    document.getElementById('da-ticker').textContent  = deal.ticker;
-    document.getElementById('da-company').textContent = company;
-    document.getElementById('da-acquirer').textContent= deal.acquirer||'Undisclosed';
-    const spreadEl = document.getElementById('da-spread');
-    spreadEl.textContent  = sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
-    spreadEl.style.color  = spColor(deal.sp_pct);
-    const annEl = document.getElementById('da-ann');
-    annEl.textContent = 'Ann. Return: '+sign(deal.ann)+deal.ann.toFixed(2)+'%';
-    annEl.style.color = spColor(deal.ann);
-
+    document.getElementById('da-ticker').textContent  =deal.ticker;
+    document.getElementById('da-company').textContent =company;
+    document.getElementById('da-acquirer').textContent=deal.acquirer||'Undisclosed';
+    const spreadEl=document.getElementById('da-spread');
+    spreadEl.textContent=sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
+    spreadEl.style.color=spColor(deal.sp_pct);
+    const annEl=document.getElementById('da-ann');
+    annEl.textContent='Ann. Return: '+sign(deal.ann)+deal.ann.toFixed(2)+'%';
+    annEl.style.color=spColor(deal.ann);
     document.getElementById('da-badges').innerHTML=`
         <span class="badge ${tc}" style="font-size:0.48rem;padding:3px 8px">${tl}</span>
         <span class="badge ${bc}" style="font-size:0.48rem;padding:3px 8px">${deal.risk} Risk</span>
         <span class="badge" style="font-size:0.48rem;padding:3px 8px;color:var(--dim);border-color:var(--bdr2)">V3 Score ${deal.score}/100</span>
-        <span class="badge fin-badge ${fin}" style="font-size:0.44rem;padding:2px 7px">${finLabel(fin)}</span>
+        <span class="fin-badge ${fin}" style="font-size:0.44rem;padding:2px 7px">${finLabel(fin)}</span>
     `;
-
     document.getElementById('da-metrics').innerHTML=`
         <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">$${deal.cp.toFixed(2)}</div></div>
         <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
@@ -1050,7 +1077,7 @@ async function renderAnalysis(deal){
                 <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">PROFIT</td></tr>
                 ${upRows}
             </table>
-            <div class="rr-note">Based on current spread of ${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}% at deal price $${deal.dp.toFixed(2)}. Prices may be delayed up to 15 minutes.</div>
+            <div class="rr-note">Based on current spread of ${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}% at deal price $${deal.dp.toFixed(2)}. Prices refresh hourly.</div>
         </div>
         <div class="rr-col downside">
             <div class="rr-title">If Deal Breaks</div>
@@ -1065,8 +1092,8 @@ async function renderAnalysis(deal){
     `;
 
     // Acquirer Intelligence
-    const acqType = deal.acquirer_type||'Strategic';
-    const premium = bp&&deal.dp?Math.round(((deal.dp-bp)/bp)*100):null;
+    const acqType=deal.acquirer_type||'Strategic';
+    const premium=bp&&deal.dp?Math.round(((deal.dp-bp)/bp)*100):null;
     document.getElementById('da-acq-grid').innerHTML=`
         <div class="acq-cell highlight">
             <div class="acq-label">Acquirer</div>
@@ -1092,11 +1119,9 @@ async function renderAnalysis(deal){
     if(!compsCache[deal.ticker]){
         document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.46rem;color:var(--dim);letter-spacing:0.14em;">Loading comparable deals...</div>';
         try{
-            const cd = await fetch(`/api/comps/${deal.ticker}?deal_type=${encodeURIComponent(deal.deal_type)}&spread=${deal.sp_pct}`).then(r=>r.json());
-            compsCache[deal.ticker] = cd;
-        }catch(e){
-            compsCache[deal.ticker]={comps:[],summary:{total:0,closed:0,broken:0,close_rate:0,avg_days:0}};
-        }
+            const cd=await fetch(`/api/comps/${deal.ticker}?deal_type=${encodeURIComponent(deal.deal_type)}&spread=${deal.sp_pct}`).then(r=>r.json());
+            compsCache[deal.ticker]=cd;
+        }catch(e){ compsCache[deal.ticker]={comps:[],summary:{total:0,closed:0,broken:0,close_rate:0,avg_days:0}}; }
     }
     const cd=compsCache[deal.ticker];
     const comps=cd.comps||[];
@@ -1110,7 +1135,7 @@ async function renderAnalysis(deal){
                 <div class="comp-stat"><div class="comp-stat-val">${summary.total}</div><div class="comp-stat-lbl">Comparable Deals</div></div>
                 <div class="comp-stat"><div class="comp-stat-val green">${summary.closed}</div><div class="comp-stat-lbl">Closed</div></div>
                 <div class="comp-stat"><div class="comp-stat-val red">${summary.broken}</div><div class="comp-stat-lbl">Broken</div></div>
-                <div class="comp-stat"><div class="comp-stat-val sky" style="color:${cc}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
+                <div class="comp-stat"><div class="comp-stat-val" style="color:${cc}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
             </div>
             <table class="comps-table">
                 <thead><tr><th>Ticker</th><th>Acquirer</th><th>Type</th><th class="r">Spread at Ann.</th><th class="r">Outcome</th><th class="r">Days to Close</th></tr></thead>
@@ -1162,15 +1187,15 @@ async function loadCompare(){
     if(compareData.length>0){ renderCompare(); return; }
     document.getElementById('compare-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.5rem;letter-spacing:0.15em;">Loading historical deals...</td></tr>';
     try{
-        const d = await fetch('/api/comps/all').then(r=>r.json());
-        compareData = d.comps||[];
+        const d=await fetch('/api/comps/all').then(r=>r.json());
+        compareData=d.comps||[];
         renderCompare();
     }catch(e){
         document.getElementById('compare-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--red);font-family:\'DM Mono\',monospace;font-size:0.5rem;">Error loading data</td></tr>';
     }
 }
 
-function filterCompare(f, btn){
+function filterCompare(f,btn){
     compareFilter=f;
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
@@ -1185,24 +1210,21 @@ function sortCompare(col){
 
 function renderCompare(){
     let data=[...compareData];
-    if(compareFilter==='Closed')   data=data.filter(d=>d.outcome==='Closed');
-    else if(compareFilter==='Broken')  data=data.filter(d=>d.outcome==='Broken');
-    else if(compareFilter==='tight')   data=data.filter(d=>d.spread_at_announce<8);
-    else if(compareFilter==='wide')    data=data.filter(d=>d.spread_at_announce>=12);
-    else if(compareFilter!=='all')     data=data.filter(d=>d.deal_type===compareFilter);
-
+    if(compareFilter==='Closed')      data=data.filter(d=>d.outcome==='Closed');
+    else if(compareFilter==='Broken') data=data.filter(d=>d.outcome==='Broken');
+    else if(compareFilter==='tight')  data=data.filter(d=>d.spread_at_announce<8);
+    else if(compareFilter==='wide')   data=data.filter(d=>d.spread_at_announce>=12);
+    else if(compareFilter!=='all')    data=data.filter(d=>d.deal_type===compareFilter);
     data.sort((a,b)=>{
-        const av=a[compareSortCol], bv=b[compareSortCol];
+        const av=a[compareSortCol],bv=b[compareSortCol];
         if(typeof av==='string') return compareSortDir*(av.localeCompare(bv));
         return compareSortDir*(av-bv);
     });
-
     const closed=data.filter(d=>d.outcome==='Closed').length;
     const broken=data.filter(d=>d.outcome==='Broken').length;
     const avgSpread=data.length?Math.round(data.reduce((s,d)=>s+d.spread_at_announce,0)/data.length*10)/10:0;
-    const avgDays=data.length?Math.round(data.reduce((s,d)=>s+d.days_to_close,0)/data.length):0;
+    const avgDays  =data.length?Math.round(data.reduce((s,d)=>s+d.days_to_close,0)/data.length):0;
     const closeRate=data.length?Math.round(closed/data.length*100):0;
-
     document.getElementById('compare-stats').innerHTML=`
         <div class="cs-cell"><div class="cs-val" style="color:var(--sky)">${data.length}</div><div class="cs-lbl">Total Deals</div></div>
         <div class="cs-cell"><div class="cs-val" style="color:var(--green)">${closed}</div><div class="cs-lbl">Closed</div></div>
@@ -1210,7 +1232,6 @@ function renderCompare(){
         <div class="cs-cell"><div class="cs-val" style="color:${closeRate>=70?'var(--green)':closeRate>=50?'var(--amber)':'var(--red)'}">${closeRate}%</div><div class="cs-lbl">Close Rate</div></div>
         <div class="cs-cell"><div class="cs-val" style="color:var(--teal)">${avgSpread}%</div><div class="cs-lbl">Avg Spread</div></div>
     `;
-
     document.getElementById('compare-tbody').innerHTML=data.map(d=>`
         <tr>
             <td>${d.ticker}</td>
@@ -1226,7 +1247,7 @@ function renderCompare(){
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function toggleSection(id){
     const body=document.getElementById('body-'+id);
-    const tog=document.getElementById('toggle-'+id);
+    const tog =document.getElementById('toggle-'+id);
     if(collapsedSections.has(id)){
         collapsedSections.delete(id);
         body.classList.remove('collapsed');
@@ -1247,25 +1268,24 @@ function renderDeals(deals){
     }
     const avgSp=deals.reduce((s,d)=>s+d.sp_pct,0)/deals.length;
     const avgSc=deals.reduce((s,d)=>s+d.score,0)/deals.length;
-    document.getElementById('m-deals').textContent=deals.length;
-    document.getElementById('m-spread').textContent=sign(avgSp)+avgSp.toFixed(2)+'%';
-    document.getElementById('m-score').textContent=Math.round(avgSc)+'/100';
-    document.getElementById('m-updated').textContent=updateLocalTime(deals[0].fetched);
+    document.getElementById('m-deals').textContent   =deals.length;
+    document.getElementById('m-spread').textContent  =sign(avgSp)+avgSp.toFixed(2)+'%';
+    document.getElementById('m-score').textContent   =Math.round(avgSc)+'/100';
+    document.getElementById('m-updated').textContent =updateLocalTime(deals[0].fetched);
 
     const sections=[
-        {id:'all-cash',label:'All Cash Deals',type:'All Cash'},
-        {id:'cash-stock',label:'Cash + Stock Deals',type:'Cash + Stock'},
-        {id:'tender',label:'Tender Offer Deals',type:'Tender Offer'},
-        {id:'pe',label:'Private Equity Deals',type:'Private Equity'},
+        {id:'all-cash',  label:'All Cash Deals',    type:'All Cash'},
+        {id:'cash-stock',label:'Cash + Stock Deals', type:'Cash + Stock'},
+        {id:'tender',    label:'Tender Offer Deals', type:'Tender Offer'},
+        {id:'pe',        label:'Private Equity Deals',type:'Private Equity'},
     ];
 
-    let html='';
-    let gi=0;
+    let html='', gi=0;
     sections.forEach(sec=>{
         const sd=deals.filter(d=>d.deal_type===sec.type);
         if(!sd.length) return;
         const asp=sd.reduce((s,d)=>s+d.sp_pct,0)/sd.length;
-        const ic=collapsedSections.has(sec.id);
+        const ic =collapsedSections.has(sec.id);
         html+=`
         <div class="section-sep" onclick="toggleSection('${sec.id}')">
           <div class="section-sep-line"></div>
@@ -1292,7 +1312,7 @@ function renderDeals(deals){
             const co=d.company||d.ticker+' Corp.';
             const cd=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'?d.close_date:'TBD';
             const tv=d.tx_value&&!isNaN(d.tx_value)?'$'+parseFloat(d.tx_value).toFixed(1)+'B':'N/A';
-            const bp=d.break_price, bd=d.break_downside;
+            const bp=d.break_price,bd=d.break_downside;
             const fin=d.financing_signal||'unknown';
             html+=`
             <div class="deal-row ${isExp?'expanded':''}" onclick="toggleDeal(${i})">
@@ -1374,6 +1394,7 @@ async function loadDeals(){
         allDeals=d.deals||[];
         dealsLoaded=true;
         renderDeals(allDeals);
+        buildTicker();
     }catch(e){
         document.getElementById('deal-list').innerHTML='<div class="loading-wrap"><div class="loading-title">Error loading deals</div><div class="loading-sub">Please refresh the page</div></div>';
     }
@@ -1381,11 +1402,11 @@ async function loadDeals(){
 
 function refreshData(){
     const btn=document.getElementById('refresh-btn');
-    const pw=document.getElementById('progress-wrap');
-    const pb=document.getElementById('progress-bar');
-    const pt=document.getElementById('progress-text');
-    const pc=document.getElementById('progress-count');
-    const pd=document.getElementById('progress-deals');
+    const pw =document.getElementById('progress-wrap');
+    const pb =document.getElementById('progress-bar');
+    const pt =document.getElementById('progress-text');
+    const pc =document.getElementById('progress-count');
+    const pd =document.getElementById('progress-deals');
     btn.disabled=true; btn.textContent='Scanning...';
     pw.classList.add('active'); pb.style.width='0%';
     pt.textContent='Connecting to SEC EDGAR...'; pc.textContent='0 / 0';
@@ -1394,7 +1415,8 @@ function refreshData(){
     es.onmessage=function(e){
         const d=JSON.parse(e.data);
         if(d.done){
-            es.close(); allDeals=d.deals||[]; renderDeals(allDeals); updateLandingStats();
+            es.close(); allDeals=d.deals||[]; renderDeals(allDeals);
+            buildTicker(); updateLandingStats();
             pb.style.width='100%'; pt.textContent='Scan complete'; pc.textContent='';
             pd.textContent=allDeals.length+' deals loaded';
             btn.disabled=false; btn.textContent='Refresh Data';
@@ -1415,6 +1437,7 @@ function refreshData(){
     };
 }
 
+buildTicker();
 updateLandingStats();
 loadDeals();
 </script>
