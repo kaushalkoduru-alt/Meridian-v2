@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 REDIS_URL   = os.environ.get('UPSTASH_REDIS_REST_URL', '')
 REDIS_TOKEN = os.environ.get('UPSTASH_REDIS_REST_TOKEN', '')
 CACHE_KEY   = 'meridian_deals_v1'
-CACHE_FILE  = "meridian_cache.csv"  # local fallback
+CACHE_FILE  = "meridian_cache.csv"
 
 def redis_get():
     if not REDIS_URL or not REDIS_TOKEN:
@@ -62,33 +62,34 @@ def redis_set(deals):
 def save_cache(records):
     if not records:
         return
-    df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
-    df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
-    clean = clean_records(df.to_dict(orient='records'))
-    if len(clean) >= 5:
-        # Save to Redis first
-        redis_set(clean)
-        # Also save local CSV as fallback
-        try:
-            tmp = CACHE_FILE + '.tmp'
-            df.to_csv(tmp, index=False)
-            os.replace(tmp, CACHE_FILE)
-        except:
-            pass
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache saved: {len(clean)} deals.")
+    try:
+        df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
+        df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
+        clean = clean_records(df.to_dict(orient='records'))
+        if len(clean) >= 3:
+            redis_set(clean)
+            try:
+                tmp = CACHE_FILE + '.tmp'
+                df.to_csv(tmp, index=False)
+                os.replace(tmp, CACHE_FILE)
+            except:
+                pass
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache saved: {len(clean)} deals.")
+    except Exception as e:
+        print(f"save_cache error: {e}")
 
 def load_cache():
-    # Try Redis first — survives deploys
+    # Try Redis first
     deals = redis_get()
     if deals:
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Loaded {len(deals)} deals from Redis.")
+        print(f"Loaded {len(deals)} deals from Redis.")
         return deals
     # Fall back to local CSV
     if os.path.exists(CACHE_FILE):
         try:
             df = pd.read_csv(CACHE_FILE)
             if not df.empty:
-                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Loaded {len(df)} deals from local CSV.")
+                print(f"Loaded {len(df)} deals from local CSV.")
                 return clean_records(df.to_dict(orient='records'))
         except:
             pass
@@ -99,9 +100,8 @@ def is_cache_fresh(max_age_minutes=50):
     if not deals:
         return False
     try:
-        fetched    = deals[0].get('fetched', '')
-        cache_time = datetime.strptime(fetched, '%Y-%m-%dT%H:%M')
-        age        = (datetime.utcnow() - cache_time).total_seconds() / 60
+        cache_time = datetime.strptime(deals[0].get('fetched',''), '%Y-%m-%dT%H:%M')
+        age = (datetime.utcnow() - cache_time).total_seconds() / 60
         return age < max_age_minutes
     except:
         return False
@@ -349,12 +349,12 @@ def score_regulatory_complexity(reg_tags):
     if len(reg_tags) == 1 and reg_tags[0].get('agency') == 'Standard Review': return 5
     score = 0
     for tag in reg_tags:
-        agency = tag.get('agency', '')
-        level  = tag.get('level', 'low')
-        if agency == 'HSR Filing':           score -= 3
-        elif agency == 'FTC Antitrust':      score -= 8 if level == 'medium' else 15
-        elif agency == 'DOJ Antitrust':      score -= 8 if level == 'medium' else 15
-        elif agency == 'CFIUS Review':       score -= 18
+        agency = tag.get('agency','')
+        level  = tag.get('level','low')
+        if agency == 'HSR Filing':             score -= 3
+        elif agency == 'FTC Antitrust':        score -= 8 if level=='medium' else 15
+        elif agency == 'DOJ Antitrust':        score -= 8 if level=='medium' else 15
+        elif agency == 'CFIUS Review':         score -= 18
         elif agency == 'Market Concentration': score -= 10
     return max(-20, min(5, score))
 
@@ -392,10 +392,10 @@ def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_pri
     return min(100, max(0, round(normalized)))
 
 def get_risk(spread_pct, score):
-    if spread_pct >= 12:   return 'High'
-    if spread_pct >= 8:    return 'High' if score < 60 else 'Medium'
-    if score >= 75:        return 'Very Low'
-    if score >= 55:        return 'Low'
+    if spread_pct >= 12:  return 'High'
+    if spread_pct >= 8:   return 'High' if score < 60 else 'Medium'
+    if score >= 75:       return 'Very Low'
+    if score >= 55:       return 'Low'
     return 'Medium'
 
 def get_acquirer_type(deal_type, acquirer):
@@ -563,8 +563,13 @@ def get_filing_links(cik, accession, headers):
 
 # ─── CORE PIPELINE ───────────────────────────────────────────────────────────
 
-def fetch_deals_from_edgar(progress_callback=None):
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting EDGAR fetch...")
+def fetch_deals_from_edgar():
+    """
+    Full EDGAR scan. Runs as a background task — never inside an HTTP request.
+    Saves to Redis after every query so partial results are always available.
+    No progress callback needed since it runs independently.
+    """
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background EDGAR scan started.")
     headers={'User-Agent':'Kaushal Koduru kaushalkoduru@gmail.com'}
     all_hits=[]
     seen_ids=set()
@@ -574,11 +579,11 @@ def fetch_deals_from_edgar(progress_callback=None):
             url=q['url'].format(start=start)
             for attempt in range(3):
                 try:
-                    time.sleep(3)
+                    time.sleep(2)
                     resp=requests.get(url,headers=headers,timeout=25)
                     if resp.status_code==429:
-                        print(f"Rate limited — waiting 30s")
-                        time.sleep(30)
+                        print(f"Rate limited — waiting 20s")
+                        time.sleep(20)
                         continue
                     hits=resp.json()['hits']['hits']
                     for h in hits:
@@ -589,18 +594,15 @@ def fetch_deals_from_edgar(progress_callback=None):
                     if len(hits)<100: break
                     break
                 except Exception as e:
-                    print(f"Query error: {e}")
-                    time.sleep(10)
-            time.sleep(2)
-        time.sleep(5)
+                    print(f"Query error attempt {attempt+1}: {e}")
+                    time.sleep(5)
+        time.sleep(3)
 
-    total=len(all_hits)
+    print(f"EDGAR scan got {len(all_hits)} total hits. Processing...")
     results=[]
     seen_tickers=set()
 
     for i,hit in enumerate(all_hits):
-        if progress_callback:
-            progress_callback(i+1,total,len(results))
         src=hit['_source']
         deal_type=hit.get('_deal_type','All Cash')
         name_str=str(src['display_names'])
@@ -660,6 +662,9 @@ def fetch_deals_from_edgar(progress_callback=None):
                 'break_downside':break_downside,'financing_signal':financing_signal,
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
+            # Save to Redis every 10 deals so results appear live
+            if len(results) % 10 == 0:
+                save_cache(results)
         except: continue
 
     for fd in FALLBACK_DEALS:
@@ -695,39 +700,56 @@ def fetch_deals_from_edgar(progress_callback=None):
 
     if results:
         save_cache(results)
-        return clean_records(pd.DataFrame(results).drop_duplicates(subset=['ticker']).sort_values('sp_pct',ascending=False).to_dict(orient='records'))
-    print(f"Cache unchanged — returning existing.")
-    return load_cache() or []
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan complete: {len(results)} deals saved to Redis.")
+    else:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan returned no results — Redis unchanged.")
 
-# ─── BACKGROUND TASKS ────────────────────────────────────────────────────────
+# ─── BACKGROUND TASK MANAGEMENT ──────────────────────────────────────────────
 
 _scan_running = False
 
+async def run_background_scan():
+    """Runs the EDGAR scan in a thread pool — never blocks the event loop."""
+    global _scan_running
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, fetch_deals_from_edgar)
+    except Exception as e:
+        print(f"Background scan error: {e}")
+    finally:
+        _scan_running = False
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background scan finished.")
+
 async def auto_refresh_loop():
+    """Fires every hour. Skips if cache is fresh or scan already running."""
     while True:
         await asyncio.sleep(3600)
+        global _scan_running
+        if _scan_running:
+            print("Auto-refresh skipped — scan already running.")
+            continue
         if is_cache_fresh(50):
-            print(f"Cache fresh — skipping auto-refresh.")
+            print("Auto-refresh skipped — cache fresh.")
             continue
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Auto-refresh triggered.")
-        try:
-            await asyncio.get_event_loop().run_in_executor(None, fetch_deals_from_edgar)
-        except Exception as e:
-            print(f"Auto-refresh error: {e}")
+        _scan_running = True
+        asyncio.create_task(run_background_scan())
 
-async def startup_fetch():
-    await asyncio.sleep(5)
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Running startup fetch...")
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, fetch_deals_from_edgar)
+async def startup_scan():
+    """Runs once on startup if Redis cache is empty or stale."""
+    global _scan_running
+    await asyncio.sleep(3)
+    if is_cache_fresh(90):
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Redis cache fresh — skipping startup scan.")
+        return
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Redis cache empty/stale — starting startup scan.")
+    _scan_running = True
+    await run_background_scan()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(auto_refresh_loop())
-    if not is_cache_fresh(90):
-        asyncio.create_task(startup_fetch())
-    else:
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Redis cache fresh — skipping startup fetch.")
+    asyncio.create_task(startup_scan())
     yield
 
 # ─── APP & ROUTES ─────────────────────────────────────────────────────────────
@@ -756,6 +778,10 @@ async def get_deals():
     deals = load_cache()
     return JSONResponse(content={"deals": deals or []})
 
+@app.get("/api/scan-status")
+async def scan_status():
+    return JSONResponse(content={"running": _scan_running})
+
 @app.get("/api/comps/all")
 async def get_all_comps():
     return JSONResponse(content={"comps": COMPS_DATA, "total": len(COMPS_DATA)})
@@ -776,29 +802,47 @@ async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.
         }
     })
 
+@app.post("/api/trigger-scan")
+async def trigger_scan():
+    """
+    Starts a background scan and returns immediately.
+    The scan runs independently — no timeout possible.
+    """
+    global _scan_running
+    if _scan_running:
+        deals = load_cache() or []
+        return JSONResponse(content={"status": "already_running", "current_deals": len(deals)})
+    _scan_running = True
+    asyncio.create_task(run_background_scan())
+    return JSONResponse(content={"status": "started"})
+
 @app.get("/api/refresh-stream")
 async def refresh_stream():
+    """
+    Triggers a background scan and streams progress to the browser.
+    Every 5 seconds checks Redis for new deals and sends the count.
+    Completes when scan finishes or after 15 minutes max.
+    """
     global _scan_running
     async def generate():
         global _scan_running
-        if _scan_running:
+        # Start the scan if not already running
+        if not _scan_running:
+            _scan_running = True
+            asyncio.create_task(run_background_scan())
+        # Stream updates every 5 seconds
+        for tick in range(180):  # 15 minutes max
+            await asyncio.sleep(5)
             deals = load_cache() or []
-            yield f"data: {json.dumps({'done':True,'deals':deals,'already_running':True})}\n\n"
-            return
-        _scan_running = True
-        try:
-            progress = {"current":0,"total":0,"deals_found":0}
-            def cb(cur,tot,found):
-                progress["current"]=cur; progress["total"]=tot; progress["deals_found"]=found
-            loop   = asyncio.get_event_loop()
-            future = loop.run_in_executor(None, lambda: fetch_deals_from_edgar(cb))
-            while not future.done():
-                yield f"data: {json.dumps(progress)}\n\n"
-                await asyncio.sleep(2)
-            deals = await future
-            yield f"data: {json.dumps({'done':True,'deals':deals})}\n\n"
-        finally:
-            _scan_running = False
+            if not _scan_running:
+                # Scan finished
+                yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
+                return
+            # Still running — send current deal count
+            yield f"data: {json.dumps({'current': tick*5, 'total': 900, 'deals_found': len(deals)})}\n\n"
+        # Timeout — return whatever we have
+        deals = load_cache() or []
+        yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 @app.post("/api/refresh")
@@ -807,9 +851,6 @@ async def refresh_deals():
     if _scan_running:
         return JSONResponse(content={"deals": load_cache() or []})
     _scan_running = True
-    try:
-        loop  = asyncio.get_event_loop()
-        deals = await loop.run_in_executor(None, fetch_deals_from_edgar)
-        return JSONResponse(content={"deals": deals})
-    finally:
-        _scan_running = False
+    asyncio.create_task(run_background_scan())
+    await asyncio.sleep(2)
+    return JSONResponse(content={"deals": load_cache() or []})

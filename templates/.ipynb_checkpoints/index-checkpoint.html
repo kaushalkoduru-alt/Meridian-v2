@@ -1407,33 +1407,84 @@ function refreshData(){
     const pt =document.getElementById('progress-text');
     const pc =document.getElementById('progress-count');
     const pd =document.getElementById('progress-deals');
+
+    if(btn.disabled) return;
     btn.disabled=true; btn.textContent='Scanning...';
-    pw.classList.add('active'); pb.style.width='0%';
-    pt.textContent='Connecting to SEC EDGAR...'; pc.textContent='0 / 0';
-    pd.textContent='0 candidates found';
-    const es=new EventSource('/api/refresh-stream');
+    pw.classList.add('active'); pb.style.width='2%';
+    pt.textContent='Starting background scan...';
+    pc.textContent='';
+    pd.textContent='Scan runs in background · deals appear as they are found · takes 5-8 minutes';
+
+    let done = false;
+    let es = null;
+
+    function finish(deals){
+        if(done) return;
+        done = true;
+        if(es){ try{ es.close(); }catch(e){} }
+        allDeals = deals||[];
+        renderDeals(allDeals);
+        buildTicker(); updateLandingStats();
+        pb.style.width='100%';
+        pt.textContent='Scan complete';
+        pc.textContent='';
+        pd.textContent=allDeals.length+' deals loaded';
+        btn.disabled=false; btn.textContent='Refresh Data';
+        setTimeout(()=>pw.classList.remove('active'),4000);
+    }
+
+    es = new EventSource('/api/refresh-stream');
+
     es.onmessage=function(e){
-        const d=JSON.parse(e.data);
-        if(d.done){
-            es.close(); allDeals=d.deals||[]; renderDeals(allDeals);
-            buildTicker(); updateLandingStats();
-            pb.style.width='100%'; pt.textContent='Scan complete'; pc.textContent='';
-            pd.textContent=allDeals.length+' deals loaded';
-            btn.disabled=false; btn.textContent='Refresh Data';
-            setTimeout(()=>pw.classList.remove('active'),3000); return;
-        }
-        if(d.total>0){
-            const pct=Math.round((d.current/d.total)*100);
-            pb.style.width=pct+'%';
-            pt.textContent='Scanning SEC EDGAR filings...';
-            pc.textContent=d.current+' / '+d.total;
-            pd.textContent=d.deals_found+' candidates found';
-        }
+        try{
+            const d=JSON.parse(e.data);
+            if(d.done){
+                finish(d.deals||[]);
+                return;
+            }
+            // Update progress bar and deal count live
+            const pct = Math.min(90, (d.deals_found / 50) * 100);
+            pb.style.width = Math.max(5, pct)+'%';
+            pt.textContent = 'Scanning SEC EDGAR — running in background...';
+            pd.textContent = d.deals_found+' deals found so far · full scan takes 5-8 minutes';
+            // Pull latest deals from Redis every update
+            if(d.deals_found > 0){
+                fetch('/api/deals').then(r=>r.json()).then(data=>{
+                    if(data.deals && data.deals.length > allDeals.length){
+                        allDeals = data.deals;
+                        renderDeals(allDeals);
+                        buildTicker();
+                        pd.textContent = allDeals.length+' deals loaded so far · scan still running...';
+                    }
+                }).catch(()=>{});
+            }
+        }catch(err){}
     };
+
     es.onerror=function(){
-        es.close(); btn.disabled=false; btn.textContent='Refresh Data';
-        pt.textContent='Error during scan. Try again.';
-        setTimeout(()=>pw.classList.remove('active'),3000);
+        if(done) return;
+        try{ es.close(); }catch(e){}
+        // SSE died but scan is still running on server — poll every 15 seconds
+        pt.textContent = 'Connected to background scan...';
+        pd.textContent = 'Checking for new deals every 15 seconds';
+        const poll = setInterval(async()=>{
+            try{
+                const [dealsRes, statusRes] = await Promise.all([
+                    fetch('/api/deals').then(r=>r.json()),
+                    fetch('/api/scan-status').then(r=>r.json()).catch(()=>({running:true}))
+                ]);
+                if(dealsRes.deals && dealsRes.deals.length > 0){
+                    allDeals = dealsRes.deals;
+                    renderDeals(allDeals);
+                    buildTicker();
+                    pd.textContent = allDeals.length+' deals loaded · '+(statusRes.running?'scan still running...':'scan complete');
+                }
+                if(!statusRes.running){
+                    clearInterval(poll);
+                    finish(dealsRes.deals||[]);
+                }
+            }catch(e){}
+        }, 15000);
     };
 }
 
