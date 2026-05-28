@@ -577,26 +577,22 @@ def fetch_deals_from_edgar():
     for q in EDGAR_QUERIES:
         for start in range(0,300,100):
             url=q['url'].format(start=start)
-            for attempt in range(3):
-                try:
-                    time.sleep(2)
+            try:
+                resp=requests.get(url,headers=headers,timeout=25)
+                if resp.status_code==429:
+                    print(f"Rate limited — waiting 10s")
+                    time.sleep(10)
                     resp=requests.get(url,headers=headers,timeout=25)
-                    if resp.status_code==429:
-                        print(f"Rate limited — waiting 20s")
-                        time.sleep(20)
-                        continue
-                    hits=resp.json()['hits']['hits']
-                    for h in hits:
-                        if h['_id'] not in seen_ids:
-                            h['_deal_type']=q['type']
-                            all_hits.append(h)
-                            seen_ids.add(h['_id'])
-                    if len(hits)<100: break
-                    break
-                except Exception as e:
-                    print(f"Query error attempt {attempt+1}: {e}")
-                    time.sleep(5)
-        time.sleep(3)
+                hits=resp.json()['hits']['hits']
+                for h in hits:
+                    if h['_id'] not in seen_ids:
+                        h['_deal_type']=q['type']
+                        all_hits.append(h)
+                        seen_ids.add(h['_id'])
+                if len(hits)<100: break
+            except Exception as e:
+                print(f"Query error: {e}")
+                break
 
     print(f"EDGAR scan got {len(all_hits)} total hits. Processing...")
     results=[]
