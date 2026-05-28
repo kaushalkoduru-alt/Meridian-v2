@@ -32,8 +32,14 @@ def redis_get():
             timeout=10
         )
         data = r.json()
-        if data.get('result'):
-            return json.loads(data['result'])
+        result = data.get('result')
+        if not result:
+            return None
+        # Handle both string and nested object responses
+        if isinstance(result, str):
+            return json.loads(result)
+        if isinstance(result, dict) and 'value' in result:
+            return json.loads(result['value'])
         return None
     except Exception as e:
         print(f"Redis get error: {e}")
@@ -44,13 +50,10 @@ def redis_set(deals):
         return False
     try:
         payload = json.dumps(deals)
+        # Upstash REST API SET command
         r = requests.post(
-            f"{REDIS_URL}/set/{CACHE_KEY}",
-            headers={
-                "Authorization": f"Bearer {REDIS_TOKEN}",
-                "Content-Type": "application/json"
-            },
-            json={"value": payload},
+            f"{REDIS_URL}/set/{CACHE_KEY}/{requests.utils.quote(payload)}",
+            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
             timeout=15
         )
         print(f"Redis set: {r.status_code} — {len(deals)} deals saved")
