@@ -740,8 +740,19 @@ async def auto_refresh_loop():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     asyncio.create_task(auto_refresh_loop())
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Meridian started.")
+    # On startup, if cache is empty or stale, trigger immediate background fetch
+    if not is_cache_fresh(max_age_minutes=90):
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache empty or stale — triggering startup fetch.")
+        asyncio.create_task(startup_fetch())
+    else:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache fresh — skipping startup fetch.")
     yield
+
+async def startup_fetch():
+    await asyncio.sleep(3)  # Give the app 3 seconds to fully start
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, fetch_deals_from_edgar)
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Startup fetch complete.")
 
 # ─── APP & ROUTES ─────────────────────────────────────────────────────────────
 
