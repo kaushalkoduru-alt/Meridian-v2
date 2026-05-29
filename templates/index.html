@@ -1403,40 +1403,62 @@ async function loadDeals(){
 function refreshData(){
     const btn=document.getElementById('refresh-btn');
     const pw =document.getElementById('progress-wrap');
-    const pb =document.getElementById('progress-bar');
     const pt =document.getElementById('progress-text');
     const pc =document.getElementById('progress-count');
     const pd =document.getElementById('progress-deals');
 
     if(btn.disabled) return;
     btn.disabled=true; btn.textContent='Scanning...';
-    pw.classList.add('active'); pb.style.width='2%';
-    pt.textContent='Starting SEC EDGAR scan...';
+    pw.classList.add('active');
+    pt.textContent='SEC EDGAR scan running';
     pc.textContent='';
-    pd.textContent='Scanning takes 5 to 8 minutes. Deals appear as they are found.';
+
+    const pbBg = document.getElementById('progress-bar').parentElement;
+    pbBg.innerHTML = '';
+    const blockBar = document.createElement('div');
+    blockBar.id = 'block-bar';
+    blockBar.style.cssText = 'display:flex;gap:2px;margin-bottom:0.35rem;';
+    const TOTAL_BLOCKS = 40;
+    for(let i=0;i<TOTAL_BLOCKS;i++){
+        const b = document.createElement('div');
+        b.style.cssText = 'width:8px;height:14px;border-radius:1px;background:#0f1f14;transition:background 0.3s;flex-shrink:0;';
+        blockBar.appendChild(b);
+    }
+    pbBg.appendChild(blockBar);
+    pd.textContent = '0 deals found. Scan takes 5 to 8 minutes.';
 
     let done = false;
-    let currentDeals = allDeals.length;
+    let currentDeals = 0;
+    const targetDeals = 50;
 
-    const startTime = Date.now();
-    const expectedDuration = 360000;
-    const progressInterval = setInterval(()=>{
-        if(done) return;
-        const elapsed = Date.now() - startTime;
-        const pct = Math.min(90, 2 + (elapsed / expectedDuration) * 88);
-        pb.style.width = pct + '%';
-    }, 2000);
+    function updateBlocks(count){
+        const blocks = blockBar.querySelectorAll('div');
+        const filled = Math.floor((count / targetDeals) * TOTAL_BLOCKS);
+        blocks.forEach((b,i)=>{
+            if(i < filled){
+                b.style.background = '#5a9e6a';
+                b.style.animation = '';
+            } else if(i === filled && count > 0){
+                b.style.background = '#4a9e8a';
+                b.style.animation = 'blink 1s infinite';
+            } else {
+                b.style.background = '#0f1f14';
+                b.style.animation = '';
+            }
+        });
+    }
 
     const dealPollInterval = setInterval(async()=>{
         if(done) return;
         try{
             const d = await fetch('/api/deals').then(r=>r.json());
-            if(d.deals && d.deals.length > currentDeals){
+            if(d.deals && d.deals.length !== currentDeals){
                 currentDeals = d.deals.length;
                 allDeals = d.deals;
                 renderDeals(allDeals);
                 buildTicker();
-                pd.textContent = currentDeals + ' deals found so far. Scan still running...';
+                updateBlocks(currentDeals);
+                pd.textContent = currentDeals + ' deals found. Scan still running...';
             }
         }catch(e){}
     }, 15000);
@@ -1445,26 +1467,26 @@ function refreshData(){
         if(done) return;
         try{
             const s = await fetch('/api/scan-status').then(r=>r.json());
-            if(!s.running){
-                finish();
-            }
+            if(!s.running) finish();
         }catch(e){}
     }, 20000);
 
     function finish(){
         if(done) return;
         done = true;
-        clearInterval(progressInterval);
         clearInterval(dealPollInterval);
         clearInterval(statusPollInterval);
         fetch('/api/deals').then(r=>r.json()).then(d=>{
             allDeals = d.deals||[];
+            currentDeals = allDeals.length;
             renderDeals(allDeals);
             buildTicker();
             updateLandingStats();
-            pb.style.width='100%';
+            blockBar.querySelectorAll('div').forEach(b=>{
+                b.style.background='#5a9e6a';
+                b.style.animation='';
+            });
             pt.textContent='Scan complete';
-            pc.textContent='';
             pd.textContent=allDeals.length+' deals loaded';
             btn.disabled=false; btn.textContent='Refresh Data';
             setTimeout(()=>pw.classList.remove('active'),4000);
@@ -1475,10 +1497,7 @@ function refreshData(){
     }
 
     fetch('/api/trigger-scan', {method:'POST'}).catch(()=>{});
-
-    setTimeout(()=>{
-        if(!done) finish();
-    }, 900000);
+    setTimeout(()=>{ if(!done) finish(); }, 900000);
 }
 
 buildTicker();
