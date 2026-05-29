@@ -509,7 +509,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="arb-grid">
         <div class="arb-card">
           <div class="arb-card-title">The Setup</div>
-          <div class="arb-card-body">When Company A announces it will acquire Company B for <b>$50 per share</b>, Company B's stock immediately jumps — but rarely all the way to $50. It might trade at <b>$48.50</b>. That $1.50 gap is the merger arbitrage spread.</div>
+          <div class="arb-card-body">When Company A announces it will acquire Company B for <b>$50 per share</b>, Company B's stock immediately jumps, but rarely all the way to $50. It might trade at <b>$48.50</b>. That $1.50 gap is the merger arbitrage spread.</div>
         </div>
         <div class="arb-card">
           <div class="arb-card-title">The Trade</div>
@@ -517,12 +517,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         </div>
         <div class="arb-card">
           <div class="arb-card-title">The Risk</div>
-          <div class="arb-card-body">If the deal breaks — blocked by regulators, financing falls through, or the buyer walks — the stock crashes back to its pre-announcement price. That's why <b>predicting deal outcomes</b> is the entire game. That's what Meridian does.</div>
+          <div class="arb-card-body">If the deal breaks, blocked by regulators, financing falls through, or the buyer walks, the stock crashes back to its pre-announcement price. That's why <b>predicting deal outcomes</b> is the entire game. That's what Meridian does.</div>
         </div>
       </div>
       <div class="arb-example">
         <div class="arb-example-label">◈ A Real Example · How to Read the Dashboard</div>
-        <div class="arb-example-text">A deal shows <b>Spread: +4.2%</b> and <b>V3 Risk: Very Low</b>. That means the stock is trading 4.2% below the deal price. If the deal closes — which Meridian's model gives high confidence — you pocket that 4.2% return in roughly 6 months. Annualized, that's over 8%. With a break price of $32.10 shown below, you also know exactly where the stock falls if the deal breaks before risking a single dollar.</div>
+        <div class="arb-example-text">A deal shows <b>Spread: +4.2%</b> and <b>V3 Risk: Very Low</b>. That means the stock is trading 4.2% below the deal price. If the deal closes, which Meridian's model gives high confidence, you pocket that 4.2% return in roughly 6 months. Annualized, that's over 8%. With a break price of $32.10 shown below, you also know exactly where the stock falls if the deal breaks before risking a single dollar.</div>
       </div>
     </div>
   </div>
@@ -568,7 +568,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="how-card">
         <div class="how-n">02</div>
         <div class="how-t">6-Factor V3 Scoring</div>
-        <div class="how-d">Spread quality, deal type, time pending, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use — not a black box.</div>
+        <div class="how-d">Spread quality, deal type, time pending, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use. No black box.</div>
       </div>
       <div class="how-card">
         <div class="how-n">03</div>
@@ -770,11 +770,11 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="base-rate-item"><div class="base-rate-val">100%</div><div class="base-rate-lbl">Very Low + Low Risk Close Rate</div></div>
       <div class="base-rate-item"><div class="base-rate-val">+27pts</div><div class="base-rate-lbl">Lift Over Base Rate</div></div>
     </div>
-    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low and Low Risk buckets combined showed a 0% break rate across 116 historical deals — 27 percentage points above the market baseline. These numbers reflect backtesting on historical data and do not guarantee future performance.</div>
+    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low and Low Risk buckets combined showed a 0% break rate across 116 historical deals, which is 27 percentage points above the market baseline These numbers reflect backtesting on historical data and do not guarantee future performance.</div>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight — Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates · 159 Historical Deals · Primary Classification Rule</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The most important discovery in building V3: spread range alone predicts deal outcomes with remarkable accuracy. Below 8%, no deals in our 159-deal dataset broke. Above 12%, 87% broke. These empirical rates form the primary classification rule — the score is a secondary tiebreaker.</p>
+    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight: Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates · 159 Historical Deals · Primary Classification Rule</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The most important discovery in building V3: spread range alone predicts deal outcomes with remarkable accuracy. Below 8%, no deals in our 159-deal dataset broke. Above 12%, 87% broke. These historical rates form the primary classification rule and the score is a secondary tiebreaker.</p>
     <table class="spread-rules">
       <thead><tr><th>Spread Range</th><th>Deals</th><th>Broken</th><th class="r">Break Rate</th><th class="r">V3 Classification</th></tr></thead>
       <tbody>
@@ -854,7 +854,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <tr><td>ACI</td><td>15.0%</td><td>52</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.2%</td><td class="correct-no">✗</td></tr>
       </tbody>
     </table>
-    <p class="factor-note" style="margin-top:1rem;">The V3 model's primary limitation is the same as every arb model — it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close after 18-24 months. ATVI and ACI are the canonical examples. Both were correctly identified as High Risk. Both closed. Both still returned positive annualized returns to investors who held through the uncertainty. The model identifies risk — it does not predict every outcome.</p>
+    <p class="factor-note" style="margin-top:1rem;">The V3 model's primary limitation is the same as every arb model — it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close after 18-24 months. ATVI and ACI are the best examples. Both were correctly identified as High Risk. Both closed. Both still returned positive annualized returns to investors who held through the uncertainty. The model identifies risk — it does not predict every outcome.</p>
   </div>
   <footer style="margin-top:2rem;">
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
@@ -985,7 +985,7 @@ function getRiskFactors(d){
     const f=[];
     if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. In our 159-deal backtest, 87% of deals with spreads above 12% broke. The market is pricing in near-certain deal failure.`});
     if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the gray zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
-    if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread — stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
+    if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread: stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
     if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
     if(d.days_old>270)            f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
     if(d.deal_type==='Cash + Stock') f.push({l:'md',t:"Mixed consideration deals add complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk beyond the deal itself."});
@@ -1103,7 +1103,7 @@ async function renderAnalysis(deal){
         <div class="acq-cell highlight">
             <div class="acq-label">Deal Premium</div>
             <div class="acq-value" style="color:${premium&&premium>=25?'var(--green)':premium&&premium>=10?'var(--teal)':'var(--muted)'}">${premium!==null?'+'+premium+'%':'N/A'}</div>
-            <div class="acq-sub">Premium paid over pre-announcement price of ${bp?'$'+bp.toFixed(2):'N/A'}. ${premium&&premium>=35?'Very high premium signals strong acquirer conviction.':premium&&premium>=20?'Healthy premium, acquirer committed.':premium!==null?'Modest premium — acquirer can walk more easily.':'Break price unavailable for premium calculation.'}</div>
+            <div class="acq-sub">Premium paid over pre-announcement price of ${bp?'$'+bp.toFixed(2):'N/A'}. ${premium&&premium>=35?'Very high premium signals strong acquirer conviction.':premium&&premium>=20?'Healthy premium, acquirer committed.':premium!==null?'Modest premium, acquirer can walk more easily.':'Break price unavailable for premium calculation.'}</div>
         </div>
         <div class="acq-cell highlight">
             <div class="acq-label">Financing Commitment</div>
