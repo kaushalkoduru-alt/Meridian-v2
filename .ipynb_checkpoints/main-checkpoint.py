@@ -69,6 +69,11 @@ def save_cache(records):
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
         clean = clean_records(df.to_dict(orient='records'))
+        # Only overwrite if new scan found more deals than current cache
+        existing = redis_get()
+        if existing and len(existing) > len(clean):
+            print(f"Keeping existing cache ({len(existing)} deals) over new scan ({len(clean)} deals).")
+            return
         if len(clean) >= 3:
             redis_set(clean)
             try:
