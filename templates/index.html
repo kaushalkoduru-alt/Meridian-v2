@@ -547,7 +547,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <div class="s-range">Medium</div>
         <div class="s-name">Spread 8–12% · Score 60+</div>
         <div class="s-stat">44% break rate · 9 historical deals</div>
-        <div class="s-desc">Gray zone. Market skepticism is meaningful. Size positions carefully and monitor spread direction for signals of deterioration.</div>
+        <div class="s-desc">Uncertain Zone. Market skepticism is meaningful. Size positions carefully and monitor spread direction for signals of deterioration.</div>
       </div>
       <div class="s-card hi">
         <div class="s-range">High</div>
@@ -789,8 +789,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </table>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Six-Factor Base Score</div><div class="meth-section-weight">Base 50 · Normalized to 0–100 · Used as Secondary Tiebreaker in 8–12% Gray Zone</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The V3 score starts at 50 and is adjusted by six factors. For deals under 8% spread, the score separates Very Low from Low risk. For deals in the 8-12% gray zone, score above 60 gives Medium, below 60 gives High. The score alone produced 88.7% accuracy. Combined with spread rules it reaches 93.7%.</p>
+    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Six-Factor Base Score</div><div class="meth-section-weight">Base 50 · Normalized to 0–100 · Used as Secondary Tiebreaker in 8–12% Uncertain Zone</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The V3 score starts at 50 and is adjusted by six factors. For deals under 8% spread, the score separates Very Low from Low risk. For deals in the 8-12% Uncertain Zone, score above 60 gives Medium, below 60 gives High. The score alone produced 88.7% accuracy. Combined with spread rules it reaches 93.7%.</p>
     <table class="factor-table">
       <thead><tr><th>Factor</th><th>Condition</th><th>Signal</th><th class="r">Adjustment</th></tr></thead>
       <tbody>
@@ -833,7 +833,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="threshold-grid">
       <div class="threshold-cell vl"><div class="threshold-range">Very Low</div><div class="threshold-name">Spread under 8% · Score 75+</div><div class="threshold-desc">0% break rate across 80 historical deals. Maximum conviction bucket.</div></div>
       <div class="threshold-cell lo"><div class="threshold-range">Low</div><div class="threshold-name">Spread under 8% · Score 55–74</div><div class="threshold-desc">0% break rate across 36 historical deals. Minor score uncertainty.</div></div>
-      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 60+</div><div class="threshold-desc">44% break rate. Gray zone — monitor spread direction carefully.</div></div>
+      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 60+</div><div class="threshold-desc">44% break rate. Uncertain Zone — monitor spread direction carefully.</div></div>
       <div class="threshold-cell hi"><div class="threshold-range">High</div><div class="threshold-name">Spread 12%+ · or 8–12% Score below 60</div><div class="threshold-desc">82% break rate. Market pricing in near-certain failure.</div></div>
     </div>
   </div>
@@ -984,7 +984,7 @@ function finDesc(sig){
 function getRiskFactors(d){
     const f=[];
     if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. In our 159-deal backtest, 87% of deals with spreads above 12% broke. The market is pricing in near-certain deal failure.`});
-    if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the gray zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
+    if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the Uncertain Zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
     if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread: stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
     if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
     if(d.days_old>270)            f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
@@ -1014,13 +1014,13 @@ function getScoreBreakdown(d){
     else if(d.days_old<500) ts=60;
     else                    ts=40;
     const finScore=d.financing_signal==='committed'?95:d.financing_signal==='confident'?65:d.financing_signal==='contingent'?20:50;
-    const spreadLabel=d.sp_pct<8?'under 8% — 0% historical break rate':d.sp_pct<12?'8-12% gray zone — 36% break rate':'above 12% — 87%+ break rate';
+    const spreadLabel=d.sp_pct<8?'under 8% — 0% historical break rate':d.sp_pct<12?'8-12% Uncertain Zone — 36% break rate':'above 12% — 87%+ break rate';
     return [
         {label:'Spread Quality',   score:sq,      color:getScoreColor(sq),      desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
         {label:'Deal Structure',   score:ds,      color:getScoreColor(ds),      desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
         {label:'Time Pending',     score:ts,      color:getScoreColor(ts),      desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
         {label:'Financing Signal', score:finScore,color:getScoreColor(finScore),desc:`${finLabel(d.financing_signal)} — ${finScore>=80?'strong positive signal, financing secured':finScore>=60?'mild positive signal':finScore>=40?'no clear signal detected':'negative signal, deal contingent on financing'}`},
-        {label:'V3 Overall Score', score:d.score, color:getScoreColor(d.score), desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% gray zone`},
+        {label:'V3 Overall Score', score:d.score, color:getScoreColor(d.score), desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% Uncertain Zone`},
     ];
 }
 
@@ -1411,81 +1411,74 @@ function refreshData(){
     if(btn.disabled) return;
     btn.disabled=true; btn.textContent='Scanning...';
     pw.classList.add('active'); pb.style.width='2%';
-    pt.textContent='Starting background scan...';
+    pt.textContent='Starting SEC EDGAR scan...';
     pc.textContent='';
-    pd.textContent='Scan runs in background · deals appear as they are found · takes 5-8 minutes';
+    pd.textContent='Scanning takes 5 to 8 minutes. Deals appear as they are found.';
 
     let done = false;
-    let es = null;
+    let currentDeals = allDeals.length;
 
-    function finish(deals){
+    const startTime = Date.now();
+    const expectedDuration = 360000;
+    const progressInterval = setInterval(()=>{
+        if(done) return;
+        const elapsed = Date.now() - startTime;
+        const pct = Math.min(90, 2 + (elapsed / expectedDuration) * 88);
+        pb.style.width = pct + '%';
+    }, 2000);
+
+    const dealPollInterval = setInterval(async()=>{
+        if(done) return;
+        try{
+            const d = await fetch('/api/deals').then(r=>r.json());
+            if(d.deals && d.deals.length > currentDeals){
+                currentDeals = d.deals.length;
+                allDeals = d.deals;
+                renderDeals(allDeals);
+                buildTicker();
+                pd.textContent = currentDeals + ' deals found so far. Scan still running...';
+            }
+        }catch(e){}
+    }, 15000);
+
+    const statusPollInterval = setInterval(async()=>{
+        if(done) return;
+        try{
+            const s = await fetch('/api/scan-status').then(r=>r.json());
+            if(!s.running){
+                finish();
+            }
+        }catch(e){}
+    }, 20000);
+
+    function finish(){
         if(done) return;
         done = true;
-        if(es){ try{ es.close(); }catch(e){} }
-        allDeals = deals||[];
-        renderDeals(allDeals);
-        buildTicker(); updateLandingStats();
-        pb.style.width='100%';
-        pt.textContent='Scan complete';
-        pc.textContent='';
-        pd.textContent=allDeals.length+' deals loaded';
-        btn.disabled=false; btn.textContent='Refresh Data';
-        setTimeout(()=>pw.classList.remove('active'),4000);
+        clearInterval(progressInterval);
+        clearInterval(dealPollInterval);
+        clearInterval(statusPollInterval);
+        fetch('/api/deals').then(r=>r.json()).then(d=>{
+            allDeals = d.deals||[];
+            renderDeals(allDeals);
+            buildTicker();
+            updateLandingStats();
+            pb.style.width='100%';
+            pt.textContent='Scan complete';
+            pc.textContent='';
+            pd.textContent=allDeals.length+' deals loaded';
+            btn.disabled=false; btn.textContent='Refresh Data';
+            setTimeout(()=>pw.classList.remove('active'),4000);
+        }).catch(()=>{
+            btn.disabled=false; btn.textContent='Refresh Data';
+            pw.classList.remove('active');
+        });
     }
 
-    es = new EventSource('/api/refresh-stream');
+    fetch('/api/trigger-scan', {method:'POST'}).catch(()=>{});
 
-    es.onmessage=function(e){
-        try{
-            const d=JSON.parse(e.data);
-            if(d.done){
-                finish(d.deals||[]);
-                return;
-            }
-            // Update progress bar and deal count live
-            const pct = Math.min(90, (d.deals_found / 50) * 100);
-            pb.style.width = Math.max(5, pct)+'%';
-            pt.textContent = 'Scanning SEC EDGAR — running in background...';
-            pd.textContent = d.deals_found+' deals found so far · full scan takes 5-8 minutes';
-            // Pull latest deals from Redis every update
-            if(d.deals_found > 0){
-                fetch('/api/deals').then(r=>r.json()).then(data=>{
-                    if(data.deals && data.deals.length > allDeals.length){
-                        allDeals = data.deals;
-                        renderDeals(allDeals);
-                        buildTicker();
-                        pd.textContent = allDeals.length+' deals loaded so far · scan still running...';
-                    }
-                }).catch(()=>{});
-            }
-        }catch(err){}
-    };
-
-    es.onerror=function(){
-        if(done) return;
-        try{ es.close(); }catch(e){}
-        // SSE died but scan is still running on server — poll every 15 seconds
-        pt.textContent = 'Connected to background scan...';
-        pd.textContent = 'Checking for new deals every 15 seconds';
-        const poll = setInterval(async()=>{
-            try{
-                const [dealsRes, statusRes] = await Promise.all([
-                    fetch('/api/deals').then(r=>r.json()),
-                    fetch('/api/scan-status').then(r=>r.json()).catch(()=>({running:true}))
-                ]);
-                if(dealsRes.deals && dealsRes.deals.length > 0){
-                    allDeals = dealsRes.deals;
-                    renderDeals(allDeals);
-                    buildTicker();
-                    pd.textContent = allDeals.length+' deals loaded · '+(statusRes.running?'scan still running...':'scan complete');
-                }
-                if(!statusRes.running){
-                    clearInterval(poll);
-                    finish(dealsRes.deals||[]);
-                }
-            }catch(e){}
-        }, 15000);
-    };
+    setTimeout(()=>{
+        if(!done) finish();
+    }, 900000);
 }
 
 buildTicker();

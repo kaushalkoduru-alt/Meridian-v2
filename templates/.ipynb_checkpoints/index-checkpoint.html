@@ -509,7 +509,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="arb-grid">
         <div class="arb-card">
           <div class="arb-card-title">The Setup</div>
-          <div class="arb-card-body">When Company A announces it will acquire Company B for <b>$50 per share</b>, Company B's stock immediately jumps — but rarely all the way to $50. It might trade at <b>$48.50</b>. That $1.50 gap is the merger arbitrage spread.</div>
+          <div class="arb-card-body">When Company A announces it will acquire Company B for <b>$50 per share</b>, Company B's stock immediately jumps, but rarely all the way to $50. It might trade at <b>$48.50</b>. That $1.50 gap is the merger arbitrage spread.</div>
         </div>
         <div class="arb-card">
           <div class="arb-card-title">The Trade</div>
@@ -517,12 +517,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         </div>
         <div class="arb-card">
           <div class="arb-card-title">The Risk</div>
-          <div class="arb-card-body">If the deal breaks — blocked by regulators, financing falls through, or the buyer walks — the stock crashes back to its pre-announcement price. That's why <b>predicting deal outcomes</b> is the entire game. That's what Meridian does.</div>
+          <div class="arb-card-body">If the deal breaks, blocked by regulators, financing falls through, or the buyer walks, the stock crashes back to its pre-announcement price. That's why <b>predicting deal outcomes</b> is the entire game. That's what Meridian does.</div>
         </div>
       </div>
       <div class="arb-example">
         <div class="arb-example-label">◈ A Real Example · How to Read the Dashboard</div>
-        <div class="arb-example-text">A deal shows <b>Spread: +4.2%</b> and <b>V3 Risk: Very Low</b>. That means the stock is trading 4.2% below the deal price. If the deal closes — which Meridian's model gives high confidence — you pocket that 4.2% return in roughly 6 months. Annualized, that's over 8%. With a break price of $32.10 shown below, you also know exactly where the stock falls if the deal breaks before risking a single dollar.</div>
+        <div class="arb-example-text">A deal shows <b>Spread: +4.2%</b> and <b>V3 Risk: Very Low</b>. That means the stock is trading 4.2% below the deal price. If the deal closes, which Meridian's model gives high confidence, you pocket that 4.2% return in roughly 6 months. Annualized, that's over 8%. With a break price of $32.10 shown below, you also know exactly where the stock falls if the deal breaks before risking a single dollar.</div>
       </div>
     </div>
   </div>
@@ -547,7 +547,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <div class="s-range">Medium</div>
         <div class="s-name">Spread 8–12% · Score 60+</div>
         <div class="s-stat">44% break rate · 9 historical deals</div>
-        <div class="s-desc">Gray zone. Market skepticism is meaningful. Size positions carefully and monitor spread direction for signals of deterioration.</div>
+        <div class="s-desc">Uncertain Zone. Market skepticism is meaningful. Size positions carefully and monitor spread direction for signals of deterioration.</div>
       </div>
       <div class="s-card hi">
         <div class="s-range">High</div>
@@ -568,7 +568,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="how-card">
         <div class="how-n">02</div>
         <div class="how-t">6-Factor V3 Scoring</div>
-        <div class="how-d">Spread quality, deal type, time pending, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use — not a black box.</div>
+        <div class="how-d">Spread quality, deal type, time pending, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use. No black box.</div>
       </div>
       <div class="how-card">
         <div class="how-n">03</div>
@@ -770,11 +770,11 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="base-rate-item"><div class="base-rate-val">100%</div><div class="base-rate-lbl">Very Low + Low Risk Close Rate</div></div>
       <div class="base-rate-item"><div class="base-rate-val">+27pts</div><div class="base-rate-lbl">Lift Over Base Rate</div></div>
     </div>
-    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low and Low Risk buckets combined showed a 0% break rate across 116 historical deals — 27 percentage points above the market baseline. These numbers reflect backtesting on historical data and do not guarantee future performance.</div>
+    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low and Low Risk buckets combined showed a 0% break rate across 116 historical deals, which is 27 percentage points above the market baseline These numbers reflect backtesting on historical data and do not guarantee future performance.</div>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight — Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates · 159 Historical Deals · Primary Classification Rule</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The most important discovery in building V3: spread range alone predicts deal outcomes with remarkable accuracy. Below 8%, no deals in our 159-deal dataset broke. Above 12%, 87% broke. These empirical rates form the primary classification rule — the score is a secondary tiebreaker.</p>
+    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight: Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates · 159 Historical Deals · Primary Classification Rule</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The most important discovery in building V3: spread range alone predicts deal outcomes with remarkable accuracy. Below 8%, no deals in our 159-deal dataset broke. Above 12%, 87% broke. These historical rates form the primary classification rule and the score is a secondary tiebreaker.</p>
     <table class="spread-rules">
       <thead><tr><th>Spread Range</th><th>Deals</th><th>Broken</th><th class="r">Break Rate</th><th class="r">V3 Classification</th></tr></thead>
       <tbody>
@@ -789,8 +789,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </table>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Six-Factor Base Score</div><div class="meth-section-weight">Base 50 · Normalized to 0–100 · Used as Secondary Tiebreaker in 8–12% Gray Zone</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The V3 score starts at 50 and is adjusted by six factors. For deals under 8% spread, the score separates Very Low from Low risk. For deals in the 8-12% gray zone, score above 60 gives Medium, below 60 gives High. The score alone produced 88.7% accuracy. Combined with spread rules it reaches 93.7%.</p>
+    <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Six-Factor Base Score</div><div class="meth-section-weight">Base 50 · Normalized to 0–100 · Used as Secondary Tiebreaker in 8–12% Uncertain Zone</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The V3 score starts at 50 and is adjusted by six factors. For deals under 8% spread, the score separates Very Low from Low risk. For deals in the 8-12% Uncertain Zone, score above 60 gives Medium, below 60 gives High. The score alone produced 88.7% accuracy. Combined with spread rules it reaches 93.7%.</p>
     <table class="factor-table">
       <thead><tr><th>Factor</th><th>Condition</th><th>Signal</th><th class="r">Adjustment</th></tr></thead>
       <tbody>
@@ -833,7 +833,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="threshold-grid">
       <div class="threshold-cell vl"><div class="threshold-range">Very Low</div><div class="threshold-name">Spread under 8% · Score 75+</div><div class="threshold-desc">0% break rate across 80 historical deals. Maximum conviction bucket.</div></div>
       <div class="threshold-cell lo"><div class="threshold-range">Low</div><div class="threshold-name">Spread under 8% · Score 55–74</div><div class="threshold-desc">0% break rate across 36 historical deals. Minor score uncertainty.</div></div>
-      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 60+</div><div class="threshold-desc">44% break rate. Gray zone — monitor spread direction carefully.</div></div>
+      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 60+</div><div class="threshold-desc">44% break rate. Uncertain Zone — monitor spread direction carefully.</div></div>
       <div class="threshold-cell hi"><div class="threshold-range">High</div><div class="threshold-name">Spread 12%+ · or 8–12% Score below 60</div><div class="threshold-desc">82% break rate. Market pricing in near-certain failure.</div></div>
     </div>
   </div>
@@ -854,7 +854,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <tr><td>ACI</td><td>15.0%</td><td>52</td><td class="outcome-broken">High</td><td class="outcome-closed">Closed</td><td class="outcome-closed">+6.2%</td><td class="correct-no">✗</td></tr>
       </tbody>
     </table>
-    <p class="factor-note" style="margin-top:1rem;">The V3 model's primary limitation is the same as every arb model — it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close after 18-24 months. ATVI and ACI are the canonical examples. Both were correctly identified as High Risk. Both closed. Both still returned positive annualized returns to investors who held through the uncertainty. The model identifies risk — it does not predict every outcome.</p>
+    <p class="factor-note" style="margin-top:1rem;">The V3 model's primary limitation is the same as every arb model — it cannot distinguish between deals that are genuinely breaking and deals facing regulatory headwinds that eventually close after 18-24 months. ATVI and ACI are the best examples. Both were correctly identified as High Risk. Both closed. Both still returned positive annualized returns to investors who held through the uncertainty. The model identifies risk — it does not predict every outcome.</p>
   </div>
   <footer style="margin-top:2rem;">
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
@@ -984,8 +984,8 @@ function finDesc(sig){
 function getRiskFactors(d){
     const f=[];
     if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. In our 159-deal backtest, 87% of deals with spreads above 12% broke. The market is pricing in near-certain deal failure.`});
-    if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the gray zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
-    if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread — stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
+    if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the Uncertain Zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
+    if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread: stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
     if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
     if(d.days_old>270)            f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
     if(d.deal_type==='Cash + Stock') f.push({l:'md',t:"Mixed consideration deals add complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk beyond the deal itself."});
@@ -1014,13 +1014,13 @@ function getScoreBreakdown(d){
     else if(d.days_old<500) ts=60;
     else                    ts=40;
     const finScore=d.financing_signal==='committed'?95:d.financing_signal==='confident'?65:d.financing_signal==='contingent'?20:50;
-    const spreadLabel=d.sp_pct<8?'under 8% — 0% historical break rate':d.sp_pct<12?'8-12% gray zone — 36% break rate':'above 12% — 87%+ break rate';
+    const spreadLabel=d.sp_pct<8?'under 8% — 0% historical break rate':d.sp_pct<12?'8-12% Uncertain Zone — 36% break rate':'above 12% — 87%+ break rate';
     return [
         {label:'Spread Quality',   score:sq,      color:getScoreColor(sq),      desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
         {label:'Deal Structure',   score:ds,      color:getScoreColor(ds),      desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
         {label:'Time Pending',     score:ts,      color:getScoreColor(ts),      desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
         {label:'Financing Signal', score:finScore,color:getScoreColor(finScore),desc:`${finLabel(d.financing_signal)} — ${finScore>=80?'strong positive signal, financing secured':finScore>=60?'mild positive signal':finScore>=40?'no clear signal detected':'negative signal, deal contingent on financing'}`},
-        {label:'V3 Overall Score', score:d.score, color:getScoreColor(d.score), desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% gray zone`},
+        {label:'V3 Overall Score', score:d.score, color:getScoreColor(d.score), desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% Uncertain Zone`},
     ];
 }
 
@@ -1103,7 +1103,7 @@ async function renderAnalysis(deal){
         <div class="acq-cell highlight">
             <div class="acq-label">Deal Premium</div>
             <div class="acq-value" style="color:${premium&&premium>=25?'var(--green)':premium&&premium>=10?'var(--teal)':'var(--muted)'}">${premium!==null?'+'+premium+'%':'N/A'}</div>
-            <div class="acq-sub">Premium paid over pre-announcement price of ${bp?'$'+bp.toFixed(2):'N/A'}. ${premium&&premium>=35?'Very high premium signals strong acquirer conviction.':premium&&premium>=20?'Healthy premium, acquirer committed.':premium!==null?'Modest premium — acquirer can walk more easily.':'Break price unavailable for premium calculation.'}</div>
+            <div class="acq-sub">Premium paid over pre-announcement price of ${bp?'$'+bp.toFixed(2):'N/A'}. ${premium&&premium>=35?'Very high premium signals strong acquirer conviction.':premium&&premium>=20?'Healthy premium, acquirer committed.':premium!==null?'Modest premium, acquirer can walk more easily.':'Break price unavailable for premium calculation.'}</div>
         </div>
         <div class="acq-cell highlight">
             <div class="acq-label">Financing Commitment</div>
@@ -1411,81 +1411,74 @@ function refreshData(){
     if(btn.disabled) return;
     btn.disabled=true; btn.textContent='Scanning...';
     pw.classList.add('active'); pb.style.width='2%';
-    pt.textContent='Starting background scan...';
+    pt.textContent='Starting SEC EDGAR scan...';
     pc.textContent='';
-    pd.textContent='Scan runs in background · deals appear as they are found · takes 5-8 minutes';
+    pd.textContent='Scanning takes 5 to 8 minutes. Deals appear as they are found.';
 
     let done = false;
-    let es = null;
+    let currentDeals = allDeals.length;
 
-    function finish(deals){
+    const startTime = Date.now();
+    const expectedDuration = 360000;
+    const progressInterval = setInterval(()=>{
+        if(done) return;
+        const elapsed = Date.now() - startTime;
+        const pct = Math.min(90, 2 + (elapsed / expectedDuration) * 88);
+        pb.style.width = pct + '%';
+    }, 2000);
+
+    const dealPollInterval = setInterval(async()=>{
+        if(done) return;
+        try{
+            const d = await fetch('/api/deals').then(r=>r.json());
+            if(d.deals && d.deals.length > currentDeals){
+                currentDeals = d.deals.length;
+                allDeals = d.deals;
+                renderDeals(allDeals);
+                buildTicker();
+                pd.textContent = currentDeals + ' deals found so far. Scan still running...';
+            }
+        }catch(e){}
+    }, 15000);
+
+    const statusPollInterval = setInterval(async()=>{
+        if(done) return;
+        try{
+            const s = await fetch('/api/scan-status').then(r=>r.json());
+            if(!s.running){
+                finish();
+            }
+        }catch(e){}
+    }, 20000);
+
+    function finish(){
         if(done) return;
         done = true;
-        if(es){ try{ es.close(); }catch(e){} }
-        allDeals = deals||[];
-        renderDeals(allDeals);
-        buildTicker(); updateLandingStats();
-        pb.style.width='100%';
-        pt.textContent='Scan complete';
-        pc.textContent='';
-        pd.textContent=allDeals.length+' deals loaded';
-        btn.disabled=false; btn.textContent='Refresh Data';
-        setTimeout(()=>pw.classList.remove('active'),4000);
+        clearInterval(progressInterval);
+        clearInterval(dealPollInterval);
+        clearInterval(statusPollInterval);
+        fetch('/api/deals').then(r=>r.json()).then(d=>{
+            allDeals = d.deals||[];
+            renderDeals(allDeals);
+            buildTicker();
+            updateLandingStats();
+            pb.style.width='100%';
+            pt.textContent='Scan complete';
+            pc.textContent='';
+            pd.textContent=allDeals.length+' deals loaded';
+            btn.disabled=false; btn.textContent='Refresh Data';
+            setTimeout(()=>pw.classList.remove('active'),4000);
+        }).catch(()=>{
+            btn.disabled=false; btn.textContent='Refresh Data';
+            pw.classList.remove('active');
+        });
     }
 
-    es = new EventSource('/api/refresh-stream');
+    fetch('/api/trigger-scan', {method:'POST'}).catch(()=>{});
 
-    es.onmessage=function(e){
-        try{
-            const d=JSON.parse(e.data);
-            if(d.done){
-                finish(d.deals||[]);
-                return;
-            }
-            // Update progress bar and deal count live
-            const pct = Math.min(90, (d.deals_found / 50) * 100);
-            pb.style.width = Math.max(5, pct)+'%';
-            pt.textContent = 'Scanning SEC EDGAR — running in background...';
-            pd.textContent = d.deals_found+' deals found so far · full scan takes 5-8 minutes';
-            // Pull latest deals from Redis every update
-            if(d.deals_found > 0){
-                fetch('/api/deals').then(r=>r.json()).then(data=>{
-                    if(data.deals && data.deals.length > allDeals.length){
-                        allDeals = data.deals;
-                        renderDeals(allDeals);
-                        buildTicker();
-                        pd.textContent = allDeals.length+' deals loaded so far · scan still running...';
-                    }
-                }).catch(()=>{});
-            }
-        }catch(err){}
-    };
-
-    es.onerror=function(){
-        if(done) return;
-        try{ es.close(); }catch(e){}
-        // SSE died but scan is still running on server — poll every 15 seconds
-        pt.textContent = 'Connected to background scan...';
-        pd.textContent = 'Checking for new deals every 15 seconds';
-        const poll = setInterval(async()=>{
-            try{
-                const [dealsRes, statusRes] = await Promise.all([
-                    fetch('/api/deals').then(r=>r.json()),
-                    fetch('/api/scan-status').then(r=>r.json()).catch(()=>({running:true}))
-                ]);
-                if(dealsRes.deals && dealsRes.deals.length > 0){
-                    allDeals = dealsRes.deals;
-                    renderDeals(allDeals);
-                    buildTicker();
-                    pd.textContent = allDeals.length+' deals loaded · '+(statusRes.running?'scan still running...':'scan complete');
-                }
-                if(!statusRes.running){
-                    clearInterval(poll);
-                    finish(dealsRes.deals||[]);
-                }
-            }catch(e){}
-        }, 15000);
-    };
+    setTimeout(()=>{
+        if(!done) finish();
+    }, 900000);
 }
 
 buildTicker();
