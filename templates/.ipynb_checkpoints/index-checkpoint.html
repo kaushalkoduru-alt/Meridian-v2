@@ -608,11 +608,11 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="progress-wrap" id="progress-wrap">
     <div class="progress-label">
-      <span id="progress-text">Scanning SEC EDGAR filings...</span>
-      <span id="progress-count">0 / 0</span>
+      <span id="progress-text">SEC EDGAR scan running</span>
+      <span id="progress-count"></span>
     </div>
-    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
-    <div class="progress-deals" id="progress-deals">0 candidates found</div>
+    <div id="block-bar-container" style="display:flex;gap:2px;margin:0.5rem 0;"></div>
+    <div class="progress-deals" id="progress-deals">Scanning takes 5 to 8 minutes. Please wait.</div>
   </div>
   <div class="mstrip">
     <div class="mc"><div class="mc-l">Active Deals</div><div class="mc-v" id="m-deals">--</div><div class="mc-h">tracked from SEC EDGAR</div></div>
@@ -1406,83 +1406,64 @@ function refreshData(){
     const pt =document.getElementById('progress-text');
     const pc =document.getElementById('progress-count');
     const pd =document.getElementById('progress-deals');
+    const container=document.getElementById('block-bar-container');
 
     if(btn.disabled) return;
     btn.disabled=true; btn.textContent='Scanning...';
     pw.classList.add('active');
     pt.textContent='SEC EDGAR scan running';
     pc.textContent='';
+    pd.textContent='Scanning takes 5 to 8 minutes. Please wait.';
 
-    const pbBg = document.getElementById('progress-bar').parentElement;
-    pbBg.innerHTML = '';
-    const blockBar = document.createElement('div');
-    blockBar.id = 'block-bar';
-    blockBar.style.cssText = 'display:flex;gap:2px;margin-bottom:0.35rem;';
-    const TOTAL_BLOCKS = 40;
+    // Build block bar
+    container.innerHTML='';
+    const TOTAL_BLOCKS=40;
     for(let i=0;i<TOTAL_BLOCKS;i++){
-        const b = document.createElement('div');
-        b.style.cssText = 'width:8px;height:14px;border-radius:1px;background:#0f1f14;transition:background 0.3s;flex-shrink:0;';
-        blockBar.appendChild(b);
-    }
-    pbBg.appendChild(blockBar);
-    pd.textContent = '0 deals found. Scan takes 5 to 8 minutes.';
-
-    let done = false;
-    let currentDeals = 0;
-    const targetDeals = 50;
-
-    function updateBlocks(count){
-        const blocks = blockBar.querySelectorAll('div');
-        const filled = Math.floor((count / targetDeals) * TOTAL_BLOCKS);
-        blocks.forEach((b,i)=>{
-            if(i < filled){
-                b.style.background = '#5a9e6a';
-                b.style.animation = '';
-            } else if(i === filled && count > 0){
-                b.style.background = '#4a9e8a';
-                b.style.animation = 'blink 1s infinite';
-            } else {
-                b.style.background = '#0f1f14';
-                b.style.animation = '';
-            }
-        });
+        const b=document.createElement('div');
+        b.style.cssText='width:8px;height:14px;border-radius:1px;background:#0f1f14;transition:background 0.4s;flex-shrink:0;';
+        container.appendChild(b);
     }
 
-    const dealPollInterval = setInterval(async()=>{
-        if(done) return;
-        try{
-            const d = await fetch('/api/deals').then(r=>r.json());
-            if(d.deals && d.deals.length !== currentDeals){
-                currentDeals = d.deals.length;
-                allDeals = d.deals;
-                renderDeals(allDeals);
-                buildTicker();
-                updateBlocks(currentDeals);
-                pd.textContent = currentDeals + ' deals found. Scan still running...';
-            }
-        }catch(e){}
-    }, 15000);
+    let done=false;
+    let animatedBlocks=0;
 
-    const statusPollInterval = setInterval(async()=>{
+    // Animate blocks slowly — purely cosmetic, not tied to deal count
+    const blockInterval=setInterval(()=>{
+        if(done) return;
+        if(animatedBlocks<TOTAL_BLOCKS-1){
+            const blocks=container.querySelectorAll('div');
+            if(animatedBlocks>0){
+                blocks[animatedBlocks-1].style.background='#5a9e6a';
+                blocks[animatedBlocks-1].style.animation='';
+            }
+            blocks[animatedBlocks].style.background='#4a9e8a';
+            blocks[animatedBlocks].style.animation='blink 1s infinite';
+            animatedBlocks++;
+        }
+    }, 12000); // one block every 12 seconds = ~8 minutes for full bar
+
+    // Poll scan status every 20 seconds
+    const statusPollInterval=setInterval(async()=>{
         if(done) return;
         try{
-            const s = await fetch('/api/scan-status').then(r=>r.json());
+            const s=await fetch('/api/scan-status').then(r=>r.json());
             if(!s.running) finish();
         }catch(e){}
-    }, 20000);
+    },20000);
 
     function finish(){
         if(done) return;
-        done = true;
-        clearInterval(dealPollInterval);
+        done=true;
+        clearInterval(blockInterval);
         clearInterval(statusPollInterval);
+        // Load all deals at once only after scan is fully complete
         fetch('/api/deals').then(r=>r.json()).then(d=>{
-            allDeals = d.deals||[];
-            currentDeals = allDeals.length;
+            allDeals=d.deals||[];
             renderDeals(allDeals);
             buildTicker();
             updateLandingStats();
-            blockBar.querySelectorAll('div').forEach(b=>{
+            // Fill all blocks green
+            container.querySelectorAll('div').forEach(b=>{
                 b.style.background='#5a9e6a';
                 b.style.animation='';
             });
@@ -1496,8 +1477,9 @@ function refreshData(){
         });
     }
 
-    fetch('/api/trigger-scan', {method:'POST'}).catch(()=>{});
-    setTimeout(()=>{ if(!done) finish(); }, 900000);
+    fetch('/api/trigger-scan',{method:'POST'}).catch(()=>{});
+    // Safety timeout after 15 minutes
+    setTimeout(()=>{ if(!done) finish(); },900000);
 }
 
 buildTicker();
