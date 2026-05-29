@@ -1415,7 +1415,6 @@ function refreshData(){
     pc.textContent='';
     pd.textContent='Scanning takes 5 to 8 minutes. Please wait.';
 
-    // Build block bar
     container.innerHTML='';
     const TOTAL_BLOCKS=40;
     for(let i=0;i<TOTAL_BLOCKS;i++){
@@ -1426,8 +1425,9 @@ function refreshData(){
 
     let done=false;
     let animatedBlocks=0;
+    let lastDealCount=0;
+    let staleSince=null;
 
-    // Animate blocks slowly — purely cosmetic, not tied to deal count
     const blockInterval=setInterval(()=>{
         if(done) return;
         if(animatedBlocks<TOTAL_BLOCKS-1){
@@ -1440,46 +1440,66 @@ function refreshData(){
             blocks[animatedBlocks].style.animation='blink 1s infinite';
             animatedBlocks++;
         }
-    }, 12000); // one block every 12 seconds = ~8 minutes for full bar
+    },12000);
 
-    // Poll scan status every 20 seconds
-    const statusPollInterval=setInterval(async()=>{
+    // Poll every 10 seconds — check both status AND deal count
+    const pollInterval=setInterval(async()=>{
         if(done) return;
         try{
-            const s=await fetch('/api/scan-status').then(r=>r.json());
-            if(!s.running) finish();
-        }catch(e){}
-    },20000);
+            const [statusRes, dealsRes]=await Promise.all([
+                fetch('/api/scan-status').then(r=>r.json()).catch(()=>({running:true})),
+                fetch('/api/deals').then(r=>r.json()).catch(()=>({deals:[]}))
+            ]);
 
-    function finish(){
+            const currentCount=dealsRes.deals?.length||0;
+
+            // Scan finished — load deals
+            if(!statusRes.running){
+                finish(dealsRes.deals||[]);
+                return;
+            }
+
+            // Deal count stopped growing for 3 minutes — scan probably finished
+            if(currentCount>0 && currentCount===lastDealCount){
+                if(!staleSince) staleSince=Date.now();
+                if(Date.now()-staleSince>180000){
+                    finish(dealsRes.deals||[]);
+                    return;
+                }
+            } else {
+                staleSince=null;
+                lastDealCount=currentCount;
+            }
+
+            pd.textContent='Scan running. '+currentCount+' deals in cache so far.';
+        }catch(e){}
+    },10000);
+
+    function finish(deals){
         if(done) return;
         done=true;
         clearInterval(blockInterval);
-        clearInterval(statusPollInterval);
-        // Load all deals at once only after scan is fully complete
-        fetch('/api/deals').then(r=>r.json()).then(d=>{
-            allDeals=d.deals||[];
-            renderDeals(allDeals);
-            buildTicker();
-            updateLandingStats();
-            // Fill all blocks green
-            container.querySelectorAll('div').forEach(b=>{
-                b.style.background='#5a9e6a';
-                b.style.animation='';
-            });
-            pt.textContent='Scan complete';
-            pd.textContent=allDeals.length+' deals loaded';
-            btn.disabled=false; btn.textContent='Refresh Data';
-            setTimeout(()=>pw.classList.remove('active'),4000);
-        }).catch(()=>{
-            btn.disabled=false; btn.textContent='Refresh Data';
-            pw.classList.remove('active');
+        clearInterval(pollInterval);
+        allDeals=deals||[];
+        renderDeals(allDeals);
+        buildTicker();
+        updateLandingStats();
+        container.querySelectorAll('div').forEach(b=>{
+            b.style.background='#5a9e6a';
+            b.style.animation='';
         });
+        pt.textContent='Scan complete';
+        pd.textContent=allDeals.length+' deals loaded';
+        btn.disabled=false; btn.textContent='Refresh Data';
+        setTimeout(()=>pw.classList.remove('active'),4000);
     }
 
     fetch('/api/trigger-scan',{method:'POST'}).catch(()=>{});
-    // Safety timeout after 15 minutes
-    setTimeout(()=>{ if(!done) finish(); },900000);
+    setTimeout(()=>{
+        if(!done){
+            fetch('/api/deals').then(r=>r.json()).then(d=>finish(d.deals||[])).catch(()=>finish([]));
+        }
+    },900000);
 }
 
 buildTicker();
