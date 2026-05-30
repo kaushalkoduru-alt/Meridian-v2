@@ -35,7 +35,6 @@ def redis_get():
         result = data.get('result')
         if not result:
             return None
-        # Handle both string and nested object responses
         if isinstance(result, str):
             return json.loads(result)
         if isinstance(result, dict) and 'value' in result:
@@ -50,7 +49,6 @@ def redis_set(deals):
         return False
     try:
         payload = json.dumps(deals)
-        # Upstash REST API SET command
         r = requests.post(
             f"{REDIS_URL}/set/{CACHE_KEY}/{requests.utils.quote(payload)}",
             headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
@@ -69,7 +67,6 @@ def save_cache(records):
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
         clean = clean_records(df.to_dict(orient='records'))
-        # Only overwrite if new scan found more deals than current cache
         existing = redis_get()
         if existing and len(existing) > len(clean):
             print(f"Keeping existing cache ({len(existing)} deals) over new scan ({len(clean)} deals).")
@@ -87,12 +84,10 @@ def save_cache(records):
         print(f"save_cache error: {e}")
 
 def load_cache():
-    # Try Redis first
     deals = redis_get()
     if deals:
         print(f"Loaded {len(deals)} deals from Redis.")
         return deals
-    # Fall back to local CSV
     if os.path.exists(CACHE_FILE):
         try:
             df = pd.read_csv(CACHE_FILE)
@@ -108,7 +103,7 @@ def is_cache_fresh(max_age_minutes=50):
     if not deals:
         return False
     try:
-        cache_time = datetime.strptime(deals[0].get('fetched',''), '%Y-%m-%dT%H:%M')
+        cache_time = datetime.strptime(deals[0].get('fetched', ''), '%Y-%m-%dT%H:%M')
         age = (datetime.utcnow() - cache_time).total_seconds() / 60
         return age < max_age_minutes
     except:
@@ -239,7 +234,7 @@ COMPS_DATA = [
     {'ticker': 'HALO', 'acquirer': 'Janssen', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 228},
     {'ticker': 'IMVT', 'acquirer': 'Roche', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 153},
     {'ticker': 'AKBA', 'acquirer': 'Akebia', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 153},
-    {'ticker': 'MCRB', 'acquirer': 'Nestlé', 'deal_type': 'All Cash', 'spread_at_announce': 7.0, 'outcome': 'Closed', 'days_to_close': 184},
+    {'ticker': 'MCRB', 'acquirer': 'Nestle', 'deal_type': 'All Cash', 'spread_at_announce': 7.0, 'outcome': 'Closed', 'days_to_close': 184},
     {'ticker': 'CTIC', 'acquirer': 'Swedish Orphan', 'deal_type': 'All Cash', 'spread_at_announce': 6.0, 'outcome': 'Closed', 'days_to_close': 184},
     {'ticker': 'PNTM', 'acquirer': 'Merck', 'deal_type': 'All Cash', 'spread_at_announce': 8.0, 'outcome': 'Closed', 'days_to_close': 181},
     {'ticker': 'ALDX', 'acquirer': 'AbbVie', 'deal_type': 'All Cash', 'spread_at_announce': 9.0, 'outcome': 'Broken', 'days_to_close': 184},
@@ -357,11 +352,11 @@ def score_regulatory_complexity(reg_tags):
     if len(reg_tags) == 1 and reg_tags[0].get('agency') == 'Standard Review': return 5
     score = 0
     for tag in reg_tags:
-        agency = tag.get('agency','')
-        level  = tag.get('level','low')
+        agency = tag.get('agency', '')
+        level  = tag.get('level', 'low')
         if agency == 'HSR Filing':             score -= 3
-        elif agency == 'FTC Antitrust':        score -= 8 if level=='medium' else 15
-        elif agency == 'DOJ Antitrust':        score -= 8 if level=='medium' else 15
+        elif agency == 'FTC Antitrust':        score -= 8 if level == 'medium' else 15
+        elif agency == 'DOJ Antitrust':        score -= 8 if level == 'medium' else 15
         elif agency == 'CFIUS Review':         score -= 18
         elif agency == 'Market Concentration': score -= 10
     return max(-20, min(5, score))
@@ -572,11 +567,6 @@ def get_filing_links(cik, accession, headers):
 # ─── CORE PIPELINE ───────────────────────────────────────────────────────────
 
 def fetch_deals_from_edgar():
-    """
-    Full EDGAR scan. Runs as a background task — never inside an HTTP request.
-    Saves to Redis after every query so partial results are always available.
-    No progress callback needed since it runs independently.
-    """
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background EDGAR scan started.")
     headers={'User-Agent':'Kaushal Koduru kaushalkoduru@gmail.com'}
     all_hits=[]
@@ -588,8 +578,8 @@ def fetch_deals_from_edgar():
             try:
                 resp=requests.get(url,headers=headers,timeout=25)
                 if resp.status_code==429:
-                    print(f"Rate limited — waiting 10s")
-                    time.sleep(10)
+                    print(f"Rate limited — waiting 20s")
+                    time.sleep(20)
                     resp=requests.get(url,headers=headers,timeout=25)
                 hits=resp.json()['hits']['hits']
                 for h in hits:
@@ -666,7 +656,6 @@ def fetch_deals_from_edgar():
                 'break_downside':break_downside,'financing_signal':financing_signal,
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
-            # Save to Redis every 10 deals so results appear live
             if len(results) % 10 == 0:
                 save_cache(results)
         except: continue
@@ -699,7 +688,7 @@ def fetch_deals_from_edgar():
                     'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 })
                 seen_tickers.add(fd['ticker'])
-                print(f"✓ Fallback: {fd['ticker']} | {sp_pct:+.2f}%")
+                print(f"Fallback: {fd['ticker']} | {sp_pct:+.2f}%")
             except: continue
 
     if results:
@@ -713,11 +702,11 @@ def fetch_deals_from_edgar():
 _scan_running = False
 
 async def run_background_scan():
-    """Runs the EDGAR scan in a thread pool — never blocks the event loop."""
     global _scan_running
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, fetch_deals_from_edgar)
+        await asyncio.sleep(3)
     except Exception as e:
         print(f"Background scan error: {e}")
     finally:
@@ -725,7 +714,6 @@ async def run_background_scan():
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background scan finished.")
 
 async def auto_refresh_loop():
-    """Fires every hour. Skips if cache is fresh or scan already running."""
     while True:
         await asyncio.sleep(3600)
         global _scan_running
@@ -740,7 +728,6 @@ async def auto_refresh_loop():
         asyncio.create_task(run_background_scan())
 
 async def startup_scan():
-    """Runs once on startup if Redis cache is empty or stale."""
     global _scan_running
     await asyncio.sleep(3)
     if is_cache_fresh(90):
@@ -806,12 +793,37 @@ async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.
         }
     })
 
+@app.get("/api/track-record/chart/{ticker}")
+async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = None):
+    """
+    Returns daily close prices for a ticker and SPY from announcement date to close.
+    Used by the track record section for interactive charts.
+    """
+    try:
+        end_date = end or datetime.utcnow().strftime('%Y-%m-%d')
+        h = yf.Ticker(ticker).history(start=start, end=end_date)
+        if h.empty:
+            return JSONResponse(content={"prices": [], "spy": []})
+        spy = yf.Ticker("SPY").history(start=start, end=end_date)
+        prices = []
+        for date, row in h.iterrows():
+            prices.append({
+                "date": date.strftime('%Y-%m-%d'),
+                "close": round(float(row['Close']), 2)
+            })
+        spy_prices = []
+        for date, row in spy.iterrows():
+            spy_prices.append({
+                "date": date.strftime('%Y-%m-%d'),
+                "close": round(float(row['Close']), 2)
+            })
+        return JSONResponse(content={"prices": prices, "spy": spy_prices})
+    except Exception as e:
+        print(f"Chart error {ticker}: {e}")
+        return JSONResponse(content={"prices": [], "spy": []})
+
 @app.post("/api/trigger-scan")
 async def trigger_scan():
-    """
-    Starts a background scan and returns immediately.
-    The scan runs independently — no timeout possible.
-    """
     global _scan_running
     if _scan_running:
         deals = load_cache() or []
@@ -822,29 +834,19 @@ async def trigger_scan():
 
 @app.get("/api/refresh-stream")
 async def refresh_stream():
-    """
-    Triggers a background scan and streams progress to the browser.
-    Every 5 seconds checks Redis for new deals and sends the count.
-    Completes when scan finishes or after 15 minutes max.
-    """
     global _scan_running
     async def generate():
         global _scan_running
-        # Start the scan if not already running
         if not _scan_running:
             _scan_running = True
             asyncio.create_task(run_background_scan())
-        # Stream updates every 5 seconds
-        for tick in range(180):  # 15 minutes max
+        for tick in range(180):
             await asyncio.sleep(5)
             deals = load_cache() or []
             if not _scan_running:
-                # Scan finished
                 yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
                 return
-            # Still running — send current deal count
             yield f"data: {json.dumps({'current': tick*5, 'total': 900, 'deals_found': len(deals)})}\n\n"
-        # Timeout — return whatever we have
         deals = load_cache() or []
         yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
