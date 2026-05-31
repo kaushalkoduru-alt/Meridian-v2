@@ -1747,7 +1747,7 @@ function buildStockSVG(prices,spy,deal){
 }
 
 function buildSpreadSVG(prices,deal){
-  if(!prices||prices.length<2||!deal.spread)return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim)">Loading chart data...</div>';
+  if(!prices||prices.length<2||!deal.spread)return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim);text-align:center;padding:1rem;">Spread data unavailable.<br>Ticker delisted after deal closed.</div>';
   const W=300,H=110,PL=32,PR=8,PT=10,PB=18;
   const w=W-PL-PR,h=H-PT-PB;
   const n=prices.length;
