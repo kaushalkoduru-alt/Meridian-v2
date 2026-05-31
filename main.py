@@ -207,7 +207,6 @@ COMPS_DATA = [
     {'ticker': 'TIGR', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 18.0, 'outcome': 'Broken', 'days_to_close': 184},
     {'ticker': 'EBIX', 'acquirer': 'Fidelity', 'deal_type': 'All Cash', 'spread_at_announce': 25.0, 'outcome': 'Broken', 'days_to_close': 212},
     {'ticker': 'PNFP', 'acquirer': 'Tennessee Bank', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 182},
-    {'ticker': 'LDOS', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
     {'ticker': 'VRNT', 'acquirer': 'Cognyte', 'deal_type': 'All Cash', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 152},
     {'ticker': 'SAIL', 'acquirer': 'Broadcom', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 183},
     {'ticker': 'ATRC', 'acquirer': 'Johnson & Johnson', 'deal_type': 'All Cash', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 183},
@@ -264,12 +263,8 @@ COMPS_DATA = [
     {'ticker': 'ZNGA', 'acquirer': 'Take-Two Interactive', 'deal_type': 'Cash + Stock', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 133},
     {'ticker': 'MBWM', 'acquirer': 'Old National', 'deal_type': 'Cash + Stock', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 198},
     {'ticker': 'CLDR', 'acquirer': 'KKR + CDP', 'deal_type': 'Private Equity', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 221},
-    {'ticker': 'PEGA', 'acquirer': 'Undisclosed', 'deal_type': 'All Cash', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 184},
-    {'ticker': 'FORG2', 'acquirer': 'Francisco Partners', 'deal_type': 'Private Equity', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
-    {'ticker': 'ULTA', 'acquirer': 'Berkshire Hathaway', 'deal_type': 'Tender Offer', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 184},
     {'ticker': 'LHCG', 'acquirer': 'UnitedHealth', 'deal_type': 'Tender Offer', 'spread_at_announce': 5.0, 'outcome': 'Closed', 'days_to_close': 315},
     {'ticker': 'ATRS', 'acquirer': 'Amneal', 'deal_type': 'Tender Offer', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 123},
-    {'ticker': 'CTIC2', 'acquirer': 'Servier', 'deal_type': 'Tender Offer', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 122},
     {'ticker': 'HRMY', 'acquirer': 'Jazz Pharma', 'deal_type': 'Tender Offer', 'spread_at_announce': 3.0, 'outcome': 'Closed', 'days_to_close': 122},
     {'ticker': 'PRTO', 'acquirer': 'Novo Nordisk', 'deal_type': 'Tender Offer', 'spread_at_announce': 2.0, 'outcome': 'Closed', 'days_to_close': 122},
     {'ticker': 'BMRN', 'acquirer': 'Roche', 'deal_type': 'Tender Offer', 'spread_at_announce': 4.0, 'outcome': 'Closed', 'days_to_close': 184},
@@ -664,7 +659,7 @@ def fetch_deals_from_edgar():
                 cp=round(h['Close'].iloc[-1],2)
                 if cp<1: continue
                 dp=fd['dp']; sp_pct=round(((dp-cp)/cp)*100,2)
-                if sp_pct<-10 or sp_pct>20: continue
+                if sp_pct<-10 or sp_pct>60: continue
                 days=(datetime.today()-datetime.strptime(fd['filed'],'%Y-%m-%d')).days
                 break_price=get_break_price(fd['ticker'],fd['filed'])
                 break_downside=get_break_downside(cp,break_price)
