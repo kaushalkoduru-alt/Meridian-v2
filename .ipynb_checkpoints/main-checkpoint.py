@@ -67,10 +67,6 @@ def save_cache(records):
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
         clean = clean_records(df.to_dict(orient='records'))
-        existing = redis_get()
-        if existing and len(existing) > len(clean):
-            print(f"Keeping existing cache ({len(existing)} deals) over new scan ({len(clean)} deals).")
-            return
         if len(clean) >= 3:
             redis_set(clean)
             try:
@@ -636,7 +632,7 @@ def fetch_deals_from_edgar():
                 except: continue
             if not dp: continue
             sp_pct=((dp-cp)/cp)*100
-            if sp_pct<-10 or sp_pct>20: continue
+            if sp_pct<-10 or sp_pct>60: continue
             days=(datetime.today()-datetime.strptime(src['file_date'],'%Y-%m-%d')).days
             acquirer=KNOWN_ACQUIRERS.get(ticker,acquirer)
             break_price=get_break_price(ticker,src['file_date'])
@@ -727,6 +723,64 @@ async def auto_refresh_loop():
         _scan_running = True
         asyncio.create_task(run_background_scan())
 
+async def preload_track_record_charts():
+    TRACK_TICKERS = [
+        ('CACC','2024-01-15','2024-07-01'),
+        ('NTCT','2024-02-20','2024-06-15'),
+        ('NUAN','2021-04-12','2022-04-04'),
+        ('SGEN','2023-03-13','2023-12-14'),
+        ('CCXI','2022-08-08','2022-12-26'),
+        ('AZPN','2022-10-11','2023-05-22'),
+        ('QDEL','2022-05-27','2022-10-16'),
+        ('ONCE','2019-12-17','2020-12-17'),
+        ('ARRY','2019-06-17','2019-07-30'),
+        ('FMBI','2021-06-01','2022-02-15'),
+        ('NTRA','2023-09-11','2024-03-01'),
+        ('EPAY','2022-01-12','2022-06-06'),
+        ('GTES','2024-01-22','2024-05-18'),
+        ('PING','2022-08-03','2023-02-19'),
+        ('PCTY','2024-03-05','2024-08-03'),
+        ('COUP','2022-12-12','2023-02-27'),
+        ('SAVE','2022-07-28','2025-01-01'),
+        ('CHNG','2022-01-06','2025-01-01'),
+        ('SGFY','2022-09-05','2025-01-01'),
+        ('IRBT','2022-08-05','2025-01-01'),
+        ('ATVI','2022-01-18','2023-10-13'),
+        ('ACI','2022-10-14','2025-01-15'),
+    ]
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Preloading track record charts...")
+    for ticker, start, end in TRACK_TICKERS:
+        cache_key = f"tr_chart_{ticker}"
+        try:
+            existing = requests.get(
+                f"{REDIS_URL}/get/{cache_key}",
+                headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+                timeout=5
+            ).json()
+            if existing.get('result'):
+                print(f"  Already cached: {ticker}")
+                continue
+        except:
+            pass
+        try:
+            h = yf.Ticker(ticker).history(start=start, end=end)
+            spy = yf.Ticker("SPY").history(start=start, end=end)
+            if not h.empty:
+                prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in h.iterrows()]
+                spy_prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in spy.iterrows()]
+                payload = json.dumps({"prices": prices, "spy": spy_prices})
+                requests.post(
+                    f"{REDIS_URL}/set/{cache_key}",
+                    headers={"Authorization": f"Bearer {REDIS_TOKEN}", "Content-Type": "application/json"},
+                    json={"value": payload},
+                    timeout=10
+                )
+                print(f"  Cached: {ticker}")
+        except Exception as e:
+            print(f"  Failed {ticker}: {e}")
+        time.sleep(0.5)
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Track record charts done.")
+
 async def startup_scan():
     global _scan_running
     await asyncio.sleep(3)
@@ -741,6 +795,7 @@ async def startup_scan():
 async def lifespan(app: FastAPI):
     asyncio.create_task(auto_refresh_loop())
     asyncio.create_task(startup_scan())
+    asyncio.create_task(preload_track_record_charts())
     yield
 
 # ─── APP & ROUTES ─────────────────────────────────────────────────────────────
@@ -793,35 +848,6 @@ async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.
         }
     })
 
-@app.get("/api/track-record/chart/{ticker}")
-async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = None):
-    """
-    Returns daily close prices for a ticker and SPY from announcement date to close.
-    Used by the track record section for interactive charts.
-    """
-    try:
-        end_date = end or datetime.utcnow().strftime('%Y-%m-%d')
-        h = yf.Ticker(ticker).history(start=start, end=end_date)
-        if h.empty:
-            return JSONResponse(content={"prices": [], "spy": []})
-        spy = yf.Ticker("SPY").history(start=start, end=end_date)
-        prices = []
-        for date, row in h.iterrows():
-            prices.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "close": round(float(row['Close']), 2)
-            })
-        spy_prices = []
-        for date, row in spy.iterrows():
-            spy_prices.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "close": round(float(row['Close']), 2)
-            })
-        return JSONResponse(content={"prices": prices, "spy": spy_prices})
-    except Exception as e:
-        print(f"Chart error {ticker}: {e}")
-        return JSONResponse(content={"prices": [], "spy": []})
-
 @app.post("/api/trigger-scan")
 async def trigger_scan():
     global _scan_running
@@ -850,6 +876,38 @@ async def refresh_stream():
         deals = load_cache() or []
         yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+@app.get("/api/track-record/chart/{ticker}")
+async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = None):
+    cache_key = f"tr_chart_{ticker}"
+    try:
+        r = requests.get(
+            f"{REDIS_URL}/get/{cache_key}",
+            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+            timeout=5
+        )
+        result = r.json().get('result')
+        if result:
+            data = json.loads(result) if isinstance(result, str) else json.loads(result.get('value', '{}'))
+            if data.get('prices'):
+                return JSONResponse(content=data)
+    except:
+        pass
+    end_date = end or datetime.utcnow().strftime('%Y-%m-%d')
+    for attempt in range(3):
+        try:
+            h = yf.Ticker(ticker).history(start=start, end=end_date)
+            if h.empty:
+                time.sleep(1)
+                continue
+            spy = yf.Ticker("SPY").history(start=start, end=end_date)
+            prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in h.iterrows()]
+            spy_prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in spy.iterrows()]
+            return JSONResponse(content={"prices": prices, "spy": spy_prices})
+        except Exception as e:
+            print(f"Chart error {ticker} attempt {attempt+1}: {e}")
+            time.sleep(1)
+    return JSONResponse(content={"prices": [], "spy": []})
 
 @app.post("/api/refresh")
 async def refresh_deals():

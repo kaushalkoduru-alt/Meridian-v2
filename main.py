@@ -67,10 +67,6 @@ def save_cache(records):
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
         clean = clean_records(df.to_dict(orient='records'))
-        existing = redis_get()
-        if existing and len(existing) > len(clean):
-            print(f"Keeping existing cache ({len(existing)} deals) over new scan ({len(clean)} deals).")
-            return
         if len(clean) >= 3:
             redis_set(clean)
             try:
@@ -636,7 +632,7 @@ def fetch_deals_from_edgar():
                 except: continue
             if not dp: continue
             sp_pct=((dp-cp)/cp)*100
-            if sp_pct<-10 or sp_pct>20: continue
+            if sp_pct<-10 or sp_pct>60: continue
             days=(datetime.today()-datetime.strptime(src['file_date'],'%Y-%m-%d')).days
             acquirer=KNOWN_ACQUIRERS.get(ticker,acquirer)
             break_price=get_break_price(ticker,src['file_date'])
