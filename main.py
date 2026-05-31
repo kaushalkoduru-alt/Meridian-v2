@@ -799,6 +799,7 @@ async def startup_scan():
 async def lifespan(app: FastAPI):
     asyncio.create_task(auto_refresh_loop())
     asyncio.create_task(startup_scan())
+    asyncio.create_task(preload_track_record_charts())
     yield
 
 # ─── APP & ROUTES ─────────────────────────────────────────────────────────────
@@ -850,35 +851,6 @@ async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.
             "avg_days":   round(sum(c['days_to_close'] for c in comps)/len(comps)) if comps else 0,
         }
     })
-
-@app.get("/api/track-record/chart/{ticker}")
-async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = None):
-    """
-    Returns daily close prices for a ticker and SPY from announcement date to close.
-    Used by the track record section for interactive charts.
-    """
-    try:
-        end_date = end or datetime.utcnow().strftime('%Y-%m-%d')
-        h = yf.Ticker(ticker).history(start=start, end=end_date)
-        if h.empty:
-            return JSONResponse(content={"prices": [], "spy": []})
-        spy = yf.Ticker("SPY").history(start=start, end=end_date)
-        prices = []
-        for date, row in h.iterrows():
-            prices.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "close": round(float(row['Close']), 2)
-            })
-        spy_prices = []
-        for date, row in spy.iterrows():
-            spy_prices.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "close": round(float(row['Close']), 2)
-            })
-        return JSONResponse(content={"prices": prices, "spy": spy_prices})
-    except Exception as e:
-        print(f"Chart error {ticker}: {e}")
-        return JSONResponse(content={"prices": [], "spy": []})
 
 @app.post("/api/trigger-scan")
 async def trigger_scan():
