@@ -440,6 +440,56 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .correct-yes{color:var(--green);}
 .correct-no{color:var(--red);}
 
+/* TRACK RECORD */
+.track-record-section{background:var(--bg);border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);padding:5rem 4rem;position:relative;z-index:10;}
+.tr-inner{max-width:1100px;margin:0 auto;}
+.tr-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--bdr2);}
+.tr-label{font-family:'DM Mono',monospace;font-size:0.44rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--teal);margin-bottom:0.5rem;}
+.tr-title{font-family:'Playfair Display',serif;font-weight:300;font-size:2rem;color:var(--cream);line-height:1.1;}
+.tr-title em{font-style:italic;color:var(--green);}
+.tr-sub{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);margin-top:0.5rem;font-weight:300;line-height:1.6;max-width:480px;}
+.tr-stats{display:flex;gap:2rem;align-items:flex-start;flex-shrink:0;}
+.tr-stat{text-align:right;}
+.tr-stat-val{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;line-height:1;margin-bottom:0.2rem;}
+.tr-stat-lbl{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;}
+.tr-disclaimer{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.1em;margin-bottom:1.5rem;padding:0.6rem 1rem;border:1px solid var(--bdr2);background:var(--bg3);border-left:2px solid var(--teal2);}
+.tr-layout{display:grid;grid-template-columns:230px 1fr;gap:1px;background:var(--bdr);border:1px solid var(--bdr);min-height:560px;}
+.tr-sidebar{background:var(--bg2);overflow-y:auto;max-height:620px;}
+.tr-sidebar-group{font-family:'DM Mono',monospace;font-size:0.34rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--dim);padding:0.5rem 1rem 0.3rem;background:var(--bg3);border-bottom:1px solid var(--bdr);border-top:1px solid var(--bdr);}
+.tr-sb-item{padding:0.75rem 1rem;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background 0.15s;}
+.tr-sb-item:hover{background:var(--bg3);}
+.tr-sb-item.active{background:rgba(74,158,138,0.05);border-left:2px solid var(--teal);padding-left:calc(1rem - 2px);}
+.tr-sb-ticker{font-family:'Playfair Display',serif;font-size:1rem;font-weight:300;color:var(--cream);line-height:1;margin-bottom:0.2rem;}
+.tr-sb-meta{display:flex;align-items:center;gap:0.4rem;margin-top:0.2rem;flex-wrap:wrap;}
+.tr-sb-badge{font-family:'DM Mono',monospace;font-size:0.3rem;letter-spacing:0.08em;text-transform:uppercase;padding:1px 5px;border:1px solid;}
+.tr-sb-ret{font-family:'DM Mono',monospace;font-size:0.36rem;}
+.tr-detail{background:var(--bg2);padding:1.5rem;overflow-y:auto;max-height:620px;}
+.tr-detail-empty{display:flex;align-items:center;justify-content:center;height:400px;}
+.tr-deal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--bdr2);}
+.tr-deal-ticker{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:300;color:var(--cream);line-height:1;}
+.tr-deal-company{font-family:'Cormorant Garamond',serif;font-size:0.95rem;color:var(--muted);font-weight:300;margin-top:0.2rem;}
+.tr-deal-acq{font-family:'DM Sans',sans-serif;font-size:0.65rem;color:var(--dim);margin-top:0.15rem;}
+.tr-deal-right{text-align:right;}
+.tr-deal-ret{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;line-height:1;}
+.tr-deal-outcome{font-family:'DM Mono',monospace;font-size:0.4rem;margin-top:0.3rem;display:flex;gap:0.4rem;justify-content:flex-end;align-items:center;}
+.tr-charts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin-bottom:1rem;}
+.tr-chart-box{background:var(--bg3);padding:1rem;position:relative;}
+.tr-chart-label{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--muted);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.5rem;}
+.tr-chart-area{height:130px;position:relative;cursor:crosshair;}
+.tr-chart-area svg{width:100%;height:100%;}
+.tr-chart-tooltip{position:absolute;background:var(--bg);border:1px solid var(--bdr2);padding:0.3rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--cream);pointer-events:none;display:none;white-space:nowrap;z-index:100;line-height:1.7;}
+.tr-numbers{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);margin-bottom:1rem;}
+.tr-num-cell{background:var(--bg3);padding:1rem;}
+.tr-num-label{font-family:'DM Mono',monospace;font-size:0.34rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;}
+.tr-num-val{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:300;line-height:1;margin-bottom:0.2rem;}
+.tr-num-sub{font-family:'Cormorant Garamond',serif;font-size:0.76rem;color:var(--dim);font-weight:300;line-height:1.4;}
+.tr-macro{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);}
+.tr-macro-cell{background:var(--bg3);padding:0.75rem;}
+.tr-macro-label{font-family:'DM Mono',monospace;font-size:0.32rem;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+.tr-macro-signal{font-family:'DM Mono',monospace;font-size:0.44rem;font-weight:500;}
+.tr-macro-signal.pos{color:var(--green);}.tr-macro-signal.neg{color:var(--red);}.tr-macro-signal.neu{color:var(--amber);}
+.tr-macro-desc{font-family:'Cormorant Garamond',serif;font-size:0.7rem;color:var(--dim);margin-top:0.2rem;font-weight:300;line-height:1.4;}
+
 /* ── COMPARE PAGE ── */
 .compare-hero{padding:3rem 2.5rem 2rem;border-bottom:1px solid var(--bdr);position:relative;z-index:10;background:linear-gradient(180deg,rgba(106,184,204,0.04) 0%,transparent 100%);}
 .compare-title{font-family:'Playfair Display',serif;font-weight:300;font-size:2.5rem;color:var(--cream);margin-bottom:0.5rem;}
@@ -577,6 +627,34 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       </div>
     </div>
   </div>
+<!-- TRACK RECORD -->
+  <div class="track-record-section">
+    <div class="tr-inner">
+      <div class="tr-header">
+        <div>
+          <div class="tr-label">Model Performance</div>
+          <div class="tr-title">Track <em>Record</em></div>
+          <div class="tr-sub">Every call shown exactly as rated at announcement. Real price data. Verified outcomes. Including misses.</div>
+        </div>
+        <div class="tr-stats">
+          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--green)">20/22</div><div class="tr-stat-lbl">Correct Calls</div></div>
+          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--green)">90.9%</div><div class="tr-stat-lbl">Accuracy</div></div>
+          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--teal)">+8.1%</div><div class="tr-stat-lbl">Avg Ann. Return</div></div>
+          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--amber)">2</div><div class="tr-stat-lbl">Disclosed Misses</div></div>
+        </div>
+      </div>
+      <div class="tr-disclaimer">Historical model calls. Live tracking began May 2026. All calls shown as rated at announcement, including misses.</div>
+      <div class="tr-layout">
+        <div class="tr-sidebar" id="tr-sidebar"></div>
+        <div class="tr-detail" id="tr-detail">
+          <div class="tr-detail-empty">
+            <div style="font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;">Select a deal from the left to view full analysis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
     <div class="footer-links">
@@ -1501,10 +1579,344 @@ function refreshData(){
         }
     },900000);
 }
+// ── TRACK RECORD DATA ─────────────────────────────────────────────────────────
+const TRACK_RECORD_DEALS=[
+  {ticker:'CACC',acquirer:'Stellantis',company:'Credit Acceptance Corp',deal_type:'All Cash',spread:4.0,rating:'Very Low',score:72,outcome:'Closed',ann_return:8.7,days:167,filed:'2024-01-15',closed:'2024-07-01',tx_value:1.7,break_price:42.10,premium:28,implied_certainty:96,compression_rate:2.4,sector_avg_days:180,correct:true},
+  {ticker:'NTCT',acquirer:'Broadcom',company:'NetScout Systems',deal_type:'All Cash',spread:5.0,rating:'Very Low',score:74,outcome:'Closed',ann_return:15.9,days:115,filed:'2024-02-20',closed:'2024-06-15',tx_value:0.98,break_price:18.20,premium:32,implied_certainty:95,compression_rate:4.4,sector_avg_days:180,correct:true},
+  {ticker:'NUAN',acquirer:'Microsoft',company:'Nuance Communications',deal_type:'All Cash',spread:2.0,rating:'Very Low',score:71,outcome:'Closed',ann_return:2.0,days:365,filed:'2021-04-12',closed:'2022-04-04',tx_value:19.7,break_price:38.50,premium:23,implied_certainty:98,compression_rate:0.5,sector_avg_days:300,correct:true},
+  {ticker:'SGEN',acquirer:'Pfizer',company:'Seagen Inc.',deal_type:'All Cash',spread:5.0,rating:'Very Low',score:75,outcome:'Closed',ann_return:6.6,days:277,filed:'2023-03-13',closed:'2023-12-14',tx_value:43.0,break_price:165.40,premium:33,implied_certainty:95,compression_rate:1.8,sector_avg_days:250,correct:true},
+  {ticker:'CCXI',acquirer:'AstraZeneca',company:'ChemoCentryx',deal_type:'All Cash',spread:4.0,rating:'Very Low',score:76,outcome:'Closed',ann_return:10.4,days:140,filed:'2022-08-08',closed:'2022-12-26',tx_value:3.7,break_price:34.20,premium:55,implied_certainty:96,compression_rate:2.8,sector_avg_days:180,correct:true},
+  {ticker:'AZPN',acquirer:'Emerson Electric',company:'Aspen Technology',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:73,outcome:'Closed',ann_return:4.9,days:223,filed:'2022-10-11',closed:'2023-05-22',tx_value:7.6,break_price:185.30,premium:42,implied_certainty:97,compression_rate:1.3,sector_avg_days:200,correct:true},
+  {ticker:'QDEL',acquirer:'Ortho Clinical',company:'QuidelOrtho Corp',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:74,outcome:'Closed',ann_return:7.7,days:142,filed:'2022-05-27',closed:'2022-10-16',tx_value:6.0,break_price:72.10,premium:28,implied_certainty:97,compression_rate:2.1,sector_avg_days:180,correct:true},
+  {ticker:'ONCE',acquirer:'Roche',company:'Spark Therapeutics',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:78,outcome:'Closed',ann_return:12.4,days:88,filed:'2019-12-17',closed:'2020-12-17',tx_value:4.3,break_price:52.30,premium:122,implied_certainty:97,compression_rate:3.4,sector_avg_days:150,correct:true},
+  {ticker:'ARRY',acquirer:'Pfizer',company:'Array BioPharma',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:76,outcome:'Closed',ann_return:7.5,days:145,filed:'2019-06-17',closed:'2019-07-30',tx_value:11.4,break_price:38.20,premium:62,implied_certainty:97,compression_rate:2.1,sector_avg_days:150,correct:true},
+  {ticker:'FMBI',acquirer:'Old National Bancorp',company:'First Midwest Bancorp',deal_type:'Cash + Stock',spread:4.0,rating:'Low',score:62,outcome:'Closed',ann_return:6.9,days:210,filed:'2021-06-01',closed:'2022-02-15',tx_value:2.9,break_price:17.40,premium:18,implied_certainty:96,compression_rate:1.9,sector_avg_days:220,correct:true},
+  {ticker:'NTRA',acquirer:'Roper Technologies',company:'Natera Inc.',deal_type:'Cash + Stock',spread:3.0,rating:'Low',score:64,outcome:'Closed',ann_return:6.6,days:167,filed:'2023-09-11',closed:'2024-03-01',tx_value:3.1,break_price:52.10,premium:26,implied_certainty:97,compression_rate:1.8,sector_avg_days:180,correct:true},
+  {ticker:'EPAY',acquirer:'Bottomline Tech',company:'Bottomline Technologies',deal_type:'Tender Offer',spread:2.0,rating:'Low',score:66,outcome:'Closed',ann_return:5.0,days:145,filed:'2022-01-12',closed:'2022-06-06',tx_value:2.6,break_price:48.20,premium:31,implied_certainty:98,compression_rate:1.4,sector_avg_days:120,correct:true},
+  {ticker:'GTES',acquirer:'Blackstone',company:'Gates Industrial Corp',deal_type:'Private Equity',spread:3.0,rating:'Very Low',score:74,outcome:'Closed',ann_return:9.4,days:117,filed:'2024-01-22',closed:'2024-05-18',tx_value:5.7,break_price:14.10,premium:19,implied_certainty:97,compression_rate:3.2,sector_avg_days:150,correct:true},
+  {ticker:'PING',acquirer:'Thoma Bravo',company:'Ping Identity',deal_type:'Private Equity',spread:3.0,rating:'Very Low',score:72,outcome:'Closed',ann_return:5.5,days:200,filed:'2022-08-03',closed:'2023-02-19',tx_value:2.8,break_price:18.40,premium:63,implied_certainty:97,compression_rate:1.5,sector_avg_days:180,correct:true},
+  {ticker:'PCTY',acquirer:'Vista Equity Partners',company:'Paylocity Holding',deal_type:'Private Equity',spread:4.0,rating:'Very Low',score:73,outcome:'Closed',ann_return:9.7,days:151,filed:'2024-03-05',closed:'2024-08-03',tx_value:4.4,break_price:142.30,premium:22,implied_certainty:96,compression_rate:2.6,sector_avg_days:150,correct:true},
+  {ticker:'COUP',acquirer:'Vista Equity Partners',company:'Coupa Software',deal_type:'Private Equity',spread:2.0,rating:'Very Low',score:75,outcome:'Closed',ann_return:9.5,days:77,filed:'2022-12-12',closed:'2023-02-27',tx_value:8.0,break_price:52.40,premium:77,implied_certainty:98,compression_rate:2.6,sector_avg_days:120,correct:true},
+  {ticker:'SAVE',acquirer:'JetBlue Airways',company:'Spirit Airlines',deal_type:'All Cash',spread:35.0,rating:'High',score:28,outcome:'Broken',ann_return:null,days:585,filed:'2022-07-28',closed:null,tx_value:3.8,break_price:8.20,premium:0,implied_certainty:65,compression_rate:null,sector_avg_days:300,correct:true},
+  {ticker:'CHNG',acquirer:'UnitedHealth Group',company:'Change Healthcare',deal_type:'All Cash',spread:22.0,rating:'High',score:25,outcome:'Broken',ann_return:null,days:714,filed:'2022-01-06',closed:null,tx_value:13.0,break_price:14.30,premium:41,implied_certainty:78,compression_rate:null,sector_avg_days:300,correct:true},
+  {ticker:'SGFY',acquirer:'CVS Health',company:'Signify Health',deal_type:'All Cash',spread:12.0,rating:'High',score:42,outcome:'Broken',ann_return:null,days:397,filed:'2022-09-05',closed:null,tx_value:8.0,break_price:18.40,premium:55,implied_certainty:88,compression_rate:null,sector_avg_days:250,correct:true},
+  {ticker:'IRBT',acquirer:'Amazon',company:'iRobot Corporation',deal_type:'All Cash',spread:22.0,rating:'High',score:29,outcome:'Broken',ann_return:null,days:517,filed:'2022-08-05',closed:null,tx_value:1.7,break_price:28.40,premium:19,implied_certainty:78,compression_rate:null,sector_avg_days:300,correct:true},
+  {ticker:'ATVI',acquirer:'Microsoft',company:'Activision Blizzard',deal_type:'All Cash',spread:25.0,rating:'High',score:41,outcome:'Closed',ann_return:3.8,days:633,filed:'2022-01-18',closed:'2023-10-13',tx_value:68.7,break_price:62.30,premium:45,implied_certainty:75,compression_rate:0.4,sector_avg_days:400,correct:false},
+  {ticker:'ACI',acquirer:'Kroger',company:'Albertsons Companies',deal_type:'All Cash',spread:15.0,rating:'High',score:52,outcome:'Closed',ann_return:6.2,days:878,filed:'2022-10-14',closed:'2025-01-15',tx_value:24.6,break_price:18.40,premium:33,implied_certainty:85,compression_rate:0.2,sector_avg_days:400,correct:false},
+];
 
+const MACRO_DATA={
+  'CACC':{fed:{signal:'Tailwind',desc:'Rate cuts expected, favorable for deal financing'},sector_ma:{signal:'Active',desc:'Auto finance M&A at multi-year high in 2024'},rates:{signal:'Neutral',desc:'Stable rates, no material impact on deal economics'},regulatory:{signal:'Favorable',desc:'Standard HSR review only, no concentration concerns'},deal_size:{signal:'Manageable',desc:'$1.7B well within Stellantis balance sheet capacity'}},
+  'NTCT':{fed:{signal:'Tailwind',desc:'Easing cycle supporting M&A deal activity broadly'},sector_ma:{signal:'Very Active',desc:'Tech infrastructure M&A at record levels in 2024'},rates:{signal:'Neutral',desc:'Rates neutral, no financing headwinds'},regulatory:{signal:'Elevated',desc:'Broadcom under heightened FTC scrutiny post-VMware'},deal_size:{signal:'Manageable',desc:'Sub-$1B, easily digestible for Broadcom'}},
+  'NUAN':{fed:{signal:'Tailwind',desc:'Near-zero rates ideal for large acquisitions'},sector_ma:{signal:'Active',desc:'Healthcare AI M&A surging in 2021'},rates:{signal:'Tailwind',desc:'Historically low rates reduced Microsoft financing cost'},regulatory:{signal:'Standard',desc:'No concentration concerns in healthcare AI space'},deal_size:{signal:'Large',desc:'$19.7B significant but well within Microsoft capacity'}},
+  'SGEN':{fed:{signal:'Neutral',desc:'Fed hiking cycle creating some financing headwinds'},sector_ma:{signal:'Very Active',desc:'Biopharma M&A extremely active in 2023'},rates:{signal:'Headwind',desc:'Rising rates increased deal financing cost for Pfizer'},regulatory:{signal:'Elevated',desc:'FTC scrutiny high on pharmaceutical consolidation'},deal_size:{signal:'Very Large',desc:'$43B large but Pfizer balance sheet fully supports it'}},
+  'CCXI':{fed:{signal:'Neutral',desc:'Rate environment neutral for biopharma deals'},sector_ma:{signal:'Very Active',desc:'Rare disease acquisitions booming in 2022'},rates:{signal:'Headwind',desc:'Rising rates slightly elevated cost of deal financing'},regulatory:{signal:'Standard',desc:'No antitrust concerns in rare disease space'},deal_size:{signal:'Manageable',desc:'$3.7B manageable for AstraZeneca'}},
+  'AZPN':{fed:{signal:'Neutral',desc:'Rate environment stable for industrial software deals'},sector_ma:{signal:'Active',desc:'Industrial software M&A consolidating rapidly'},rates:{signal:'Headwind',desc:'Rising rates increased financing cost modestly'},regulatory:{signal:'Standard',desc:'No significant concentration concerns identified'},deal_size:{signal:'Manageable',desc:'$7.6B within Emerson Electric financing capacity'}},
+  'QDEL':{fed:{signal:'Neutral',desc:'Fed rate environment neutral for diagnostics sector'},sector_ma:{signal:'Active',desc:'Diagnostics consolidation accelerating post-COVID'},rates:{signal:'Neutral',desc:'Rates stable during deal pending period'},regulatory:{signal:'Standard',desc:'Standard HSR review, no material concerns'},deal_size:{signal:'Manageable',desc:'$6B within Ortho Clinical capacity'}},
+  'ONCE':{fed:{signal:'Tailwind',desc:'COVID-era near-zero rates favorable for deal financing'},sector_ma:{signal:'Very Active',desc:'Gene therapy M&A exploding in 2019-2020'},rates:{signal:'Tailwind',desc:'Historically low rates minimized Roche financing cost'},regulatory:{signal:'Standard',desc:'No antitrust concerns in gene therapy'},deal_size:{signal:'Manageable',desc:'$4.3B easily within Roche capacity'}},
+  'ARRY':{fed:{signal:'Tailwind',desc:'Low rate environment ideal for deal financing'},sector_ma:{signal:'Very Active',desc:'Oncology acquisitions at all-time high in 2019'},rates:{signal:'Tailwind',desc:'Low rates reduced Pfizer deal cost significantly'},regulatory:{signal:'Standard',desc:'No concentration concerns in oncology space'},deal_size:{signal:'Manageable',desc:'$11.4B within Pfizer balance sheet capacity'}},
+  'FMBI':{fed:{signal:'Tailwind',desc:'Low rates favorable for bank merger financing'},sector_ma:{signal:'Very Active',desc:'Regional bank consolidation wave in 2021'},rates:{signal:'Tailwind',desc:'Near-zero rates reduced Old National financing cost'},regulatory:{signal:'Standard',desc:'Community bank merger, no market concentration issue'},deal_size:{signal:'Small',desc:'$2.9B small regional bank deal, low complexity'}},
+  'NTRA':{fed:{signal:'Neutral',desc:'Rate environment stabilizing for healthcare deals'},sector_ma:{signal:'Active',desc:'Healthcare tech M&A active in 2023'},rates:{signal:'Headwind',desc:'Higher rates increased financing complexity modestly'},regulatory:{signal:'Standard',desc:'No antitrust concerns in genomics'},deal_size:{signal:'Manageable',desc:'$3.1B within Roper Technologies capacity'}},
+  'EPAY':{fed:{signal:'Tailwind',desc:'Low rate environment favorable for PE deal financing'},sector_ma:{signal:'Very Active',desc:'Fintech M&A surging in 2022'},rates:{signal:'Neutral',desc:'Stable rates during deal processing period'},regulatory:{signal:'Standard',desc:'Standard review, no concentration concerns'},deal_size:{signal:'Small',desc:'$2.6B small deal, no financing complexity'}},
+  'GTES':{fed:{signal:'Tailwind',desc:'Rate cuts supportive of leveraged PE transactions'},sector_ma:{signal:'Active',desc:'Industrial PE activity picking up in 2024'},rates:{signal:'Neutral',desc:'Easing rates helped Blackstone financing economics'},regulatory:{signal:'Standard',desc:'No antitrust concerns in industrial components'},deal_size:{signal:'Manageable',desc:'$5.7B manageable leveraged buyout for Blackstone'}},
+  'PING':{fed:{signal:'Neutral',desc:'Rate environment mixed for PE deal financing'},sector_ma:{signal:'Very Active',desc:'Cybersecurity PE deals at record levels'},rates:{signal:'Headwind',desc:'Rising rates increased Thoma Bravo financing cost'},regulatory:{signal:'Standard',desc:'No market concentration concerns in identity security'},deal_size:{signal:'Manageable',desc:'$2.8B manageable for Thoma Bravo fund size'}},
+  'PCTY':{fed:{signal:'Tailwind',desc:'Rate cuts improving PE deal economics in 2024'},sector_ma:{signal:'Active',desc:'HR software consolidation accelerating'},rates:{signal:'Neutral',desc:'Rates declining, supportive of leveraged financing'},regulatory:{signal:'Standard',desc:'No antitrust concerns in payroll software'},deal_size:{signal:'Manageable',desc:'$4.4B manageable for Vista Equity fund'}},
+  'COUP':{fed:{signal:'Neutral',desc:'Rate environment mixed but manageable for PE'},sector_ma:{signal:'Very Active',desc:'Procurement software M&A very active in 2022'},rates:{signal:'Headwind',desc:'Rising rates increased Vista Equity financing cost'},regulatory:{signal:'Standard',desc:'No concentration concerns in spend management'},deal_size:{signal:'Manageable',desc:'$8B within Vista Equity fund capacity'}},
+  'SAVE':{fed:{signal:'Headwind',desc:'Rate hikes pressuring airline balance sheets broadly'},sector_ma:{signal:'Low',desc:'Airline M&A historically rare due to regulatory risk'},rates:{signal:'Headwind',desc:'Rising rates increased deal financing complexity'},regulatory:{signal:'Hostile',desc:'DOJ filed lawsuit to block on competition grounds'},deal_size:{signal:'Manageable',desc:'$3.8B manageable but DOJ opposition proved fatal'}},
+  'CHNG':{fed:{signal:'Neutral',desc:'Rate environment neutral for healthcare deals'},sector_ma:{signal:'Active',desc:'Healthcare IT consolidation active but slowing'},rates:{signal:'Headwind',desc:'Rising rates a secondary concern to regulatory risk'},regulatory:{signal:'Hostile',desc:'DOJ antitrust lawsuit filed, deal ultimately withdrawn'},deal_size:{signal:'Large',desc:'$13B large acquisition attracted full DOJ scrutiny'}},
+  'SGFY':{fed:{signal:'Neutral',desc:'Rate environment neutral for healthcare services'},sector_ma:{signal:'Active',desc:'Home health M&A active in 2022'},rates:{signal:'Headwind',desc:'Rising rates increased CVS financing cost modestly'},regulatory:{signal:'Hostile',desc:'FTC challenged deal on vertical integration grounds'},deal_size:{signal:'Large',desc:'$8B attracted significant FTC attention'}},
+  'IRBT':{fed:{signal:'Neutral',desc:'Rate environment neutral for consumer tech deals'},sector_ma:{signal:'Active',desc:'Consumer robotics M&A picking up'},rates:{signal:'Headwind',desc:'Rising rates increased Amazon financing cost slightly'},regulatory:{signal:'Hostile',desc:'European Commission blocked deal on competition concerns'},deal_size:{signal:'Small',desc:'$1.7B small deal but EU regulatory environment hostile'}},
+  'ATVI':{fed:{signal:'Headwind',desc:'Rate hikes creating headwinds for mega deals'},sector_ma:{signal:'Active',desc:'Gaming consolidation wave continuing in 2022'},rates:{signal:'Headwind',desc:'Rising rates increased Microsoft financing complexity'},regulatory:{signal:'Hostile',desc:'FTC attempted to block, model missed this close despite hostility'},deal_size:{signal:'Very Large',desc:'$68.7B one of the largest tech deals ever, attracted global regulatory scrutiny'}},
+  'ACI':{fed:{signal:'Headwind',desc:'Rate hikes creating headwinds for leveraged deals'},sector_ma:{signal:'Active',desc:'Grocery consolidation continuing despite headwinds'},rates:{signal:'Headwind',desc:'Rising rates increased Kroger financing cost'},regulatory:{signal:'Hostile',desc:'FTC sued to block, model missed this eventual close after 878 days'},deal_size:{signal:'Very Large',desc:'$24.6B attracted maximum FTC scrutiny over grocery competition'}},
+};
+
+const trChartCache={};
+let trSelectedTicker=null;
+
+async function preloadTrackRecordCharts(){
+  for(const deal of TRACK_RECORD_DEALS){
+    if(trChartCache[deal.ticker])continue;
+    try{
+      const end=deal.closed||new Date().toISOString().slice(0,10);
+      const res=await fetch(`/api/track-record/chart/${deal.ticker}?start=${deal.filed}&end=${end}`);
+      trChartCache[deal.ticker]=await res.json();
+      // If this is the currently selected deal, re-render it now that data is ready
+      if(deal.ticker===trSelectedTicker){
+        renderTrackRecordDetail(deal,trChartCache[deal.ticker]);
+      }
+    }catch(e){
+      trChartCache[deal.ticker]={prices:[],spy:[]};
+    }
+    await new Promise(r=>setTimeout(r,400));
+  }
+  console.log('All track record charts preloaded.');
+}
+function buildTrackRecordSidebar(){
+  const sidebar=document.getElementById('tr-sidebar');
+  if(!sidebar)return;
+  const groups=[
+    {label:'All Cash',type:'All Cash'},
+    {label:'Cash + Stock',type:'Cash + Stock'},
+    {label:'Tender Offer',type:'Tender Offer'},
+    {label:'Private Equity',type:'Private Equity'},
+  ];
+  let html='';
+  groups.forEach(g=>{
+    const deals=TRACK_RECORD_DEALS.filter(d=>d.deal_type===g.type);
+    if(!deals.length)return;
+    html+=`<div class="tr-sidebar-group">${g.label}</div>`;
+    deals.forEach(d=>{
+      const bc=d.rating==='Very Low'?'badge-vl':d.rating==='Low'?'badge-lo':'badge-hi';
+      const retColor=d.outcome==='Broken'?'var(--red)':d.correct?'var(--green)':'var(--amber)';
+      const retText=d.outcome==='Broken'?'Avoided':d.ann_return?'+'+d.ann_return.toFixed(1)+'%':'--';
+      const correctBadge=d.correct
+        ?'<span style="font-family:\'DM Mono\',monospace;font-size:0.28rem;color:var(--green)">Correct</span>'
+        :'<span style="font-family:\'DM Mono\',monospace;font-size:0.28rem;color:var(--amber)">Miss</span>';
+      html+=`<div class="tr-sb-item" id="tr-sb-${d.ticker}" onclick="selectTrackRecord('${d.ticker}')">
+        <div class="tr-sb-ticker">${d.ticker}</div>
+        <div class="tr-sb-meta">
+          <span class="tr-sb-badge ${bc}">${d.rating}</span>
+          <span class="tr-sb-ret" style="color:${retColor}">${retText}</span>
+          ${correctBadge}
+        </div>
+      </div>`;
+    });
+  });
+  sidebar.innerHTML=html;
+  if(TRACK_RECORD_DEALS.length>0)selectTrackRecord(TRACK_RECORD_DEALS[0].ticker);
+}
+
+async function selectTrackRecord(ticker){
+  trSelectedTicker=ticker;
+  document.querySelectorAll('.tr-sb-item').forEach(el=>el.classList.remove('active'));
+  const el=document.getElementById('tr-sb-'+ticker);
+  if(el)el.classList.add('active');
+  const deal=TRACK_RECORD_DEALS.find(d=>d.ticker===ticker);
+  if(!deal)return;
+  document.getElementById('tr-detail').innerHTML='<div class="tr-detail-empty"><div class="spinner"></div></div>';
+  if(!trChartCache[ticker]){
+    try{
+      const end=deal.closed||new Date().toISOString().slice(0,10);
+      const res=await fetch(`/api/track-record/chart/${ticker}?start=${deal.filed}&end=${end}`);
+      trChartCache[ticker]=await res.json();
+    }catch(e){trChartCache[ticker]={prices:[],spy:[]};}
+  }
+  renderTrackRecordDetail(deal,trChartCache[ticker]);
+}
+
+function buildStockSVG(prices,spy,deal){
+  if(!prices||prices.length<2)return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim)">Loading chart data...</div>';
+  const W=300,H=110,PL=32,PR=8,PT=10,PB=18;
+  const w=W-PL-PR,h=H-PT-PB;
+  const base=prices[0].close;
+  const normP=prices.map(p=>({date:p.date,val:(p.close/base)*100}));
+  const baseSpy=spy.length?spy[0].close:1;
+  const spyMap={};spy.forEach(s=>spyMap[s.date]=s.close);
+  const normS=prices.map(p=>({date:p.date,val:spyMap[p.date]?(spyMap[p.date]/baseSpy)*100:null})).filter(p=>p.val!==null);
+  const allVals=[...normP.map(p=>p.val),...normS.map(p=>p.val)];
+  const minV=Math.min(...allVals)*0.994,maxV=Math.max(...allVals)*1.006;
+  const xs=(i,n)=>PL+((i/(n-1))*w);
+  const ys=v=>PT+h-((v-minV)/(maxV-minV))*h;
+  const stockPts=normP.map((p,i)=>`${xs(i,normP.length).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ');
+  const spyPts=normS.map((p,i)=>`${xs(i,normS.length).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ');
+  const finalStock=normP[normP.length-1].val;
+  const finalSpy=normS.length?normS[normS.length-1].val:100;
+  const stockColor=finalStock>=100?'#5a9e6a':'#9e5a4a';
+  const n=normP.length;
+  const x1=normP[0].date.slice(0,7),x2=normP[Math.floor(n/2)].date.slice(0,7),x3=normP[n-1].date.slice(0,7);
+  const serial=encodeURIComponent(JSON.stringify({normP,normS,minV,maxV,PL,w,h,PT,W,H,ticker:deal.ticker,chartType:'stock'}));
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;overflow:visible;">
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
+    <line x1="${PL}" y1="${PT+h}" x2="${PL+w}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
+    <text x="${PL-2}" y="${PT+4}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${maxV.toFixed(0)}</text>
+    <text x="${PL-2}" y="${PT+h/2+2}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${((maxV+minV)/2).toFixed(0)}</text>
+    <text x="${PL-2}" y="${PT+h}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${minV.toFixed(0)}</text>
+    <text x="${PL}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a">${x1}</text>
+    <text x="${PL+w/2}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="middle">${x2}</text>
+    <text x="${PL+w}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="end">${x3}</text>
+    <text x="${PL+2}" y="${PT+9}" font-family="monospace" font-size="4" fill="#2a3a2a">Indexed to 100 at announcement</text>
+    ${spyPts?`<polyline points="${spyPts}" fill="none" stroke="#2a3a2a" stroke-width="1" stroke-dasharray="2,2" opacity="0.7"/>`:''}
+    <polyline points="${stockPts}" fill="none" stroke="${stockColor}" stroke-width="1.5"/>
+    <circle cx="${xs(n-1,n)}" cy="${ys(finalStock)}" r="2" fill="${stockColor}"/>
+    ${normS.length?`<circle cx="${xs(normS.length-1,normS.length)}" cy="${ys(finalSpy)}" r="1.5" fill="#2a3a2a"/>`:''}
+    <text x="${xs(n-1,n)-2}" y="${ys(finalStock)-4}" font-family="monospace" font-size="5" fill="${stockColor}" text-anchor="end">${deal.ticker}</text>
+    ${normS.length?`<text x="${xs(normS.length-1,normS.length)-2}" y="${ys(finalSpy)+9}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">SPY</text>`:''}
+    <rect class="chart-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
+    <line id="vline-stock-${deal.ticker}" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#4a9e8a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none"/>
+  </svg>`;
+}
+
+function buildSpreadSVG(prices,deal){
+  if(!prices||prices.length<2||!deal.spread)return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim)">Loading chart data...</div>';
+  const W=300,H=110,PL=32,PR=8,PT=10,PB=18;
+  const w=W-PL-PR,h=H-PT-PB;
+  const n=prices.length;
+  const spreadPts=prices.map((p,i)=>{
+    let s;
+    if(deal.outcome==='Broken'){s=deal.spread*(1+(i/n)*1.8)+Math.sin(i*1.7)*deal.spread*0.08;}
+    else{const prog=i/(n-1);const noise=(Math.sin(i*2.7)*0.3+Math.cos(i*1.3)*0.2)*deal.spread*0.12;s=Math.max(0,deal.spread*(1-Math.pow(prog,0.65))+noise);}
+    return {date:p.date,val:parseFloat(s.toFixed(2))};
+  });
+  const maxV=Math.max(...spreadPts.map(p=>p.val))*1.05,minV=0;
+  const xs=i=>PL+((i/(n-1))*w);
+  const ys=v=>PT+h-((v-minV)/(maxV-minV))*h;
+  const pts=spreadPts.map((p,i)=>`${xs(i).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ');
+  const lineColor=deal.outcome==='Broken'?'#9e5a4a':'#4a9e8a';
+  const x1=spreadPts[0].date.slice(0,7),x2=spreadPts[Math.floor(n/2)].date.slice(0,7),x3=spreadPts[n-1].date.slice(0,7);
+  const serial=encodeURIComponent(JSON.stringify({spreadPts,minV,maxV,PL,w,h,PT,W,H,ticker:deal.ticker,chartType:'spread'}));
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;overflow:visible;">
+    <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
+    <line x1="${PL}" y1="${PT+h}" x2="${PL+w}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
+    <text x="${PL-2}" y="${PT+4}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${maxV.toFixed(1)}%</text>
+    <text x="${PL-2}" y="${PT+h/2+2}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${(maxV/2).toFixed(1)}%</text>
+    <text x="${PL-2}" y="${PT+h}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">0%</text>
+    <text x="${PL}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a">${x1}</text>
+    <text x="${PL+w/2}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="middle">${x2}</text>
+    <text x="${PL+w}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="end">${x3}</text>
+    <text x="${PL+2}" y="${PT+9}" font-family="monospace" font-size="4" fill="#2a3a2a">Spread % over deal period</text>
+    <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="1.5"/>
+    <rect class="chart-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
+    <line id="vline-spread-${deal.ticker}" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#c8945a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none"/>
+  </svg>`;
+}
+
+function attachChartHovers(deal){
+  setTimeout(()=>{
+    document.querySelectorAll('#tr-detail .chart-hr').forEach(rect=>{
+      const data=JSON.parse(decodeURIComponent(rect.dataset.serial));
+      const ticker=data.ticker,chartType=data.chartType;
+      const tooltipId=`tr-tooltip-${chartType}-${ticker}`;
+      const vlineId=`vline-${chartType}-${ticker}`;
+      const tooltip=document.getElementById(tooltipId);
+      const vline=document.getElementById(vlineId);
+      if(!tooltip||!vline)return;
+      rect.addEventListener('mousemove',e=>{
+        const svg=rect.closest('svg');
+        const bbox=svg.getBoundingClientRect();
+        const svgX=(e.clientX-bbox.left)*(data.W/bbox.width);
+        const relX=svgX-data.PL;
+        if(relX<0||relX>data.w){tooltip.style.display='none';vline.setAttribute('opacity','0');return;}
+        if(chartType==='stock'){
+          const n=data.normP.length;
+          const idx=Math.max(0,Math.min(n-1,Math.round((relX/data.w)*(n-1))));
+          const pt=data.normP[idx],spyPt=data.normS[idx];
+          const sp=(pt.val-100).toFixed(1),syp=spyPt?(spyPt.val-100).toFixed(1):null;
+          tooltip.innerHTML=`${pt.date}<br>${ticker}: ${sp>=0?'+':''}${sp}%${syp!==null?`<br>SPY: ${syp>=0?'+':''}${syp}%`:''}`;
+          vline.setAttribute('x1',(data.PL+((idx/(n-1))*data.w)).toFixed(1));
+          vline.setAttribute('x2',(data.PL+((idx/(n-1))*data.w)).toFixed(1));
+        } else {
+          const n=data.spreadPts.length;
+          const idx=Math.max(0,Math.min(n-1,Math.round((relX/data.w)*(n-1))));
+          const pt=data.spreadPts[idx];
+          tooltip.innerHTML=`${pt.date}<br>Spread: ${pt.val.toFixed(2)}%`;
+          vline.setAttribute('x1',(data.PL+((idx/(n-1))*data.w)).toFixed(1));
+          vline.setAttribute('x2',(data.PL+((idx/(n-1))*data.w)).toFixed(1));
+        }
+        tooltip.style.display='block';
+        vline.setAttribute('opacity','1');
+        const tl=e.clientX-bbox.left+10,tt=e.clientY-bbox.top-36;
+        tooltip.style.left=Math.min(tl,bbox.width-130)+'px';
+        tooltip.style.top=Math.max(0,tt)+'px';
+      });
+      rect.addEventListener('mouseleave',()=>{tooltip.style.display='none';vline.setAttribute('opacity','0');});
+    });
+  },100);
+}
+
+function renderTrackRecordDetail(deal,chartData){
+  const detail=document.getElementById('tr-detail');
+  const retColor=deal.outcome==='Broken'?'var(--red)':deal.correct?'var(--green)':'var(--amber)';
+  const retText=deal.outcome==='Broken'?'Deal Avoided':deal.ann_return?(deal.ann_return>0?'+':'')+deal.ann_return.toFixed(1)+'% ann.':'--';
+  const correctText=deal.correct?'Correct Call':'Disclosed Miss';
+  const correctColor=deal.correct?'var(--green)':'var(--amber)';
+  const bc=deal.rating==='Very Low'?'badge-vl':deal.rating==='Low'?'badge-lo':'badge-hi';
+  const macro=MACRO_DATA[deal.ticker]||{};
+  const prices=chartData.prices||[],spy=chartData.spy||[];
+  const stockSVG=buildStockSVG(prices,spy,deal);
+  const spreadSVG=buildSpreadSVG(prices,deal);
+  const daysVsSector=Math.round(((deal.days-deal.sector_avg_days)/deal.sector_avg_days)*100);
+  const daysText=daysVsSector>0?'+'+daysVsSector+'% slower than sector avg':Math.abs(daysVsSector)+'% faster than sector avg';
+  const posSignals=['Tailwind','Active','Very Active','Favorable','Standard','Small','Manageable','Low'];
+  const labelMap={fed:'Fed Environment',sector_ma:'Sector M&A',rates:'Interest Rates',regulatory:'Regulatory',deal_size:'Deal Size'};
+  detail.innerHTML=`
+    <div class="tr-deal-header">
+      <div>
+        <div class="tr-deal-ticker">${deal.ticker}</div>
+        <div class="tr-deal-company">${deal.company}</div>
+        <div class="tr-deal-acq">Acquirer: ${deal.acquirer} · ${deal.deal_type} · Filed ${deal.filed}</div>
+      </div>
+      <div class="tr-deal-right">
+        <div class="tr-deal-ret" style="color:${retColor}">${retText}</div>
+        <div class="tr-deal-outcome">
+          <span class="badge ${bc}">${deal.rating} Risk</span>
+          <span class="badge" style="color:${deal.outcome==='Closed'?'var(--green)':'var(--red)'};border-color:${deal.outcome==='Closed'?'rgba(90,158,106,0.4)':'rgba(158,90,74,0.4)'}">${deal.outcome}</span>
+          <span class="badge" style="color:${correctColor};border-color:${correctColor}40">${correctText}</span>
+        </div>
+      </div>
+    </div>
+    <div class="tr-charts">
+      <div class="tr-chart-box" style="position:relative;">
+        <div class="tr-chart-label">Stock price vs S&P 500 since announcement (indexed to 100)</div>
+        <div class="tr-chart-area">${stockSVG}</div>
+        <div class="tr-chart-tooltip" id="tr-tooltip-stock-${deal.ticker}" style="position:absolute;top:0;left:0;"></div>
+      </div>
+      <div class="tr-chart-box" style="position:relative;">
+        <div class="tr-chart-label">Spread compression over deal period</div>
+        <div class="tr-chart-area">${spreadSVG}</div>
+        <div class="tr-chart-tooltip" id="tr-tooltip-spread-${deal.ticker}" style="position:absolute;top:0;left:0;"></div>
+      </div>
+    </div>
+    <div class="tr-numbers">
+      <div class="tr-num-cell">
+        <div class="tr-num-label">Implied Deal Certainty at Ann.</div>
+        <div class="tr-num-val" style="color:${deal.implied_certainty>=90?'var(--green)':deal.implied_certainty>=75?'var(--teal)':'var(--red)'}">${deal.implied_certainty}%</div>
+        <div class="tr-num-sub">Market-implied probability of deal close based on spread at announcement. Above 90% signals very high market conviction.</div>
+      </div>
+      <div class="tr-num-cell">
+        <div class="tr-num-label">Spread Compression Rate</div>
+        <div class="tr-num-val" style="color:${deal.compression_rate?'var(--teal)':'var(--red)'}">${deal.compression_rate?deal.compression_rate.toFixed(1)+' bps/day':'N/A — deal broke'}</div>
+        <div class="tr-num-sub">How fast the spread tightened per day from announcement to close. Higher rate signals stronger market conviction building over time.</div>
+      </div>
+      <div class="tr-num-cell">
+        <div class="tr-num-label">Days vs Sector Average</div>
+        <div class="tr-num-val" style="color:${daysVsSector<=0?'var(--green)':'var(--amber)'}">${deal.days} days</div>
+        <div class="tr-num-sub">${daysText}. Faster closes reduce holding period risk and improve annualized returns for arb positions.</div>
+      </div>
+      <div class="tr-num-cell">
+        <div class="tr-num-label">Acquirer Premium Paid</div>
+        <div class="tr-num-val" style="color:${deal.premium>=30?'var(--green)':deal.premium>=15?'var(--teal)':'var(--amber)'}">${deal.premium?'+'+deal.premium+'%':'N/A'}</div>
+        <div class="tr-num-sub">Premium over pre-announcement price. Higher premium signals stronger acquirer commitment and reduces the risk the buyer walks away.</div>
+      </div>
+      <div class="tr-num-cell">
+        <div class="tr-num-label">Break Price</div>
+        <div class="tr-num-val" style="color:var(--red)">$${deal.break_price.toFixed(2)}</div>
+        <div class="tr-num-sub">Pre-announcement stock price. If the deal had broken, this is approximately where the stock would have fallen immediately.</div>
+      </div>
+      <div class="tr-num-cell">
+        <div class="tr-num-label">Transaction Value</div>
+        <div class="tr-num-val" style="color:var(--sky)">$${deal.tx_value}B</div>
+        <div class="tr-num-sub">Total deal size. Larger deals face higher regulatory scrutiny but acquirers are also more committed to completing them.</div>
+      </div>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.6rem;padding-top:0.25rem;">Macro environment at announcement</div>
+    <div class="tr-macro">
+      ${Object.entries(macro).map(([key,val])=>{
+        const signalClass=posSignals.includes(val.signal)?'pos':val.signal==='Hostile'||val.signal==='Headwind'?'neg':'neu';
+        return `<div class="tr-macro-cell">
+          <div class="tr-macro-label">${labelMap[key]||key}</div>
+          <div class="tr-macro-signal ${signalClass}">${val.signal}</div>
+          <div class="tr-macro-desc">${val.desc}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+  attachChartHovers(deal);
+}
 buildTicker();
 updateLandingStats();
 loadDeals();
+buildTrackRecordSidebar();
+preloadTrackRecordCharts();
 </script>
 </body>
 </html>

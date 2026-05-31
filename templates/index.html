@@ -1633,6 +1633,24 @@ const MACRO_DATA={
 const trChartCache={};
 let trSelectedTicker=null;
 
+async function preloadTrackRecordCharts(){
+  for(const deal of TRACK_RECORD_DEALS){
+    if(trChartCache[deal.ticker])continue;
+    try{
+      const end=deal.closed||new Date().toISOString().slice(0,10);
+      const res=await fetch(`/api/track-record/chart/${deal.ticker}?start=${deal.filed}&end=${end}`);
+      trChartCache[deal.ticker]=await res.json();
+      // If this is the currently selected deal, re-render it now that data is ready
+      if(deal.ticker===trSelectedTicker){
+        renderTrackRecordDetail(deal,trChartCache[deal.ticker]);
+      }
+    }catch(e){
+      trChartCache[deal.ticker]={prices:[],spy:[]};
+    }
+    await new Promise(r=>setTimeout(r,400));
+  }
+  console.log('All track record charts preloaded.');
+}
 function buildTrackRecordSidebar(){
   const sidebar=document.getElementById('tr-sidebar');
   if(!sidebar)return;
@@ -1898,6 +1916,7 @@ buildTicker();
 updateLandingStats();
 loadDeals();
 buildTrackRecordSidebar();
+preloadTrackRecordCharts();
 </script>
 </body>
 </html>
