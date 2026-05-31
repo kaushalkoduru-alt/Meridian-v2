@@ -851,6 +851,24 @@ async def refresh_stream():
         yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
 
+@app.get("/api/track-record/chart/{ticker}")
+async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = None):
+    end_date = end or datetime.utcnow().strftime('%Y-%m-%d')
+    for attempt in range(3):
+        try:
+            h = yf.Ticker(ticker).history(start=start, end=end_date)
+            if h.empty:
+                time.sleep(1)
+                continue
+            spy = yf.Ticker("SPY").history(start=start, end=end_date)
+            prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in h.iterrows()]
+            spy_prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in spy.iterrows()]
+            return JSONResponse(content={"prices": prices, "spy": spy_prices})
+        except Exception as e:
+            print(f"Chart error {ticker} attempt {attempt+1}: {e}")
+            time.sleep(1)
+    return JSONResponse(content={"prices": [], "spy": []})
+
 @app.post("/api/refresh")
 async def refresh_deals():
     global _scan_running
