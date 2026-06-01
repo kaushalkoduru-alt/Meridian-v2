@@ -825,7 +825,8 @@ async def preload_track_record_charts():
         except:
             pass
         try:
-            h = yf.Ticker(ticker).history(start=start, end=end)
+            etf = SECTOR_ETF_MAP.get(ticker, 'SPY')
+            h = yf.Ticker(etf).history(start=start, end=end)
             spy = yf.Ticker("SPY").history(start=start, end=end)
             if not h.empty:
                 prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in h.iterrows()]
@@ -939,6 +940,31 @@ async def refresh_stream():
         yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
 
+SECTOR_ETF_MAP = {
+    'CACC': 'XLF',   # Financial
+    'NTCT': 'XLK',   # Technology
+    'NUAN': 'XLK',   # Technology
+    'SGEN': 'XLV',   # Healthcare
+    'CCXI': 'XLV',   # Healthcare
+    'AZPN': 'XLK',   # Technology
+    'QDEL': 'XLV',   # Healthcare
+    'ONCE': 'XLV',   # Healthcare
+    'ARRY': 'XLV',   # Healthcare
+    'FMBI': 'XLF',   # Financial
+    'NTRA': 'XLV',   # Healthcare
+    'EPAY': 'XLF',   # Financial
+    'GTES': 'XLI',   # Industrials
+    'PING': 'XLK',   # Technology
+    'PCTY': 'XLK',   # Technology
+    'COUP': 'XLK',   # Technology
+    'SAVE': 'XTN',   # Transportation
+    'CHNG': 'XLV',   # Healthcare
+    'SGFY': 'XLV',   # Healthcare
+    'IRBT': 'XLK',   # Technology
+    'ATVI': 'XLK',   # Technology
+    'ACI':  'XLP',   # Consumer Staples
+}
+
 @app.get("/api/track-record/chart/{ticker}")
 async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = None):
     cache_key = f"tr_chart_{ticker}"
@@ -956,20 +982,30 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
     except:
         pass
     end_date = end or datetime.utcnow().strftime('%Y-%m-%d')
+    # Use sector ETF instead of company ticker for delisted stocks
+    etf = SECTOR_ETF_MAP.get(ticker, 'SPY')
     for attempt in range(3):
         try:
-            h = yf.Ticker(ticker).history(start=start, end=end_date)
+            h = yf.Ticker(etf).history(start=start, end=end_date)
             if h.empty:
                 time.sleep(1)
                 continue
             spy = yf.Ticker("SPY").history(start=start, end=end_date)
             prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in h.iterrows()]
             spy_prices = [{"date": d.strftime('%Y-%m-%d'), "close": round(float(r['Close']), 2)} for d, r in spy.iterrows()]
-            return JSONResponse(content={"prices": prices, "spy": spy_prices})
+            # Cache it
+            payload = json.dumps({"prices": prices, "spy": spy_prices, "etf": etf})
+            requests.post(
+                f"{REDIS_URL}/set/{cache_key}",
+                headers={"Authorization": f"Bearer {REDIS_TOKEN}", "Content-Type": "application/json"},
+                json={"value": payload},
+                timeout=10
+            )
+            return JSONResponse(content={"prices": prices, "spy": spy_prices, "etf": etf})
         except Exception as e:
             print(f"Chart error {ticker} attempt {attempt+1}: {e}")
             time.sleep(1)
-    return JSONResponse(content={"prices": [], "spy": []})
+    return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
 
 @app.post("/api/refresh")
 async def refresh_deals():

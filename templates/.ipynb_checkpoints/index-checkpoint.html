@@ -1697,9 +1697,12 @@ async function selectTrackRecord(ticker){
 }
 
 function buildStockSVG(prices,spy,deal){
-  if(!prices||prices.length<2)return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim);text-align:center;padding:1rem;">Historical price data unavailable.<br>Ticker delisted after deal closed.</div>';
   const W=300,H=110,PL=32,PR=8,PT=10,PB=18;
   const w=W-PL-PR,h=H-PT-PB;
+  const etfName=prices&&prices.length>0&&deal._etf?deal._etf:(SECTOR_ETF_MAP[deal.ticker]||'SPY');
+  if(!prices||prices.length<2){
+    return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim);text-align:center;padding:1rem;">Loading sector data...</div>';
+  }
   const base=prices[0].close;
   const normP=prices.map(p=>({date:p.date,val:(p.close/base)*100}));
   const baseSpy=spy.length?spy[0].close:1;
@@ -1709,14 +1712,14 @@ function buildStockSVG(prices,spy,deal){
   const minV=Math.min(...allVals)*0.994,maxV=Math.max(...allVals)*1.006;
   const xs=(i,n)=>PL+((i/(n-1))*w);
   const ys=v=>PT+h-((v-minV)/(maxV-minV))*h;
-  const stockPts=normP.map((p,i)=>`${xs(i,normP.length).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ');
+  const etfPts=normP.map((p,i)=>`${xs(i,normP.length).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ');
   const spyPts=normS.map((p,i)=>`${xs(i,normS.length).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ');
-  const finalStock=normP[normP.length-1].val;
+  const finalEtf=normP[normP.length-1].val;
   const finalSpy=normS.length?normS[normS.length-1].val:100;
-  const stockColor=finalStock>=100?'#5a9e6a':'#9e5a4a';
+  const etfColor=finalEtf>=100?'#5a9e6a':'#9e5a4a';
   const n=normP.length;
   const x1=normP[0].date.slice(0,7),x2=normP[Math.floor(n/2)].date.slice(0,7),x3=normP[n-1].date.slice(0,7);
-  const serial=encodeURIComponent(JSON.stringify({normP,normS,minV,maxV,PL,w,h,PT,W,H,ticker:deal.ticker,chartType:'stock'}));
+  const serial=encodeURIComponent(JSON.stringify({normP,normS,minV,maxV,PL,w,h,PT,W,H,ticker:deal.ticker,chartType:'stock',etfName}));
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;overflow:visible;">
     <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
     <line x1="${PL}" y1="${PT+h}" x2="${PL+w}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
@@ -1726,12 +1729,12 @@ function buildStockSVG(prices,spy,deal){
     <text x="${PL}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a">${x1}</text>
     <text x="${PL+w/2}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="middle">${x2}</text>
     <text x="${PL+w}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="end">${x3}</text>
-    <text x="${PL+2}" y="${PT+9}" font-family="monospace" font-size="4" fill="#2a3a2a">Indexed to 100 at announcement</text>
+    <text x="${PL+2}" y="${PT+9}" font-family="monospace" font-size="4" fill="#2a3a2a">Indexed to 100 at announcement · ${etfName} vs SPY</text>
     ${spyPts?`<polyline points="${spyPts}" fill="none" stroke="#2a3a2a" stroke-width="1" stroke-dasharray="2,2" opacity="0.7"/>`:''}
-    <polyline points="${stockPts}" fill="none" stroke="${stockColor}" stroke-width="1.5"/>
-    <circle cx="${xs(n-1,n)}" cy="${ys(finalStock)}" r="2" fill="${stockColor}"/>
+    <polyline points="${etfPts}" fill="none" stroke="${etfColor}" stroke-width="1.5"/>
+    <circle cx="${xs(n-1,n)}" cy="${ys(finalEtf)}" r="2" fill="${etfColor}"/>
     ${normS.length?`<circle cx="${xs(normS.length-1,normS.length)}" cy="${ys(finalSpy)}" r="1.5" fill="#2a3a2a"/>`:''}
-    <text x="${xs(n-1,n)-2}" y="${ys(finalStock)-4}" font-family="monospace" font-size="5" fill="${stockColor}" text-anchor="end">${deal.ticker}</text>
+    <text x="${xs(n-1,n)-2}" y="${ys(finalEtf)-4}" font-family="monospace" font-size="5" fill="${etfColor}" text-anchor="end">${etfName}</text>
     ${normS.length?`<text x="${xs(normS.length-1,normS.length)-2}" y="${ys(finalSpy)+9}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">SPY</text>`:''}
     <rect class="chart-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
     <line id="vline-stock-${deal.ticker}" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#4a9e8a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none"/>
@@ -1739,23 +1742,33 @@ function buildStockSVG(prices,spy,deal){
 }
 
 function buildSpreadSVG(prices,deal){
-  if(!prices||prices.length<2||!deal.spread)return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim);text-align:center;padding:1rem;">Spread data unavailable.<br>Ticker delisted after deal closed.</div>';
   const W=300,H=110,PL=32,PR=8,PT=10,PB=18;
   const w=W-PL-PR,h=H-PT-PB;
-  const n=prices.length;
-  const spreadPts=prices.map((p,i)=>{
-    let s;
-    if(deal.outcome==='Broken'){s=deal.spread*(1+(i/n)*1.8)+Math.sin(i*1.7)*deal.spread*0.08;}
-    else{const prog=i/(n-1);const noise=(Math.sin(i*2.7)*0.3+Math.cos(i*1.3)*0.2)*deal.spread*0.12;s=Math.max(0,deal.spread*(1-Math.pow(prog,0.65))+noise);}
-    return {date:p.date,val:parseFloat(s.toFixed(2))};
-  });
-  const maxV=Math.max(...spreadPts.map(p=>p.val))*1.05,minV=0;
-  const xs=i=>PL+((i/(n-1))*w);
+  // Use hardcoded milestone data if available
+  const milestones=SPREAD_MILESTONES[deal.ticker];
+  if(!milestones&&(!prices||prices.length<2||!deal.spread)){
+    return '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-family:\'DM Mono\',monospace;font-size:0.36rem;color:var(--dim);text-align:center;padding:1rem;">Spread data unavailable.</div>';
+  }
+  let spreadPts;
+  if(milestones){
+    spreadPts=milestones;
+  } else {
+    const n=prices.length;
+    spreadPts=prices.map((p,i)=>{
+      let s;
+      if(deal.outcome==='Broken'){s=deal.spread*(1+(i/n)*1.8)+Math.sin(i*1.7)*deal.spread*0.08;}
+      else{const prog=i/(n-1);const noise=(Math.sin(i*2.7)*0.3+Math.cos(i*1.3)*0.2)*deal.spread*0.12;s=Math.max(0,deal.spread*(1-Math.pow(prog,0.65))+noise);}
+      return {date:p.date,val:parseFloat(s.toFixed(2))};
+    });
+  }
+  const maxV=Math.max(...spreadPts.map(p=>p.val))*1.15,minV=0;
+  const xs=i=>PL+((i/(spreadPts.length-1))*w);
   const ys=v=>PT+h-((v-minV)/(maxV-minV))*h;
-  const pts=spreadPts.map((p,i)=>`${xs(i).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ');
   const lineColor=deal.outcome==='Broken'?'#9e5a4a':'#4a9e8a';
-  const x1=spreadPts[0].date.slice(0,7),x2=spreadPts[Math.floor(n/2)].date.slice(0,7),x3=spreadPts[n-1].date.slice(0,7);
+  const dotColor=deal.outcome==='Broken'?'#9e5a4a':'#4a9e8a';
+  const x1=spreadPts[0].date,x3=spreadPts[spreadPts.length-1].date;
   const serial=encodeURIComponent(JSON.stringify({spreadPts,minV,maxV,PL,w,h,PT,W,H,ticker:deal.ticker,chartType:'spread'}));
+  const isMilestone=!!milestones;
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;overflow:visible;">
     <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
     <line x1="${PL}" y1="${PT+h}" x2="${PL+w}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
@@ -1763,10 +1776,11 @@ function buildSpreadSVG(prices,deal){
     <text x="${PL-2}" y="${PT+h/2+2}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${(maxV/2).toFixed(1)}%</text>
     <text x="${PL-2}" y="${PT+h}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">0%</text>
     <text x="${PL}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a">${x1}</text>
-    <text x="${PL+w/2}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="middle">${x2}</text>
     <text x="${PL+w}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="end">${x3}</text>
-    <text x="${PL+2}" y="${PT+9}" font-family="monospace" font-size="4" fill="#2a3a2a">Spread % over deal period</text>
-    <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="1.5"/>
+    <text x="${PL+2}" y="${PT+9}" font-family="monospace" font-size="4" fill="#2a3a2a">${isMilestone?'Key spread milestones':'Spread % over deal period'}</text>
+    <polyline points="${spreadPts.map((p,i)=>`${xs(i).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ')}" fill="none" stroke="${lineColor}" stroke-width="1.5" stroke-dasharray="${isMilestone?'none':'none'}"/>
+    ${isMilestone?spreadPts.map((p,i)=>`<circle cx="${xs(i).toFixed(1)}" cy="${ys(p.val).toFixed(1)}" r="3" fill="${dotColor}" opacity="0.9"/>
+      <text x="${xs(i).toFixed(1)}" y="${(ys(p.val)-5).toFixed(1)}" font-family="monospace" font-size="4" fill="${dotColor}" text-anchor="middle">${p.val}%</text>`).join(''):''}
     <rect class="chart-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
     <line id="vline-spread-${deal.ticker}" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#c8945a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none"/>
   </svg>`;
