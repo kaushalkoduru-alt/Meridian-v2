@@ -1782,7 +1782,21 @@ function buildSpreadSVG(prices,deal){
   }
   let spreadPts;
   if(milestones){
-    spreadPts=milestones;
+    // Interpolate between milestones to add density
+    const interpolated=[];
+    for(let i=0;i<milestones.length-1;i++){
+      const a=milestones[i],b=milestones[i+1];
+      const steps=8;
+      for(let s=0;s<steps;s++){
+        const t=s/steps;
+        interpolated.push({
+          date:a.date,
+          val:parseFloat((a.val+(b.val-a.val)*t).toFixed(2))
+        });
+      }
+    }
+    interpolated.push(milestones[milestones.length-1]);
+    spreadPts=interpolated;
   } else {
     const n=prices.length;
     spreadPts=prices.map((p,i)=>{
