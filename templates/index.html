@@ -1786,7 +1786,7 @@ function buildSpreadSVG(prices,deal){
     const interpolated=[];
     for(let i=0;i<milestones.length-1;i++){
       const a=milestones[i],b=milestones[i+1];
-      const steps=8;
+      const steps=5;
       for(let s=0;s<steps;s++){
         const t=s/steps;
         interpolated.push({
@@ -1822,10 +1822,13 @@ function buildSpreadSVG(prices,deal){
     <text x="${PL-2}" y="${PT+h}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">0%</text>
     <text x="${PL}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a">${x1}</text>
     <text x="${PL+w}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="end">${x3}</text>
-    <text x="${PL+2}" y="${PT+9}" font-family="monospace" font-size="4" fill="#2a3a2a">${isMilestone?'Key spread milestones':'Spread % over deal period'}</text>
+    <text x="${PL+w/2}" y="${H-4}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="middle">${isMilestone?'Key spread milestones':'Spread % over deal period'}</text>
     <polyline points="${spreadPts.map((p,i)=>`${xs(i).toFixed(1)},${ys(p.val).toFixed(1)}`).join(' ')}" fill="none" stroke="${lineColor}" stroke-width="1.5" stroke-dasharray="${isMilestone?'none':'none'}"/>
-    ${isMilestone?spreadPts.map((p,i)=>`<circle cx="${xs(i).toFixed(1)}" cy="${ys(p.val).toFixed(1)}" r="3" fill="${dotColor}" opacity="0.9"/>
-      <text x="${xs(i).toFixed(1)}" y="${(ys(p.val)-5).toFixed(1)}" font-family="monospace" font-size="4" fill="${dotColor}" text-anchor="middle">${p.val}%</text>`).join(''):''}
+    ${isMilestone?milestones.map((p,i)=>{
+      const mi=Math.round(i*(spreadPts.length-1)/(milestones.length-1));
+      return `<circle cx="${xs(mi).toFixed(1)}" cy="${ys(p.val).toFixed(1)}" r="2.5" fill="${dotColor}" opacity="0.9"/>
+      <text x="${xs(mi).toFixed(1)}" y="${(ys(p.val)-5).toFixed(1)}" font-family="monospace" font-size="4" fill="${dotColor}" text-anchor="middle">${p.val}%</text>`;
+    }).join(''):''}
     <rect class="chart-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
     <line id="vline-spread-${deal.ticker}" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#c8945a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none"/>
   </svg>`;
