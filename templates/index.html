@@ -1621,7 +1621,38 @@ const MACRO_DATA={
   'ATVI':{fed:{signal:'Headwind',desc:'Rate hikes creating headwinds for mega deals'},sector_ma:{signal:'Active',desc:'Gaming consolidation wave continuing in 2022'},rates:{signal:'Headwind',desc:'Rising rates increased Microsoft financing complexity'},regulatory:{signal:'Hostile',desc:'FTC attempted to block, model missed this close despite hostility'},deal_size:{signal:'Very Large',desc:'$68.7B one of the largest tech deals ever, attracted global regulatory scrutiny'}},
   'ACI':{fed:{signal:'Headwind',desc:'Rate hikes creating headwinds for leveraged deals'},sector_ma:{signal:'Active',desc:'Grocery consolidation continuing despite headwinds'},rates:{signal:'Headwind',desc:'Rising rates increased Kroger financing cost'},regulatory:{signal:'Hostile',desc:'FTC sued to block, model missed this eventual close after 878 days'},deal_size:{signal:'Very Large',desc:'$24.6B attracted maximum FTC scrutiny over grocery competition'}},
 };
+const SECTOR_ETF_MAP={
+  'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
+  'AZPN':'XLK','QDEL':'XLV','ONCE':'XLV','ARRY':'XLV','FMBI':'XLF',
+  'NTRA':'XLV','EPAY':'XLF','GTES':'XLI','PING':'XLK','PCTY':'XLK',
+  'COUP':'XLK','SAVE':'XTN','CHNG':'XLV','SGFY':'XLV','IRBT':'XLK',
+  'ATVI':'XLK','ACI':'XLP',
+};
 
+const SPREAD_MILESTONES={
+  'CACC':[{date:'Jan 2024',val:4.0},{date:'Feb 2024',val:3.2},{date:'Apr 2024',val:1.8},{date:'Jun 2024',val:0.4},{date:'Jul 2024',val:0.0}],
+  'NTCT':[{date:'Feb 2024',val:5.0},{date:'Mar 2024',val:3.8},{date:'Apr 2024',val:2.1},{date:'May 2024',val:0.8},{date:'Jun 2024',val:0.0}],
+  'NUAN':[{date:'Apr 2021',val:2.0},{date:'Aug 2021',val:1.6},{date:'Dec 2021',val:1.2},{date:'Feb 2022',val:0.5},{date:'Apr 2022',val:0.0}],
+  'SGEN':[{date:'Mar 2023',val:5.0},{date:'Jun 2023',val:3.8},{date:'Sep 2023',val:2.2},{date:'Nov 2023',val:0.6},{date:'Dec 2023',val:0.0}],
+  'CCXI':[{date:'Aug 2022',val:4.0},{date:'Sep 2022',val:2.9},{date:'Oct 2022',val:1.6},{date:'Nov 2022',val:0.5},{date:'Dec 2022',val:0.0}],
+  'AZPN':[{date:'Oct 2022',val:3.0},{date:'Jan 2023',val:2.4},{date:'Mar 2023',val:1.5},{date:'May 2023',val:0.3},{date:'May 2023',val:0.0}],
+  'QDEL':[{date:'May 2022',val:3.0},{date:'Jul 2022',val:2.2},{date:'Sep 2022',val:1.1},{date:'Oct 2022',val:0.2},{date:'Oct 2022',val:0.0}],
+  'ONCE':[{date:'Dec 2019',val:3.0},{date:'Mar 2020',val:2.4},{date:'Jun 2020',val:1.5},{date:'Sep 2020',val:0.6},{date:'Dec 2020',val:0.0}],
+  'ARRY':[{date:'Jun 2019',val:3.0},{date:'Jun 2019',val:1.8},{date:'Jul 2019',val:0.5},{date:'Jul 2019',val:0.0}],
+  'FMBI':[{date:'Jun 2021',val:4.0},{date:'Sep 2021',val:3.1},{date:'Dec 2021',val:1.8},{date:'Jan 2022',val:0.5},{date:'Feb 2022',val:0.0}],
+  'NTRA':[{date:'Sep 2023',val:3.0},{date:'Nov 2023',val:2.2},{date:'Jan 2024',val:1.1},{date:'Feb 2024',val:0.2},{date:'Mar 2024',val:0.0}],
+  'EPAY':[{date:'Jan 2022',val:2.0},{date:'Feb 2022',val:1.5},{date:'Apr 2022',val:0.8},{date:'May 2022',val:0.2},{date:'Jun 2022',val:0.0}],
+  'GTES':[{date:'Jan 2024',val:3.0},{date:'Feb 2024',val:2.3},{date:'Apr 2024',val:1.2},{date:'May 2024',val:0.2},{date:'May 2024',val:0.0}],
+  'PING':[{date:'Aug 2022',val:3.0},{date:'Oct 2022',val:2.5},{date:'Dec 2022',val:1.4},{date:'Jan 2023',val:0.4},{date:'Feb 2023',val:0.0}],
+  'PCTY':[{date:'Mar 2024',val:4.0},{date:'Apr 2024',val:3.1},{date:'Jun 2024',val:1.6},{date:'Jul 2024',val:0.3},{date:'Aug 2024',val:0.0}],
+  'COUP':[{date:'Dec 2022',val:2.0},{date:'Jan 2023',val:1.4},{date:'Feb 2023',val:0.5},{date:'Feb 2023',val:0.0}],
+  'SAVE':[{date:'Jul 2022',val:35.0},{date:'Oct 2022',val:42.0},{date:'Jan 2023',val:38.0},{date:'Jun 2023',val:55.0},{date:'Jan 2024',val:80.0}],
+  'CHNG':[{date:'Jan 2022',val:22.0},{date:'Jun 2022',val:28.0},{date:'Jan 2023',val:35.0},{date:'Jun 2023',val:42.0},{date:'Jan 2024',val:50.0}],
+  'SGFY':[{date:'Sep 2022',val:12.0},{date:'Dec 2022',val:18.0},{date:'Mar 2023',val:24.0},{date:'Jun 2023',val:30.0},{date:'Dec 2023',val:45.0}],
+  'IRBT':[{date:'Aug 2022',val:22.0},{date:'Nov 2022',val:28.0},{date:'Mar 2023',val:35.0},{date:'Sep 2023',val:42.0},{date:'Jan 2024',val:55.0}],
+  'ATVI':[{date:'Jan 2022',val:25.0},{date:'Jun 2022',val:30.0},{date:'Jan 2023',val:22.0},{date:'Jun 2023',val:12.0},{date:'Oct 2023',val:0.0}],
+  'ACI':[{date:'Oct 2022',val:15.0},{date:'Mar 2023',val:20.0},{date:'Sep 2023',val:28.0},{date:'Mar 2024',val:18.0},{date:'Jan 2025',val:0.0}],
+};
 const trChartCache={};
 let trSelectedTicker=null;
 
