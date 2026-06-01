@@ -1786,7 +1786,7 @@ function buildSpreadSVG(prices,deal){
     const interpolated=[];
     for(let i=0;i<milestones.length-1;i++){
       const a=milestones[i],b=milestones[i+1];
-      const steps=6;
+      const steps=7;
       for(let s=0;s<steps;s++){
         const t=s/steps;
         interpolated.push({
@@ -1796,6 +1796,7 @@ function buildSpreadSVG(prices,deal){
       }
     }
     interpolated.push(milestones[milestones.length-1]);
+    console.log(interpolated.length);
     spreadPts=interpolated;
   } else {
     const n=prices.length;
