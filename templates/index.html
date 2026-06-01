@@ -1862,7 +1862,7 @@ function renderTrackRecordDetail(deal,chartData){
     </div>
     <div class="tr-charts">
       <div class="tr-chart-box" style="position:relative;">
-        <div class="tr-chart-label">Stock price vs S&P 500 since announcement (indexed to 100)</div>
+        <div class="tr-chart-label">${SECTOR_ETF_MAP[deal.ticker]||'Sector ETF'} vs S&P 500 during deal period (indexed to 100)</div>
         <div class="tr-chart-area">${stockSVG}</div>
         <div class="tr-chart-tooltip" id="tr-tooltip-stock-${deal.ticker}" style="position:absolute;top:0;left:0;"></div>
       </div>
