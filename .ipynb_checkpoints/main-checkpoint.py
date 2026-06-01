@@ -68,16 +68,83 @@ def save_cache(records):
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
         clean = clean_records(df.to_dict(orient='records'))
         if len(clean) >= 3:
-            redis_set(clean)
+            merged = rolling_merge(clean)
+            redis_set(merged)
             try:
                 tmp = CACHE_FILE + '.tmp'
-                df.to_csv(tmp, index=False)
+                pd.DataFrame(merged).to_csv(tmp, index=False)
                 os.replace(tmp, CACHE_FILE)
             except:
                 pass
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache saved: {len(clean)} deals.")
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache saved: {len(merged)} deals ({len(clean)} from scan, {len(merged)-len(clean)} carried over).")
     except Exception as e:
         print(f"save_cache error: {e}")
+
+
+def rolling_merge(new_deals):
+    """
+    Merges new scan results with existing cache.
+    - New deals always included with fresh prices
+    - Deals missing from this scan but in cache are kept IF:
+      1. They were seen within the last 2 hours (one missed scan)
+      2. Their spread hasn't moved more than 15% in either direction
+    - Deals missing from two consecutive scans are dropped
+    - Deals whose stock has crashed more than 15% below deal price are dropped immediately
+    """
+    existing = redis_get()
+    if not existing:
+        return new_deals
+
+    now = datetime.utcnow()
+    new_tickers = {d['ticker'] for d in new_deals}
+    carried = []
+
+    for deal in existing:
+        if deal['ticker'] in new_tickers:
+            continue  # Already in new scan with fresh data
+        try:
+            fetched_str = deal.get('fetched', '')
+            if not fetched_str:
+                continue
+            fetched_time = datetime.strptime(fetched_str, '%Y-%m-%dT%H:%M')
+            age_hours = (now - fetched_time).total_seconds() / 3600
+
+            # Drop if missing for more than 2 hours (2 consecutive scans)
+            if age_hours > 2:
+                print(f"  Rolling drop: {deal['ticker']} — missing for {age_hours:.1f}h")
+                continue
+
+            # Drop immediately if spread has gone very negative (deal broke/closed)
+            sp = deal.get('sp_pct', 0)
+            if sp < -15:
+                print(f"  Rolling drop: {deal['ticker']} — spread crashed to {sp:.2f}%")
+                continue
+
+            # Refresh stock price before carrying over
+            try:
+                h = yf.Ticker(deal['ticker']).history(period='5d')
+                if not h.empty:
+                    cp = round(float(h['Close'].iloc[-1]), 2)
+                    dp = deal.get('dp', 0)
+                    if dp and cp > 0:
+                        new_sp = round(((dp - cp) / cp) * 100, 2)
+                        if new_sp < -15:
+                            print(f"  Rolling drop: {deal['ticker']} — fresh spread {new_sp:.2f}%")
+                            continue
+                        deal['cp'] = cp
+                        deal['sp_pct'] = new_sp
+                        deal['ann'] = round((new_sp / 180) * 365, 2)
+            except:
+                pass  # Keep old price if refresh fails
+
+            carried.append(deal)
+            print(f"  Rolling carry: {deal['ticker']} — {age_hours:.1f}h old")
+        except:
+            continue
+
+    merged = new_deals + carried
+    merged.sort(key=lambda x: x.get('sp_pct', 0), reverse=True)
+    return merged
 
 def load_cache():
     deals = redis_get()
@@ -684,7 +751,7 @@ def fetch_deals_from_edgar():
 
     if results:
         save_cache(results)
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan complete: {len(results)} deals saved to Redis.")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan complete.")
     else:
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan returned no results — Redis unchanged.")
 
