@@ -14,6 +14,12 @@ import math
 import random
 import time
 from contextlib import asynccontextmanager
+import stripe
+
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
+CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
+BASE_URL = 'https://meridian-v2-production-cffa.up.railway.app'
 
 # ─── REDIS CACHE ─────────────────────────────────────────────────────────────
 
@@ -989,7 +995,43 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
             print(f"Chart error {ticker} attempt {attempt+1}: {e}")
             time.sleep(1)
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
+@app.post("/api/create-checkout-session")
+async def create_checkout_session(request: Request):
+    try:
+        body = await request.json()
+        user_email = body.get('email', '')
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{'price': STRIPE_PRICE_ID, 'quantity': 1}],
+            mode='subscription',
+            success_url=f'{BASE_URL}/?session_id={{CHECKOUT_SESSION_ID}}&subscribed=true',
+            cancel_url=f'{BASE_URL}/?cancelled=true',
+            customer_email=user_email if user_email else None,
+        )
+        return JSONResponse(content={'url': session.url})
+    except Exception as e:
+        print(f"Stripe error: {e}")
+        return JSONResponse(content={'error': str(e)}, status_code=500)
 
+@app.get("/api/check-subscription")
+async def check_subscription(email: str = ''):
+    if not email:
+        return JSONResponse(content={'subscribed': False})
+    try:
+        customers = stripe.Customer.list(email=email, limit=1)
+        if not customers.data:
+            return JSONResponse(content={'subscribed': False})
+        customer = customers.data[0]
+        subscriptions = stripe.Subscription.list(
+            customer=customer.id,
+            status='active',
+            limit=1
+        )
+        subscribed = len(subscriptions.data) > 0
+        return JSONResponse(content={'subscribed': subscribed})
+    except Exception as e:
+        print(f"Subscription check error: {e}")
+        return JSONResponse(content={'subscribed': False})
 @app.post("/api/refresh")
 async def refresh_deals():
     global _scan_running

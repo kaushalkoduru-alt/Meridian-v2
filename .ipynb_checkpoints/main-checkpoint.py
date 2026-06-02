@@ -213,7 +213,13 @@ KNOWN_ACQUIRERS = {
 EXCLUDED_TICKERS = {
     'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU'
 }
-
+SECTOR_ETF_MAP = {
+    'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
+    'AZPN':'XLK','QDEL':'XLV','ONCE':'XLV','ARRY':'XLV','FMBI':'XLF',
+    'NTRA':'XLV','EPAY':'XLF','GTES':'XLI','PING':'XLK','PCTY':'XLK',
+    'COUP':'XLK','SAVE':'XTN','CHNG':'XLV','SGFY':'XLV','IRBT':'XLK',
+    'ATVI':'XLK','ACI':'XLP',
+}
 EDGAR_QUERIES = [
     {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'},
     {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22merger+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-05-21&from={start}&size=100'},
@@ -940,30 +946,7 @@ async def refresh_stream():
         yield f"data: {json.dumps({'done': True, 'deals': deals})}\n\n"
     return StreamingResponse(generate(), media_type="text/event-stream")
 
-SECTOR_ETF_MAP = {
-    'CACC': 'XLF',   # Financial
-    'NTCT': 'XLK',   # Technology
-    'NUAN': 'XLK',   # Technology
-    'SGEN': 'XLV',   # Healthcare
-    'CCXI': 'XLV',   # Healthcare
-    'AZPN': 'XLK',   # Technology
-    'QDEL': 'XLV',   # Healthcare
-    'ONCE': 'XLV',   # Healthcare
-    'ARRY': 'XLV',   # Healthcare
-    'FMBI': 'XLF',   # Financial
-    'NTRA': 'XLV',   # Healthcare
-    'EPAY': 'XLF',   # Financial
-    'GTES': 'XLI',   # Industrials
-    'PING': 'XLK',   # Technology
-    'PCTY': 'XLK',   # Technology
-    'COUP': 'XLK',   # Technology
-    'SAVE': 'XTN',   # Transportation
-    'CHNG': 'XLV',   # Healthcare
-    'SGFY': 'XLV',   # Healthcare
-    'IRBT': 'XLK',   # Technology
-    'ATVI': 'XLK',   # Technology
-    'ACI':  'XLP',   # Consumer Staples
-}
+
 
 @app.get("/api/track-record/chart/{ticker}")
 async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = None):
