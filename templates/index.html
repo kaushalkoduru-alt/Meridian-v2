@@ -2017,7 +2017,8 @@ function updateModalState(){
 }
 function showAnalysis(d){
   if(!isSubscribed){openPaywall();return;}
-  _originalShowAnalysis(d);
+  showPage('page-analysis');
+  renderAnalysis(d);
 }
 
 async function handleModalCTA(){
