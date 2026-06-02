@@ -995,6 +995,12 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
             print(f"Chart error {ticker} attempt {attempt+1}: {e}")
             time.sleep(1)
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
+@app.get("/api/debug-env")
+async def debug_env():
+    return JSONResponse(content={
+        "stripe_price_id": STRIPE_PRICE_ID,
+        "stripe_key_set": bool(stripe.api_key),
+    })
 @app.post("/api/create-checkout-session")
 async def create_checkout_session(request: Request):
     try:
