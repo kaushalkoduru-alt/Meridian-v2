@@ -1,7 +1,9 @@
-streamlit
+fastapi
+uvicorn
 pandas
 yfinance
 requests
 beautifulsoup4
 lxml
 stripe==7.0.0
+python-multipart
