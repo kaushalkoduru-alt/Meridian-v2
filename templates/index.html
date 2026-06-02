@@ -983,6 +983,7 @@ function showLanding()    { showPage('page-landing'); }
 function showMethodology(){ showPage('page-methodology'); }
 function showDashboard()  { showPage('page-dashboard'); if(!dealsLoaded) loadDeals(); }
 function showAnalysis(d)  { showPage('page-analysis'); renderAnalysis(d); }
+const _originalShowAnalysis=showAnalysis;
 function showCompare()    { showPage('page-compare'); loadCompare(); }
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
@@ -2014,7 +2015,6 @@ function updateModalState(){
   if(currentUser&&!isSubscribed){ctaBtn.textContent='Subscribe Now →';signinBtn.style.display='none';hint.style.display='none';}
   else if(!currentUser){ctaBtn.textContent='Sign Up & Subscribe →';signinBtn.style.display='block';hint.style.display='block';}
 }
-const _originalShowAnalysis=showAnalysis;
 function showAnalysis(d){
   if(!isSubscribed){openPaywall();return;}
   _originalShowAnalysis(d);
