@@ -1,9 +1,7 @@
-fastapi
-uvicorn
+streamlit
 pandas
-jinja2
-python-multipart
-requests
 yfinance
+requests
 beautifulsoup4
 lxml
+stripe==7.0.0
