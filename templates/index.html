@@ -2019,6 +2019,23 @@ function showAnalysis(d){
   if(!isSubscribed){openPaywall();return;}
   _originalShowAnalysis(d);
 }
+
+async function handleModalCTA(){
+  if(!currentUser){
+    await window.Clerk.openSignUp({afterSignUpUrl:window.location.href,afterSignInUrl:window.location.href});
+    return;
+  }
+  const email=currentUser.primaryEmailAddress?.emailAddress||'';
+  try{
+    const res=await fetch('/api/create-checkout-session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const data=await res.json();
+    if(data.url) window.location.href=data.url;
+  }catch(e){console.error('Stripe error:',e);}
+}
+
+async function handleModalSignIn(){
+  await window.Clerk.openSignIn({afterSignInUrl:window.location.href,afterSignUpUrl:window.location.href});
+}
 </script>
 <!-- PAYWALL MODAL -->
 <div class="modal-overlay hidden" id="paywall-modal">
@@ -2070,67 +2087,7 @@ async function initClerk() {
   }
 }
 
-function openPaywall() {
-  document.getElementById('paywall-modal').classList.remove('hidden');
-  updateModalState();
-}
 
-function closePaywall() {
-  document.getElementById('paywall-modal').classList.add('hidden');
-}
-
-function updateModalState() {
-  const ctaBtn = document.getElementById('modal-cta-btn');
-  const signinBtn = document.getElementById('modal-signin-btn');
-  const hint = document.getElementById('modal-signin-hint');
-  if (currentUser && !isSubscribed) {
-    ctaBtn.textContent = 'Subscribe Now →';
-    signinBtn.style.display = 'none';
-    hint.style.display = 'none';
-  } else if (!currentUser) {
-    ctaBtn.textContent = 'Sign Up & Subscribe →';
-    signinBtn.style.display = 'block';
-    hint.style.display = 'block';
-  }
-}
-
-async function handleModalCTA() {
-  if (!currentUser) {
-    await window.Clerk.openSignUp({
-      afterSignUpUrl: window.location.href,
-      afterSignInUrl: window.location.href,
-    });
-    return;
-  }
-  const email = currentUser.primaryEmailAddress?.emailAddress || '';
-  try {
-    const res = await fetch('/api/create-checkout-session', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({email})
-    });
-    const data = await res.json();
-    if (data.url) window.location.href = data.url;
-  } catch(e) {
-    console.error('Stripe error:', e);
-  }
-}
-
-async function handleModalSignIn() {
-  await window.Clerk.openSignIn({
-    afterSignInUrl: window.location.href,
-    afterSignUpUrl: window.location.href,
-  });
-}
-
-const _originalShowAnalysis = showAnalysis;
-function showAnalysis(d) {
-  if (!isSubscribed) {
-    openPaywall();
-    return;
-  }
-  _originalShowAnalysis(d);
-}
 
 document.getElementById('paywall-modal').addEventListener('click', function(e) {
   if (e.target === this) closePaywall();
