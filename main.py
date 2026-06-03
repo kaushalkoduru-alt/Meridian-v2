@@ -217,7 +217,8 @@ KNOWN_ACQUIRERS = {
 }
 
 EXCLUDED_TICKERS = {
-    'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU'
+    'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU',
+    'LEGO', 'LEG', 'LEGN'
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
@@ -531,7 +532,16 @@ def get_break_price(ticker, filed_date):
 def get_break_downside(current_price, break_price):
     if not break_price or not current_price: return None
     return round(((break_price-current_price)/current_price)*100,2)
-
+def calculate_break_price(deal_price, premium_pct=None, current_price=None, spread_pct=None):
+    # Method 1: deal premium reversal (most reliable)
+    if premium_pct and premium_pct > 0:
+        bp = round(deal_price / (1 + premium_pct/100), 2)
+        return bp, 'premium_reversal'
+    # Method 2: spread regression fallback
+    if current_price and spread_pct and spread_pct > 0:
+        bp = round(current_price - (deal_price - current_price) * (1/spread_pct), 2)
+        return bp, 'spread_regression'
+    return None, None
 def extract_price_from_text(clean_text):
     patterns=[
         r'\$(\d+\.\d+)\s+per\s+share\s+in\s+cash',
@@ -697,7 +707,7 @@ def fetch_deals_from_edgar():
                 try:
                     dr=requests.get(lk,headers=headers,timeout=10)
                     ct=BeautifulSoup(dr.text,'html.parser').get_text()
-                    if any(kw in ct.lower() for kw in ['definitive agreement','merger agreement','tender offer','per share in cash','per share of']):
+                    if any(kw in ct.lower() for kw in ['definitive agreement','merger agreement','tender offer','per share in cash']) and any(kw in ct.lower() for kw in ['acquir','merger','tender offer']) and ('per share' in ct.lower() or 'per common share' in ct.lower()):
                         dp_try=extract_price_from_text(ct)
                         if dp_try:
                             dp=dp_try; acquirer=extract_acquirer(ct)
@@ -710,6 +720,21 @@ def fetch_deals_from_edgar():
             days=(datetime.today()-datetime.strptime(src['file_date'],'%Y-%m-%d')).days
             acquirer=KNOWN_ACQUIRERS.get(ticker,acquirer)
             break_price=get_break_price(ticker,src['file_date'])
+            break_price_method='historical'
+            if not break_price:
+                premium_pct=None
+                if tx_value and dp:
+                    try:
+                        shares_outstanding=yf.Ticker(ticker).info.get('sharesOutstanding',0)
+                        if shares_outstanding and shares_outstanding>0:
+                            implied_premium=((dp-(tx_value*1e9/shares_outstanding))/(tx_value*1e9/shares_outstanding))*100
+                            if 0<implied_premium<200:
+                                premium_pct=round(implied_premium,2)
+                    except: pass
+                bp_calc,method=calculate_break_price(dp,premium_pct,round(cp,2),round(sp_pct,2))
+                if bp_calc and bp_calc>0 and bp_calc<dp:
+                    break_price=bp_calc
+                    break_price_method=method or 'calculated'
             break_downside=get_break_downside(round(cp,2),break_price)
             reg_tags=get_regulatory_risk(ticker,acquirer,tx_value,deal_type)
             sc=score_deal(sp_pct,days,deal_type,reg_tags,break_price,dp,financing_signal)
@@ -723,7 +748,8 @@ def fetch_deals_from_edgar():
                 'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'ann':round(ann,2),
                 'score':sc,'risk':risk,'filed':src['file_date'],'days_old':days,
                 'close_date':close_date,'tx_value':tx_value,'break_price':break_price,
-                'break_downside':break_downside,'financing_signal':financing_signal,
+                'break_downside':break_downside,'break_price_method':break_price_method,
+                'financing_signal':financing_signal,
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
             })
             if len(results) % 10 == 0:
@@ -741,6 +767,12 @@ def fetch_deals_from_edgar():
                 if sp_pct<-10 or sp_pct>60: continue
                 days=(datetime.today()-datetime.strptime(fd['filed'],'%Y-%m-%d')).days
                 break_price=get_break_price(fd['ticker'],fd['filed'])
+                break_price_method='historical'
+                if not break_price:
+                    bp_calc,method=calculate_break_price(fd['dp'],None,cp,sp_pct)
+                    if bp_calc and bp_calc>0 and bp_calc<fd['dp']:
+                        break_price=bp_calc
+                        break_price_method=method or 'calculated'
                 break_downside=get_break_downside(cp,break_price)
                 reg_tags=get_regulatory_risk(fd['ticker'],fd['acquirer'],fd['tx_value'],fd['deal_type'])
                 fin_signal='committed' if fd['deal_type']=='All Cash' else 'confident'
@@ -753,7 +785,7 @@ def fetch_deals_from_edgar():
                     'company':fd['company'],'deal_type':fd['deal_type'],'cp':cp,'dp':dp,
                     'sp_pct':sp_pct,'ann':ann,'score':sc,'risk':risk,'filed':fd['filed'],
                     'days_old':days,'close_date':fd['close_date'],'tx_value':fd['tx_value'],
-                    'break_price':break_price,'break_downside':break_downside,
+                    'break_price':break_price,'break_downside':break_downside,'break_price_method':break_price_method,
                     'financing_signal':fin_signal,'reg_tags':json.dumps(reg_tags),
                     'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 })
@@ -995,6 +1027,202 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
             print(f"Chart error {ticker} attempt {attempt+1}: {e}")
             time.sleep(1)
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
+@app.get("/api/spread-history/{ticker}")
+async def spread_history(ticker: str, filed: str = "2024-01-01"):
+    cache_key = f"spread_hist_{ticker}"
+    try:
+        r = requests.get(
+            f"{REDIS_URL}/get/{cache_key}",
+            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+            timeout=5
+        )
+        result = r.json().get('result')
+        if result:
+            data = json.loads(result) if isinstance(result, str) else json.loads(result.get('value', '{}'))
+            if data.get('history'):
+                return JSONResponse(content=data)
+    except:
+        pass
+    try:
+        end_date = datetime.utcnow().strftime('%Y-%m-%d')
+        h = yf.Ticker(ticker).history(start=filed, end=end_date)
+        if h.empty:
+            return JSONResponse(content={"history": [], "ticker": ticker})
+        deals = load_cache() or []
+        deal = next((d for d in deals if d['ticker'] == ticker), None)
+        dp = deal.get('dp') if deal else None
+        if not dp:
+            return JSONResponse(content={"history": [], "ticker": ticker})
+        history = []
+        for date, row in h.iterrows():
+            cp = round(float(row['Close']), 2)
+            if cp > 0 and dp > 0:
+                spread = round(((dp - cp) / cp) * 100, 2)
+                history.append({"date": date.strftime('%Y-%m-%d'), "spread": spread, "close": cp})
+        payload = json.dumps({"history": history, "ticker": ticker, "dp": dp})
+        try:
+            requests.post(
+                f"{REDIS_URL}/set/{cache_key}",
+                headers={"Authorization": f"Bearer {REDIS_TOKEN}", "Content-Type": "application/json"},
+                json={"value": payload, "ex": 3600},
+                timeout=10
+            )
+        except:
+            pass
+        return JSONResponse(content={"history": history, "ticker": ticker, "dp": dp})
+    except Exception as e:
+        print(f"Spread history error {ticker}: {e}")
+        return JSONResponse(content={"history": [], "ticker": ticker})
+
+@app.get("/api/catalyst/{ticker}")
+async def get_catalyst(ticker: str, filed: str = "2024-01-01", deal_type: str = "All Cash", tx_value: float = 0):
+    try:
+        filed_dt = datetime.strptime(filed, '%Y-%m-%d')
+        today = datetime.utcnow()
+        days_elapsed = (today - filed_dt).days
+        catalysts = []
+
+        # Announcement — always known
+        catalysts.append({
+            "label": "Announced",
+            "date": filed,
+            "status": "completed",
+            "description": "Definitive merger agreement filed with SEC"
+        })
+
+        # HSR filing — typically 30 days after announcement
+        hsr_date = filed_dt + timedelta(days=30)
+        catalysts.append({
+            "label": "HSR Filing",
+            "date": hsr_date.strftime('%Y-%m-%d'),
+            "status": "completed" if today > hsr_date else "pending",
+            "description": "Hart-Scott-Rodino antitrust filing — mandatory for deals over $119.5M",
+            "estimated": True
+        })
+
+        # HSR waiting period expiration — 30 days after HSR filing
+        hsr_expire = hsr_date + timedelta(days=30)
+        catalysts.append({
+            "label": "HSR Waiting Period",
+            "date": hsr_expire.strftime('%Y-%m-%d'),
+            "status": "completed" if today > hsr_expire else "pending",
+            "description": "DOJ/FTC 30-day review window expires — deal can proceed unless challenged",
+            "estimated": True
+        })
+
+        # Shareholder vote — typically 90-120 days for mergers, faster for tender offers
+        if deal_type == 'Tender Offer':
+            sv_days = 45
+            sv_label = "Tender Offer Expiration"
+            sv_desc = "Mandatory minimum 20-business-day tender period expires"
+        elif deal_type == 'Private Equity':
+            sv_days = 100
+            sv_label = "Shareholder Vote"
+            sv_desc = "Target company shareholders vote to approve the merger agreement"
+        else:
+            sv_days = 110
+            sv_label = "Shareholder Vote"
+            sv_desc = "Target company shareholders vote to approve the merger agreement"
+
+        sv_date = filed_dt + timedelta(days=sv_days)
+        catalysts.append({
+            "label": sv_label,
+            "date": sv_date.strftime('%Y-%m-%d'),
+            "status": "completed" if today > sv_date else "pending",
+            "description": sv_desc,
+            "estimated": deal_type != 'Tender Offer'
+        })
+
+        # Regulatory clearance — depends on deal size and type
+        if tx_value and tx_value > 5:
+            reg_days = 180
+            reg_label = "Regulatory Clearance"
+            reg_desc = f"Expected FTC/DOJ antitrust clearance for ${tx_value:.1f}B deal"
+        else:
+            reg_days = 120
+            reg_label = "Regulatory Clearance"
+            reg_desc = "Expected regulatory clearance — standard review timeline"
+
+        reg_date = filed_dt + timedelta(days=reg_days)
+        catalysts.append({
+            "label": reg_label,
+            "date": reg_date.strftime('%Y-%m-%d'),
+            "status": "completed" if today > reg_date else "pending",
+            "description": reg_desc,
+            "estimated": True
+        })
+
+        # Outside date — typically 12-18 months, deal terminates if not closed
+        outside_days = 365 if deal_type == 'Tender Offer' else 540
+        outside_date = filed_dt + timedelta(days=outside_days)
+        catalysts.append({
+            "label": "Outside Date",
+            "date": outside_date.strftime('%Y-%m-%d'),
+            "status": "active",
+            "description": "Deal automatically terminates if not closed by this date unless extended by mutual agreement",
+            "estimated": True
+        })
+
+        # Expected close
+        avg_days = {'Tender Offer': 90, 'Private Equity': 150, 'All Cash': 180, 'Cash + Stock': 220}
+        close_days = avg_days.get(deal_type, 180)
+        close_date = filed_dt + timedelta(days=close_days)
+        days_to_close = (close_date - today).days
+        catalysts.append({
+            "label": "Expected Close",
+            "date": close_date.strftime('%Y-%m-%d'),
+            "status": "completed" if today > close_date else "pending",
+            "description": f"Estimated close based on {deal_type} deal average of {close_days} days · {max(0, days_to_close)} days remaining",
+            "estimated": True
+        })
+
+        return JSONResponse(content={
+            "catalysts": catalysts,
+            "days_elapsed": days_elapsed,
+            "current_stage": next((c["label"] for c in reversed(catalysts) if c["status"] == "completed"), "Announced")
+        })
+    except Exception as e:
+        print(f"Catalyst error {ticker}: {e}")
+        return JSONResponse(content={"catalysts": [], "days_elapsed": 0, "current_stage": "Unknown"})
+
+@app.get("/api/implied-probability/{ticker}")
+async def implied_probability(ticker: str):
+    try:
+        deals = load_cache() or []
+        deal = next((d for d in deals if d['ticker'] == ticker), None)
+        if not deal:
+            return JSONResponse(content={"probability": None, "error": "Deal not found"})
+        cp = deal.get('cp')
+        dp = deal.get('dp')
+        bp = deal.get('break_price')
+        if not cp or not dp or not bp or dp <= bp:
+            return JSONResponse(content={"probability": None, "error": "Insufficient data"})
+        prob = round(((cp - bp) / (dp - bp)) * 100, 1)
+        prob = max(0, min(99.9, prob))
+        if prob >= 90:
+            signal = "Very High"
+            color = "green"
+        elif prob >= 75:
+            signal = "High"
+            color = "teal"
+        elif prob >= 55:
+            signal = "Moderate"
+            color = "amber"
+        else:
+            signal = "Low"
+            color = "red"
+        return JSONResponse(content={
+            "probability": prob,
+            "signal": signal,
+            "color": color,
+            "current_price": cp,
+            "deal_price": dp,
+            "break_price": bp,
+            "method": deal.get('break_price_method', 'historical')
+        })
+    except Exception as e:
+        print(f"Implied probability error {ticker}: {e}")
+        return JSONResponse(content={"probability": None, "error": str(e)})
 @app.get("/api/debug-env")
 async def debug_env():
     return JSONResponse(content={
