@@ -1195,7 +1195,7 @@ async def implied_probability(ticker: str):
         cp = deal.get('cp')
         dp = deal.get('dp')
         bp = deal.get('break_price')
-        if not cp or not dp or not bp or dp <= bp:
+        if not cp or not dp or not bp:
             return JSONResponse(content={"probability": None, "error": "Insufficient data"})
         prob = round(((cp - bp) / (dp - bp)) * 100, 1)
         prob = max(0, min(99.9, prob))
