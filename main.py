@@ -1199,6 +1199,17 @@ async def implied_probability(ticker: str):
             return JSONResponse(content={"probability": None, "error": "Insufficient data"})
         prob = round(((cp - bp) / (dp - bp)) * 100, 1)
         prob = max(0, min(99.9, prob))
+        if cp < bp:
+            return JSONResponse(content={
+                "probability": round(prob, 1),
+                "signal": "Distressed",
+                "color": "red",
+                "current_price": cp,
+                "deal_price": dp,
+                "break_price": bp,
+                "method": deal.get('break_price_method', 'historical'),
+                "note": "Stock trading below break price — deal may be in distress"
+            })
         if prob >= 90:
             signal = "Very High"
             color = "green"
