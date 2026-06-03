@@ -515,6 +515,41 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .compare-table tr:last-child td{border-bottom:none;}
 .compare-table tr:hover td{background:var(--bg3);}
 
+/* ── USER AVATAR ── */
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--teal2);border:1px solid var(--teal);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:0.42rem;font-weight:500;color:var(--teal);cursor:pointer;letter-spacing:0.05em;flex-shrink:0;}
+.user-avatar.subscribed{border:2px solid var(--gold);color:var(--gold);background:rgba(168,144,96,0.1);}
+
+/* ── SPREAD HISTORY CHART ── */
+.spread-chart-wrap{background:var(--bg2);border:1px solid var(--bdr);padding:1.25rem;}
+.spread-chart-area{height:160px;position:relative;}
+.spread-chart-area svg{width:100%;height:100%;}
+.spread-chart-tooltip{position:absolute;background:var(--bg);border:1px solid var(--bdr2);padding:0.3rem 0.6rem;font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--cream);pointer-events:none;display:none;white-space:nowrap;z-index:100;line-height:1.7;top:0;left:0;}
+
+/* ── IMPLIED PROBABILITY ── */
+.implied-prob-wrap{background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem;display:grid;grid-template-columns:auto 1fr;gap:1.5rem;align-items:center;}
+.implied-prob-number{font-family:'Playfair Display',serif;font-size:3.5rem;font-weight:300;line-height:1;}
+.implied-prob-label{font-family:'DM Mono',monospace;font-size:0.4rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.4rem;}
+.implied-prob-signal{font-family:'DM Mono',monospace;font-size:0.56rem;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:0.5rem;}
+.implied-prob-desc{font-family:'Cormorant Garamond',serif;font-size:0.88rem;color:var(--muted);line-height:1.6;font-weight:300;}
+.implied-prob-formula{font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);margin-top:0.5rem;letter-spacing:0.08em;}
+
+/* ── CATALYST TIMELINE ── */
+.catalyst-chain{background:var(--bg2);border:1px solid var(--bdr);padding:1.5rem 2rem;overflow-x:auto;}
+.catalyst-steps{display:flex;align-items:flex-start;gap:0;min-width:max-content;}
+.catalyst-step{display:flex;flex-direction:column;align-items:center;position:relative;min-width:140px;}
+.catalyst-step:not(:last-child)::after{content:'→';position:absolute;right:-14px;top:10px;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--bdr2);z-index:1;}
+.catalyst-step.completed .catalyst-step-dot{background:var(--teal);border-color:var(--teal);}
+.catalyst-step.current .catalyst-step-dot{background:var(--green);border-color:var(--green);box-shadow:0 0 8px rgba(90,158,106,0.5);}
+.catalyst-step.pending .catalyst-step-dot{background:transparent;border-color:var(--bdr2);}
+.catalyst-step-dot{width:20px;height:20px;border-radius:50%;border:2px solid;margin-bottom:0.5rem;flex-shrink:0;}
+.catalyst-step-label{font-family:'DM Mono',monospace;font-size:0.38rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--cream);text-align:center;margin-bottom:0.2rem;}
+.catalyst-step.pending .catalyst-step-label{color:var(--muted);}
+.catalyst-step-date{font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--teal);text-align:center;margin-bottom:0.2rem;}
+.catalyst-step.pending .catalyst-step-date{color:var(--dim);}
+.catalyst-step-est{font-family:'DM Mono',monospace;font-size:0.3rem;color:var(--dim);letter-spacing:0.08em;text-align:center;}
+.catalyst-step-desc{font-family:'Cormorant Garamond',serif;font-size:0.7rem;color:var(--dim);text-align:center;margin-top:0.3rem;max-width:130px;line-height:1.4;font-weight:300;}
+.catalyst-current-stage{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--green);letter-spacing:0.14em;text-transform:uppercase;margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--bdr2);}
+
 /* ── PAYWALL MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);}
 .modal-overlay.hidden{display:none;}
@@ -552,7 +587,10 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <nav class="land-nav">
     <div class="land-logo">MERI<em>DIAN</em></div>
     <div class="land-tag">◈ Near Real-Time M&A Arbitrage Intelligence</div>
-    <button class="land-nav-enter" onclick="showDashboard()">Enter Meridian →</button>
+    <div style="display:flex;align-items:center;gap:1rem;">
+      <div id="user-avatar-landing"></div>
+      <button class="land-nav-enter" onclick="showDashboard()">Enter Meridian →</button>
+    </div>
   </nav>
   <div class="hero">
     <div class="edition">M&A Arbitrage Intelligence · Sourced from SEC EDGAR</div>
@@ -702,6 +740,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="dnav-r">
       <div class="dlive"><span class="ddot"></span>Updated Hourly</div>
       <div class="dts" id="timestamp"></div>
+      <div id="user-avatar-dashboard"></div>
     </div>
   </nav>
   <div class="toolbar">
@@ -740,6 +779,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
     <div class="dnav-r">
       <button class="da-back" onclick="showDashboard()">← Back to Deals</button>
+      <div id="user-avatar-analysis"></div>
     </div>
   </nav>
   <div class="da-hero">
@@ -759,13 +799,15 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </div>
   <div class="da-metrics" id="da-metrics"></div>
+  <div class="da-section"><div class="da-section-title">Market-Implied Close Probability</div><div id="da-implied-prob"></div></div>
+  <div class="da-section"><div class="da-section-title">Live Spread History</div><div id="da-spread-chart"></div></div>
   <div class="da-section"><div class="da-section-title">Risk / Reward Analysis</div><div class="rr-grid" id="da-rr-grid"></div></div>
   <div class="da-section"><div class="da-section-title">Acquirer Intelligence</div><div class="acq-grid" id="da-acq-grid"></div></div>
   <div class="da-section"><div class="da-section-title">Comparable Deals</div><div id="da-comps"></div></div>
   <div class="da-section"><div class="da-section-title">Regulatory Risk</div><div class="reg-risk-list" id="da-reg-risk"></div></div>
   <div class="da-section"><div class="da-section-title">V3 Score Breakdown</div><div class="score-bars" id="da-score-bars"></div></div>
   <div class="da-section"><div class="da-section-title">Risk Factors</div><div class="risk-factors" id="da-risk-factors"></div></div>
-  <div class="da-section"><div class="da-section-title">Deal Timeline</div><div class="timeline" id="da-timeline"></div></div>
+  <div class="da-section"><div class="da-section-title">Deal Catalyst Calendar</div><div id="da-catalyst"></div></div>
   <footer style="margin-top:2rem;">
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
     <div class="footer-links">
@@ -982,8 +1024,6 @@ function showPage(id){
 function showLanding()    { showPage('page-landing'); }
 function showMethodology(){ showPage('page-methodology'); }
 function showDashboard()  { showPage('page-dashboard'); if(!dealsLoaded) loadDeals(); }
-function showAnalysis(d)  { showPage('page-analysis'); renderAnalysis(d); }
-const _originalShowAnalysis=showAnalysis;
 function showCompare()    { showPage('page-compare'); loadCompare(); }
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
@@ -1120,7 +1160,301 @@ function getScoreBreakdown(d){
 }
 
 // ── RENDER ANALYSIS ───────────────────────────────────────────────────────────
+function buildSpreadHistorySVG(history, dp){
+  if(!history||history.length<2) return '<div style="padding:2rem;text-align:center;font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading spread history...</div>';
+  const W=600,H=140,PL=36,PR=12,PT=12,PB=22;
+  const w=W-PL-PR,h=H-PT-PB;
+  const spreads=history.map(p=>p.spread);
+  const minV=Math.min(...spreads)*0.9,maxV=Math.max(...spreads)*1.1;
+  const xs=i=>PL+((i/(history.length-1))*w);
+  const ys=v=>PT+h-((v-minV)/(maxV-minV))*h;
+  const pts=history.map((p,i)=>`${xs(i).toFixed(1)},${ys(p.spread).toFixed(1)}`).join(' ');
+  const today=new Date();
+  const latest=history[history.length-1];
+  const latestColor=latest.spread>=12?'#9e5a4a':latest.spread>=8?'#c8945a':'#4a9e8a';
+  const x1=history[0].date.slice(0,7);
+  const x2=history[Math.floor(history.length/2)].date.slice(0,7);
+  const x3=history[history.length-1].date.slice(0,7);
+  const zeroY=ys(0);
+  const serial=encodeURIComponent(JSON.stringify({history,minV,maxV,PL,w,h,PT,W,H}));
+  return `<div class="spread-chart-wrap" style="position:relative;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;">Daily spread % since announcement · Real market data</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:${latestColor};font-weight:300;">+${latest.spread.toFixed(2)}% <span style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);">current</span></div>
+    </div>
+    <div class="spread-chart-area" style="position:relative;">
+      <svg id="spread-hist-svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;overflow:visible;">
+        <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
+        <line x1="${PL}" y1="${PT+h}" x2="${PL+w}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
+        ${zeroY>=PT&&zeroY<=PT+h?`<line x1="${PL}" y1="${zeroY.toFixed(1)}" x2="${PL+w}" y2="${zeroY.toFixed(1)}" stroke="#162a1c" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.5"/>`:''}
+        <text x="${PL-2}" y="${PT+5}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${maxV.toFixed(1)}%</text>
+        <text x="${PL-2}" y="${PT+h/2+2}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${((maxV+minV)/2).toFixed(1)}%</text>
+        <text x="${PL-2}" y="${PT+h}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${minV.toFixed(1)}%</text>
+        <text x="${PL}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a">${x1}</text>
+        <text x="${PL+w/2}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="middle">${x2}</text>
+        <text x="${PL+w}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="end">${x3}</text>
+        <polyline points="${pts}" fill="none" stroke="${latestColor}" stroke-width="1.5"/>
+        <circle cx="${xs(history.length-1).toFixed(1)}" cy="${ys(latest.spread).toFixed(1)}" r="3" fill="${latestColor}"/>
+        <rect id="spread-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
+        <line id="spread-vline" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#4a9e8a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none"/>
+      </svg>
+      <div class="spread-chart-tooltip" id="spread-hist-tooltip"></div>
+    </div>
+  </div>`;
+}
+
+function attachSpreadHistoryHover(){
+  setTimeout(()=>{
+    const rect=document.getElementById('spread-hr');
+    const tooltip=document.getElementById('spread-hist-tooltip');
+    const vline=document.getElementById('spread-vline');
+    if(!rect||!tooltip||!vline)return;
+    const data=JSON.parse(decodeURIComponent(rect.dataset.serial));
+    rect.addEventListener('mousemove',e=>{
+      const svg=rect.closest('svg');
+      const bbox=svg.getBoundingClientRect();
+      const svgX=(e.clientX-bbox.left)*(data.W/bbox.width);
+      const relX=svgX-data.PL;
+      if(relX<0||relX>data.w){tooltip.style.display='none';vline.setAttribute('opacity','0');return;}
+      const n=data.history.length;
+      const idx=Math.max(0,Math.min(n-1,Math.round((relX/data.w)*(n-1))));
+      const pt=data.history[idx];
+      tooltip.innerHTML=`${pt.date}<br>Spread: +${pt.spread.toFixed(2)}%<br>Price: $${pt.close.toFixed(2)}`;
+      const xPos=data.PL+((idx/(n-1))*data.w);
+      vline.setAttribute('x1',xPos.toFixed(1));
+      vline.setAttribute('x2',xPos.toFixed(1));
+      tooltip.style.display='block';
+      vline.setAttribute('opacity','1');
+      const tl=e.clientX-bbox.left+10,tt=e.clientY-bbox.top-50;
+      tooltip.style.left=Math.min(tl,bbox.width-160)+'px';
+      tooltip.style.top=Math.max(0,tt)+'px';
+    });
+    rect.addEventListener('mouseleave',()=>{tooltip.style.display='none';vline.setAttribute('opacity','0');});
+  },200);
+}
+
 async function renderAnalysis(deal){
+    const bc=getBadgeClass(deal.risk);
+    const tc=getTypeClass(deal.deal_type);
+    const tl=getTypeLabel(deal.deal_type);
+    const company  =deal.company||deal.ticker+' Corp.';
+    const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:null;
+    const txVal    =deal.tx_value&&!isNaN(deal.tx_value)?'$'+parseFloat(deal.tx_value).toFixed(1)+'B':'N/A';
+    const bp=deal.break_price, bd=deal.break_downside;
+    const fin=deal.financing_signal||'unknown';
+    const bpMethod=deal.break_price_method||'historical';
+
+    document.getElementById('da-ticker').textContent  =deal.ticker;
+    document.getElementById('da-company').textContent =company;
+    document.getElementById('da-acquirer').textContent=deal.acquirer||'Undisclosed';
+    const spreadEl=document.getElementById('da-spread');
+    spreadEl.textContent=sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
+    spreadEl.style.color=spColor(deal.sp_pct);
+    const annEl=document.getElementById('da-ann');
+    annEl.textContent='Ann. Return: '+sign(deal.ann)+deal.ann.toFixed(2)+'%';
+    annEl.style.color=spColor(deal.ann);
+    document.getElementById('da-badges').innerHTML=`
+        <span class="badge ${tc}" style="font-size:0.48rem;padding:3px 8px">${tl}</span>
+        <span class="badge ${bc}" style="font-size:0.48rem;padding:3px 8px">${deal.risk} Risk</span>
+        <span class="badge" style="font-size:0.48rem;padding:3px 8px;color:var(--dim);border-color:var(--bdr2)">V3 Score ${deal.score}/100</span>
+        <span class="fin-badge ${fin}" style="font-size:0.44rem;padding:2px 7px">${finLabel(fin)}</span>
+    `;
+
+    // Metrics — hide Expected Close if TBD
+    const metricsHtml=`
+        <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">$${deal.cp.toFixed(2)}</div></div>
+        <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
+        <div class="da-metric hi"><div class="da-ml">Spread</div><div class="da-mv" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div></div>
+        <div class="da-metric"><div class="da-ml">Ann. Return</div><div class="da-mv sm" style="color:${spColor(deal.ann)}">${sign(deal.ann)}${deal.ann.toFixed(2)}%</div></div>
+        ${closeDate?`<div class="da-metric"><div class="da-ml">Expected Close</div><div class="da-mv sm">${closeDate}</div></div>`:''}
+        <div class="da-metric"><div class="da-ml">Transaction Value</div><div class="da-mv sm">${txVal}</div></div>
+    `;
+    document.getElementById('da-metrics').innerHTML=metricsHtml;
+
+    // Implied Probability
+    document.getElementById('da-implied-prob').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Calculating...</div>';
+    try{
+        const probData=await fetch(`/api/implied-probability/${deal.ticker}`).then(r=>r.json());
+        if(probData.probability!==null){
+            const colorMap={green:'var(--green)',teal:'var(--teal)',amber:'var(--amber)',red:'var(--red)'};
+            const c=colorMap[probData.color]||'var(--teal)';
+            document.getElementById('da-implied-prob').innerHTML=`
+                <div class="implied-prob-wrap">
+                    <div>
+                        <div class="implied-prob-number" style="color:${c}">${probData.probability}%</div>
+                    </div>
+                    <div>
+                        <div class="implied-prob-label">Market-Implied Probability of Deal Close</div>
+                        <div class="implied-prob-signal" style="color:${c}">${probData.signal} Conviction</div>
+                        <div class="implied-prob-desc">Based on current price $${probData.current_price?.toFixed(2)}, deal price $${probData.deal_price?.toFixed(2)}, and break price $${probData.break_price?.toFixed(2)}. The market is pricing in a ${probData.probability}% chance this deal closes successfully.</div>
+                        <div class="implied-prob-formula">Formula: (Current Price − Break Price) ÷ (Deal Price − Break Price) · ${bpMethod==='historical'?'Break price from pre-announcement trading':'Break price estimated from deal premium'}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            document.getElementById('da-implied-prob').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Break price unavailable — implied probability cannot be calculated for this deal.</div>';
+        }
+    }catch(e){
+        document.getElementById('da-implied-prob').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to calculate implied probability.</div>';
+    }
+
+    // Live Spread History
+    document.getElementById('da-spread-chart').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading spread history...</div>';
+    try{
+        const histData=await fetch(`/api/spread-history/${deal.ticker}?filed=${deal.filed}`).then(r=>r.json());
+        if(histData.history&&histData.history.length>1){
+            document.getElementById('da-spread-chart').innerHTML=buildSpreadHistorySVG(histData.history,deal.dp);
+            attachSpreadHistoryHover();
+        } else {
+            document.getElementById('da-spread-chart').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Spread history unavailable — insufficient price data since announcement.</div>';
+        }
+    }catch(e){
+        document.getElementById('da-spread-chart').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to load spread history.</div>';
+    }
+
+    // Risk/Reward — only show downside if break price is available
+    const invs=[1000,5000,10000,50000,100000];
+    let upRows='',dnRows='';
+    invs.forEach(inv=>{
+        const up=(deal.sp_pct/100)*inv;
+        const dn=bd?((bd/100)*inv):null;
+        upRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r pos">+$${Math.abs(up).toLocaleString('en-US',{maximumFractionDigits:0})}</td></tr>`;
+        dnRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r neg">${dn!==null?'-$'+Math.abs(dn).toLocaleString('en-US',{maximumFractionDigits:0}):'N/A'}</td></tr>`;
+    });
+    const downsideHtml=bp?`
+        <div class="rr-col downside">
+            <div class="rr-title">If Deal Breaks</div>
+            <div class="rr-big">${bd!==null?bd.toFixed(2)+'%':'N/A'}</div>
+            <div class="rr-sub">Est. downside · Break price: $${bp.toFixed(2)}</div>
+            <table class="rr-table">
+                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">LOSS</td></tr>
+                ${dnRows}
+            </table>
+            <div class="rr-note">${bpMethod==='historical'?`Break price from pre-announcement trading on ${deal.filed}.`:`Break price estimated from deal premium — actual may vary.`} Always conduct independent research.</div>
+        </div>`:'';
+    document.getElementById('da-rr-grid').innerHTML=`
+        <div class="rr-col upside">
+            <div class="rr-title">If Deal Closes</div>
+            <div class="rr-big">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div>
+            <div class="rr-sub">Spread return · Ann. ${sign(deal.ann)}${deal.ann.toFixed(2)}%</div>
+            <table class="rr-table">
+                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">PROFIT</td></tr>
+                ${upRows}
+            </table>
+            <div class="rr-note">Based on current spread of ${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}% at deal price $${deal.dp.toFixed(2)}. Prices refresh hourly.</div>
+        </div>
+        ${downsideHtml}
+    `;
+    // Make grid single column if no downside
+    if(!bp) document.getElementById('da-rr-grid').style.gridTemplateColumns='1fr';
+    else document.getElementById('da-rr-grid').style.gridTemplateColumns='1fr 1fr';
+
+    // Acquirer Intelligence
+    const acqType=deal.acquirer_type||'Strategic';
+    const premium=bp&&deal.dp?Math.round(((deal.dp-bp)/bp)*100):null;
+    document.getElementById('da-acq-grid').innerHTML=`
+        <div class="acq-cell highlight">
+            <div class="acq-label">Acquirer</div>
+            <div class="acq-value" style="font-size:1rem">${deal.acquirer||'Undisclosed'}</div>
+            <div class="acq-sub" style="margin-top:0.4rem">${acqType} buyer · ${deal.deal_type}</div>
+        </div>
+        <div class="acq-cell highlight">
+            <div class="acq-label">Deal Premium</div>
+            <div class="acq-value" style="color:${premium&&premium>=25?'var(--green)':premium&&premium>=10?'var(--teal)':'var(--muted)'}">${premium!==null?'+'+premium+'%':'N/A'}</div>
+            <div class="acq-sub">Premium paid over pre-announcement price of ${bp?'$'+bp.toFixed(2):'N/A'}. ${premium&&premium>=35?'Very high premium signals strong acquirer conviction.':premium&&premium>=20?'Healthy premium, acquirer committed.':premium!==null?'Modest premium, acquirer can walk more easily.':'Break price unavailable for premium calculation.'}</div>
+        </div>
+        <div class="acq-cell highlight">
+            <div class="acq-label">Financing Commitment</div>
+            <div class="fin-signal-row">
+                <div class="fin-dot ${fin}"></div>
+                <div class="fin-label ${fin}">${finLabel(fin)}</div>
+            </div>
+            <div class="acq-sub" style="margin-top:0.5rem">${finDesc(fin)}</div>
+        </div>
+    `;
+
+    // Comps
+    if(!compsCache[deal.ticker]){
+        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.46rem;color:var(--dim);letter-spacing:0.14em;">Loading comparable deals...</div>';
+        try{
+            const cd=await fetch(`/api/comps/${deal.ticker}?deal_type=${encodeURIComponent(deal.deal_type)}&spread=${deal.sp_pct}`).then(r=>r.json());
+            compsCache[deal.ticker]=cd;
+        }catch(e){ compsCache[deal.ticker]={comps:[],summary:{total:0,closed:0,broken:0,close_rate:0,avg_days:0}}; }
+    }
+    const cd=compsCache[deal.ticker];
+    const comps=cd.comps||[];
+    const summary=cd.summary||{};
+    if(comps.length===0){
+        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">No comparable deals found in our 154-deal historical database for this deal type and spread range.</div>';
+    } else {
+        const cc=summary.close_rate>=70?'var(--green)':summary.close_rate>=50?'var(--amber)':'var(--red)';
+        document.getElementById('da-comps').innerHTML=`
+            <div class="comps-summary">
+                <div class="comp-stat"><div class="comp-stat-val">${summary.total}</div><div class="comp-stat-lbl">Comparable Deals</div></div>
+                <div class="comp-stat"><div class="comp-stat-val green">${summary.closed}</div><div class="comp-stat-lbl">Closed</div></div>
+                <div class="comp-stat"><div class="comp-stat-val red">${summary.broken}</div><div class="comp-stat-lbl">Broken</div></div>
+                <div class="comp-stat"><div class="comp-stat-val" style="color:${cc}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
+            </div>
+            <table class="comps-table">
+                <thead><tr><th>Ticker</th><th>Acquirer</th><th>Type</th><th class="r">Spread at Ann.</th><th class="r">Outcome</th><th class="r">Days to Close</th></tr></thead>
+                <tbody>${comps.map(c=>`<tr><td>${c.ticker}</td><td>${c.acquirer}</td><td>${c.deal_type}</td><td class="r">${c.spread_at_announce.toFixed(1)}%</td><td class="r ${c.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${c.outcome}</td><td class="r">${c.days_to_close} days</td></tr>`).join('')}</tbody>
+            </table>
+            <div class="comps-note">Matched by deal type (${deal.deal_type}) and spread range from our 154-deal historical database. ${summary.close_rate}% of comparable deals closed. Avg time to completion: ${summary.avg_days} days. Historical data 2020–2025.</div>
+        `;
+    }
+
+    // Regulatory
+    let rt=[];
+    try{ rt=deal.reg_tags?JSON.parse(deal.reg_tags):[]; }catch(e){}
+    document.getElementById('da-reg-risk').innerHTML=rt.length>0
+        ?rt.map(t=>`<div class="reg-risk-item"><div class="reg-dot ${t.level}"></div><div class="reg-agency">${t.agency}</div><div class="reg-reason">${t.reason}</div></div>`).join('')
+        :'<div class="reg-risk-item"><div class="reg-dot low"></div><div class="reg-agency">Standard Review</div><div class="reg-reason">No elevated regulatory concerns identified based on deal size and sector.</div></div>';
+
+    // Score bars
+    document.getElementById('da-score-bars').innerHTML=getScoreBreakdown(deal).map(b=>`
+        <div>
+            <div class="score-bar-header"><span class="score-bar-label">${b.label}</span><span class="score-bar-val">${b.score}/100</span></div>
+            <div class="score-bar-desc">${b.desc}</div>
+            <div class="score-bar-track"><div class="score-bar-fill" style="width:${b.score}%;background:${b.color}"></div></div>
+        </div>
+    `).join('');
+
+    // Risk factors
+    document.getElementById('da-risk-factors').innerHTML=getRiskFactors(deal).map(f=>`
+        <div class="risk-factor"><div class="risk-dot ${f.l}"></div><div class="risk-text">${f.t}</div></div>
+    `).join('');
+
+    // Catalyst Calendar
+    document.getElementById('da-catalyst').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading catalyst calendar...</div>';
+    try{
+        const txv=deal.tx_value||0;
+        const catalystData=await fetch(`/api/catalyst/${deal.ticker}?filed=${deal.filed}&deal_type=${encodeURIComponent(deal.deal_type)}&tx_value=${txv}`).then(r=>r.json());
+        const cats=catalystData.catalysts||[];
+        if(cats.length>0){
+            const stepsHtml=cats.map((c,i)=>{
+                const isLast=i===cats.length-1;
+                const isCurrent=catalystData.current_stage===c.label;
+                const statusClass=isCurrent?'current':c.status==='completed'?'completed':'pending';
+                const dateStr=c.date?c.date.slice(0,7):'';
+                return `<div class="catalyst-step ${statusClass}">
+                    <div class="catalyst-step-dot"></div>
+                    <div class="catalyst-step-label">${c.label}</div>
+                    <div class="catalyst-step-date">${dateStr}</div>
+                    ${c.estimated?'<div class="catalyst-step-est">est.</div>':'<div class="catalyst-step-est">confirmed</div>'}
+                    <div class="catalyst-step-desc">${c.description}</div>
+                </div>`;
+            }).join('');
+            document.getElementById('da-catalyst').innerHTML=`
+                <div class="catalyst-chain">
+                    <div class="catalyst-steps">${stepsHtml}</div>
+                    <div class="catalyst-current-stage">◈ Current Stage: ${catalystData.current_stage} · ${catalystData.days_elapsed} days elapsed</div>
+                </div>
+            `;
+        }
+    }catch(e){
+        document.getElementById('da-catalyst').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to load catalyst calendar.</div>';
+    }
+}
     const bc=getBadgeClass(deal.risk);
     const tc=getTypeClass(deal.deal_type);
     const tl=getTypeLabel(deal.deal_type);
@@ -2064,6 +2398,15 @@ async function handleModalSignIn(){
 // ── AUTH + PAYWALL ────────────────────────────────────────────────────────────
 let clerkReady = false;
 
+function renderAvatars(){
+  const initials=currentUser?(currentUser.firstName?currentUser.firstName[0]:'U')+(currentUser.lastName?currentUser.lastName[0]:''):'';
+  const avatarHtml=currentUser?`<div class="user-avatar ${isSubscribed?'subscribed':''}" title="${isSubscribed?'Pro Subscriber':currentUser.primaryEmailAddress?.emailAddress||''}">${initials}</div>`:'';
+  ['user-avatar-dashboard','user-avatar-analysis','user-avatar-landing'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=avatarHtml;
+  });
+}
+
 async function initClerk() {
   try {
     await window.Clerk.load();
@@ -2083,6 +2426,7 @@ async function initClerk() {
       isSubscribed = true;
       window.history.replaceState({}, '', '/');
     }
+    renderAvatars();
   } catch(e) {
     console.log('Clerk init error:', e);
   }
