@@ -1278,15 +1278,20 @@ async function renderAnalysis(deal){
         if(probData.probability!==null){
             const colorMap={green:'var(--green)',teal:'var(--teal)',amber:'var(--amber)',red:'var(--red)'};
             const c=colorMap[probData.color]||'var(--teal)';
+            const isDistressed=probData.signal==='Distressed';
+            const descText=isDistressed
+                ?`Stock trading at $${probData.current_price?.toFixed(2)}, below the pre-announcement price of $${probData.break_price?.toFixed(2)}. The market has priced this stock below where it traded before the deal was announced — signaling near-certain deal failure or serious company deterioration. Extreme caution warranted.`
+                :`Based on current price $${probData.current_price?.toFixed(2)}, deal price $${probData.deal_price?.toFixed(2)}, and break price $${probData.break_price?.toFixed(2)}. The market is pricing in a ${probData.probability}% probability this deal closes successfully.`;
+            const signalText=isDistressed?'Distressed — Deal Likely Broken':`${probData.signal} Conviction`;
             document.getElementById('da-implied-prob').innerHTML=`
                 <div class="implied-prob-wrap">
                     <div>
-                        <div class="implied-prob-number" style="color:${c}">${probData.probability}%</div>
+                        <div class="implied-prob-number" style="color:${c}">${isDistressed?'—':probData.probability+'%'}</div>
                     </div>
                     <div>
                         <div class="implied-prob-label">Market-Implied Probability of Deal Close</div>
-                        <div class="implied-prob-signal" style="color:${c}">${probData.signal} Conviction</div>
-                        <div class="implied-prob-desc">Based on current price $${probData.current_price?.toFixed(2)}, deal price $${probData.deal_price?.toFixed(2)}, and break price $${probData.break_price?.toFixed(2)}. The market is pricing in a ${probData.probability}% chance this deal closes successfully.</div>
+                        <div class="implied-prob-signal" style="color:${c}">${signalText}</div>
+                        <div class="implied-prob-desc">${descText}</div>
                         <div class="implied-prob-formula">Formula: (Current Price − Break Price) ÷ (Deal Price − Break Price) · ${bpMethod==='historical'?'Break price from pre-announcement trading':'Break price estimated from deal premium'}</div>
                     </div>
                 </div>
