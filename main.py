@@ -148,8 +148,7 @@ def redis_get():
         if isinstance(result, str):
             return json.loads(result)
         if isinstance(result, dict) and 'value' in result:
-            inner = result['value']
-            return json.loads(inner) if isinstance(inner, str) else inner
+            return json.loads(result['value'])
         return None
     except Exception as e:
         print(f"Redis get error: {e}")
@@ -160,13 +159,10 @@ def redis_set(deals):
         return False
     try:
         payload = json.dumps(deals)
+        encoded = requests.utils.quote(payload, safe='')
         r = requests.post(
-            f"{REDIS_URL}/set/{CACHE_KEY}",
-            headers={
-                "Authorization": f"Bearer {REDIS_TOKEN}",
-                "Content-Type": "application/json"
-            },
-            json={"value": payload},
+            f"{REDIS_URL}/set/{CACHE_KEY}/{encoded}",
+            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
             timeout=15
         )
         print(f"Redis set: {r.status_code} — {len(deals)} deals saved")
