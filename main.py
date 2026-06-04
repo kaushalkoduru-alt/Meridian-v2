@@ -829,6 +829,17 @@ def fetch_deals_from_edgar():
         if not ticker or not cik or not accession: continue
         if ticker in seen_tickers: continue
         if ticker in EXCLUDED_TICKERS: continue
+
+        # ── 8-K Item filter ───────────────────────────────────────────────────
+        # Only process filings that include Item 1.01 (Entry into Material Definitive Agreement)
+        src = hit.get('_source', {})
+        items = src.get('items', [])
+        if items:  
+            item_strs = [str(i) for i in items]
+            has_101 = any('1.01' in i for i in item_strs)
+            if not has_101:
+                print(f"  Skip {ticker}: 8-K items {items} — no Item 1.01")
+                continue
         try:
             h=yf.Ticker(ticker).history(period='5d')
             if h.empty: continue
