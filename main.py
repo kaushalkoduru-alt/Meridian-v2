@@ -697,7 +697,7 @@ def extract_price_from_text(clean_text):
     return max(set(deal_prices),key=deal_prices.count)
 
 def extract_acquirer(clean_text):
-    text=clean_text[:5000]
+    text=clean_text[:15000]
     for g in [r'News\s*Release\s*',r'Press\s*Release\s*',r'For\s*Immediate\s*Release\s*',r'Document\w*\s*(?:News\s*)?Release\w*\s*',r'\bDocument\b\s*',r'Under\s*the\s*terms\s*of\s*the\s*(?:proposed\s*)?(?:merger\s*)?agreement[,\s]*',r'Pursuant\s*to\s*the\s*(?:terms\s*of\s*the\s*)?agreement[,\s]*',r'In\s*connection\s*with\s*the\s*(?:proposed\s*)?(?:merger|transaction)[,\s]*',r'Announces\s+Definitive\s+Agreement\s+']:
         text=re.sub(g,' ',text,flags=re.IGNORECASE)
     text=re.sub(r'\s+',' ',text).strip()
