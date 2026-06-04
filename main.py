@@ -148,7 +148,8 @@ def redis_get():
         if isinstance(result, str):
             return json.loads(result)
         if isinstance(result, dict) and 'value' in result:
-            return json.loads(result['value'])
+            inner = result['value']
+            return json.loads(inner) if isinstance(inner, str) else inner
         return None
     except Exception as e:
         print(f"Redis get error: {e}")
