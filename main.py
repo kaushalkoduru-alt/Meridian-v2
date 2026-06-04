@@ -870,7 +870,9 @@ def fetch_deals_from_edgar():
                         tx_value=extract_transaction_value(full_ct)
                         financing_signal=extract_financing_signal(full_ct)
                         break
-                except: continue
+                except Exception as e:
+                    print(f"  Filing parse error {ticker}: {e}")
+                    continue
             if not dp: continue
             sp_pct=((dp-cp)/cp)*100
             if sp_pct<-10 or sp_pct>60: continue
