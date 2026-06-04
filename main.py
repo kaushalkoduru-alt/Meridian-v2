@@ -21,12 +21,116 @@ STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
 CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
 BASE_URL = 'https://meridian-v2-production-cffa.up.railway.app'
 
+
+
 # ─── REDIS CACHE ─────────────────────────────────────────────────────────────
 
 REDIS_URL   = os.environ.get('UPSTASH_REDIS_REST_URL', '')
 REDIS_TOKEN = os.environ.get('UPSTASH_REDIS_REST_TOKEN', '')
 CACHE_KEY   = 'meridian_deals_v1'
 CACHE_FILE  = "meridian_cache.csv"
+# ─── SEC COMPLIANCE ───────────────────────────────────────────────────────────
+# No 'Host' header — requests manages this dynamically to avoid TLS mismatches
+SEC_HEADERS = {
+    'User-Agent': 'MeridianResearch/1.0 (kaushalkoduru@gmail.com)',
+    'Accept-Encoding': 'gzip, deflate',
+}
+EDGAR_HEADERS = {
+    'User-Agent': 'MeridianResearch/1.0 (kaushalkoduru@gmail.com)',
+    'Accept-Encoding': 'gzip, deflate',
+}
+SEC_TICKER_MAP = {}  # ticker -> official SEC company name, populated at startup
+SEC_CIK_MAP    = {}  # ticker -> zero-padded CIK string, populated at startup
+
+def fetch_sec_ticker_map():
+    """
+    Fetches SEC's official company_tickers.json once at startup.
+    Builds two lookup dicts: ticker->name and ticker->cik.
+    Cached in Redis for 24 hours. Single request — no rate limit concern.
+    Runs in run_in_executor thread pool, never blocks the event loop.
+    """
+    global SEC_TICKER_MAP, SEC_CIK_MAP
+    cache_key = 'sec_ticker_map_v1'
+
+    # ── Try Redis cache first ──────────────────────────────────────────────────
+    try:
+        r = requests.get(
+            f"{REDIS_URL}/get/{cache_key}",
+            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+            timeout=10
+        )
+        result = r.json().get('result')
+        if result:
+            raw = result if isinstance(result, str) else result.get('value', '')
+            if raw:
+                data = json.loads(raw)
+                if data.get('ticker_map'):
+                    SEC_TICKER_MAP = data['ticker_map']
+                    SEC_CIK_MAP    = data.get('cik_map', {})
+                    print(f"[SEC] Ticker map loaded from Redis: {len(SEC_TICKER_MAP)} tickers")
+                    return
+    except Exception as e:
+        print(f"[SEC] Redis read error: {e}")
+
+    # ── Fetch from SEC ─────────────────────────────────────────────────────────
+    try:
+        resp = requests.get(
+            'https://data.sec.gov/files/company_tickers.json',
+            headers=SEC_HEADERS,
+            timeout=30
+        )
+        if resp.status_code != 200:
+            print(f"[SEC] Ticker map fetch failed: HTTP {resp.status_code}")
+            return
+        raw_data = resp.json()
+        ticker_map = {}
+        cik_map    = {}
+        for entry in raw_data.values():
+            t    = entry.get('ticker', '').upper().strip()
+            name = entry.get('title', '').strip()
+            cik  = str(entry.get('cik_str', '')).zfill(10)
+            if t and name:
+                ticker_map[t] = name
+                cik_map[t]    = cik
+        SEC_TICKER_MAP = ticker_map
+        SEC_CIK_MAP    = cik_map
+        print(f"[SEC] Ticker map fetched fresh: {len(SEC_TICKER_MAP)} tickers")
+
+        # ── Write to Redis using body POST (URL-path would exceed length limits) ─
+        try:
+            payload = json.dumps({'ticker_map': ticker_map, 'cik_map': cik_map})
+            requests.post(
+                f"{REDIS_URL}/set/{cache_key}",
+                headers={
+                    "Authorization": f"Bearer {REDIS_TOKEN}",
+                    "Content-Type": "application/json"
+                },
+                json={"value": payload, "ex": 86400},
+                timeout=20
+            )
+        except Exception as e:
+            print(f"[SEC] Redis write error (non-fatal): {e}")
+
+    except Exception as e:
+        print(f"[SEC] Ticker map fetch error: {e}")
+
+
+def resolve_company_name(ticker):
+    """
+    Returns the official company name for a ticker.
+    Priority: SEC official name → yfinance shortName → honest placeholder.
+    Never returns a fake 'TICKER Corp.' name.
+    """
+    if ticker in SEC_TICKER_MAP:
+        return SEC_TICKER_MAP[ticker]
+    try:
+        info = yf.Ticker(ticker).info
+        name = info.get('shortName') or info.get('longName', '')
+        if name and len(name) > 2 and name.upper() != ticker:
+            return name
+    except:
+        pass
+    return f"{ticker} (name pending)"
 
 def redis_get():
     if not REDIS_URL or not REDIS_TOKEN:
@@ -56,8 +160,12 @@ def redis_set(deals):
     try:
         payload = json.dumps(deals)
         r = requests.post(
-            f"{REDIS_URL}/set/{CACHE_KEY}/{requests.utils.quote(payload)}",
-            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+            f"{REDIS_URL}/set/{CACHE_KEY}",
+            headers={
+                "Authorization": f"Bearer {REDIS_TOKEN}",
+                "Content-Type": "application/json"
+            },
+            json={"value": payload},
             timeout=15
         )
         print(f"Redis set: {r.status_code} — {len(deals)} deals saved")
@@ -180,40 +288,11 @@ def is_cache_fresh(max_age_minutes=50):
 
 # ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-COMPANY_NAMES = {
-    'UNF': 'UniFirst Corporation', 'KDP': 'Keurig Dr Pepper',
-    'OGN': 'Organon & Co.', 'IMXI': 'International Money Express',
-    'AES': 'The AES Corporation', 'WBD': 'Warner Bros. Discovery',
-    'HBT': 'Heartland BancCorp', 'PRA': 'ProAssurance Corporation',
-    'GBTG': 'Global Business Travel Group', 'AVNS': 'Avanos Medical',
-    'CPRX': 'Catalyst Biosciences', 'KALV': 'KalVista Pharmaceuticals',
-    'MASI': 'Masimo Corporation', 'CWAN': 'Clearwater Analytics',
-    'ASRT': 'Assertio Holdings', 'TPH': 'Tri Pointe Homes',
-    'TERN': 'Terns Pharmaceuticals', 'CSGS': 'CSG Systems International',
-    'EHAB': 'Enhabit Home Health', 'SLNO': 'Soleno Therapeutics',
-    'APLS': 'Apellis Pharmaceuticals', 'EWCZ': 'European Wax Center',
-    'JHG': 'Janus Henderson Group', 'KW': 'Kennedy-Wilson Holdings',
-    'UAC': 'United Auto Credit', 'NATL': 'National Western Financial',
-    'SKYT': 'SkyWater Technology', 'CVGW': 'Calavo Growers',
-    'NBRG': 'Northbrook Bank & Trust', 'AFBI': 'Affinity Bancshares',
-    'KTWO': 'K2 Pure Solutions', 'OIM': 'Oil States International',
-    'HPE': 'Hewlett Packard Enterprise', 'OC': 'Owens Corning',
-    'B': 'Barnes Group',
-}
-
-KNOWN_ACQUIRERS = {
-    'UAC': 'Stellantis', 'NATL': 'NCR Voyix', 'WBD': 'Paramount Global',
-    'AVNS': 'Becton Dickinson', 'HBT': 'Heartland Financial',
-    'ASRT': 'Paratek Pharmaceuticals', 'EHAB': 'KKR',
-    'NBRG': 'Glacier Bancorp', 'AFBI': 'Center Parc Credit Union',
-    'KTWO': 'Roper Technologies', 'SKYT': 'IonQ',
-    'CVGW': 'Mission Produce', 'EWCZ': 'General Atlantic',
-    'PRA': 'The Doctors Company', 'GBTG': 'Long Lake Management',
-    'TERN': 'Merck', 'CSGS': 'CSG Systems International',
-    'HPE': 'Juniper Networks', 'OC': 'Saint-Gobain',
-    'B': 'Apollo Global Management', 'MASI': 'Danaher',
-    'IMXI': 'Western Union', 'CWAN': 'Advent International',
-    'SLNO': 'Neurocrine Biosciences',
+# COMPANY_NAMES and KNOWN_ACQUIRERS eliminated — replaced by dynamic SEC resolution.
+# resolve_company_name() uses SEC's official company_tickers.json fetched at startup.
+# VERIFIED_ACQUIRERS contains only manually confirmed overrides.
+VERIFIED_ACQUIRERS = {
+    'EA': 'Savvy Games Group (Saudi Arabia)',
 }
 
 EXCLUDED_TICKERS = {
@@ -244,11 +323,7 @@ EDGAR_QUERIES = [
     {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22&forms=DEFM14C&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
 ]
 
-FALLBACK_DEALS = [
-    {'ticker': 'CWAN', 'acquirer': 'Advent International', 'company': 'Clearwater Analytics', 'deal_type': 'Private Equity', 'dp': 27.52, 'filed': '2025-02-18', 'close_date': 'Q3 2026', 'tx_value': 6.50},
-    {'ticker': 'MASI', 'acquirer': 'Danaher', 'company': 'Masimo Corporation', 'deal_type': 'All Cash', 'dp': 180.00, 'filed': '2023-02-14', 'close_date': 'TBD', 'tx_value': 7.65},
-    {'ticker': 'IMXI', 'acquirer': 'Western Union', 'company': 'International Money Express', 'deal_type': 'All Cash', 'dp': 16.00, 'filed': '2025-03-10', 'close_date': 'TBD', 'tx_value': None},
-]
+# FALLBACK_DEALS eliminated. No hardcoded deals. Zero real deals > fake deals.
 
 COMPS_DATA = [
     {'ticker': 'ATVI', 'acquirer': 'Microsoft', 'deal_type': 'All Cash', 'spread_at_announce': 25.0, 'outcome': 'Closed', 'days_to_close': 633},
@@ -551,6 +626,72 @@ def calculate_break_price(deal_price, premium_pct=None, current_price=None, spre
         bp = round(current_price - (deal_price - current_price) * (1/spread_pct), 2)
         return bp, 'spread_regression'
     return None, None
+# ─── TARGETED SECTION PARSING (Step 2) ───────────────────────────────────────
+
+MERGER_CONSIDERATION_HEADERS = [
+    'the merger consideration',
+    'summary term sheet',
+    'terms of the merger',
+    'consideration to be received',
+    'per share merger consideration',
+    'the offer price',
+    'the offer and merger consideration',
+    'merger price',
+    'the proposed merger',
+    'consideration',
+]
+
+def extract_targeted_section(html_text):
+    """
+    Parses filing HTML and extracts only the section immediately following a
+    merger consideration header — typically 2500 chars. This prevents false
+    positives from exec comp tables, historical price references, and fee schedules.
+    Falls back to first 3000 chars if no targeted section is found.
+    Runs synchronously inside fetch_deals_from_edgar thread — safe, no await needed.
+    """
+    try:
+        soup = BeautifulSoup(html_text, 'html.parser')
+        full_text = soup.get_text(separator=' ', strip=True)
+        full_lower = full_text.lower()
+
+        for header in MERGER_CONSIDERATION_HEADERS:
+            idx = full_lower.find(header)
+            if idx != -1:
+                block = full_text[idx:idx + 2500]
+                # Validate this block actually contains price language before returning
+                if any(kw in block.lower() for kw in [
+                    'per share', 'per common share', 'in cash', 'cash consideration'
+                ]):
+                    return block
+
+        # No targeted section found — fall back to first 3000 chars
+        return full_text[:3000]
+
+    except Exception as e:
+        print(f"[Parser] Section extract error: {e}")
+        try:
+            return BeautifulSoup(html_text, 'html.parser').get_text()[:3000]
+        except:
+            return html_text[:3000]
+
+
+def validate_deal_price(deal_price, current_price, ticker):
+    """
+    Validates extracted deal price against live market price.
+    Ratio must be between 0.70 and 3.00 for a legitimate active arb deal.
+    Below 0.70: deal likely closed or broken (stock has crashed past deal price).
+    Above 3.00: extraction error — picked up exec comp or fee table number.
+    """
+    if not deal_price or not current_price or deal_price <= 0 or current_price <= 0:
+        return False
+    ratio = deal_price / current_price
+    if ratio < 0.70:
+        print(f"  Reject {ticker}: deal ${deal_price} / current ${current_price:.2f} = {ratio:.2f} — too low, deal likely closed")
+        return False
+    if ratio > 3.00:
+        print(f"  Reject {ticker}: deal ${deal_price} / current ${current_price:.2f} = {ratio:.2f} — too high, likely extraction error")
+        return False
+    return True
 def extract_price_from_text(clean_text):
     patterns=[
         r'\$(\d+\.\d+)\s+per\s+share\s+in\s+cash',
@@ -718,20 +859,35 @@ def fetch_deals_from_edgar():
                 except: pass
             for lk in links[:8]:
                 try:
-                    dr=requests.get(lk,headers=headers,timeout=10)
-                    ct=BeautifulSoup(dr.text,'html.parser').get_text()
-                    if any(kw in ct.lower() for kw in ['definitive agreement','merger agreement','tender offer','per share in cash']) and any(kw in ct.lower() for kw in ['acquir','merger','tender offer']) and ('per share' in ct.lower() or 'per common share' in ct.lower()):
-                        dp_try=extract_price_from_text(ct)
-                        if dp_try:
-                            dp=dp_try; acquirer=extract_acquirer(ct)
-                            close_date=extract_close_date(ct); tx_value=extract_transaction_value(ct)
-                            financing_signal=extract_financing_signal(ct); break
+                    dr=requests.get(lk,headers=EDGAR_HEADERS,timeout=10)
+                    time.sleep(0.12)  # SEC rate limit: 10 req/sec max — safe: in thread pool
+                    # Full text for keyword gate — cheap check before deeper parsing
+                    full_ct=BeautifulSoup(dr.text,'html.parser').get_text()
+                    # Gate check: must have merger language to proceed
+                    if not (any(kw in full_ct.lower() for kw in ['definitive agreement','merger agreement','tender offer','per share in cash']) and
+                            any(kw in full_ct.lower() for kw in ['acquir','merger','tender offer']) and
+                            ('per share' in full_ct.lower() or 'per common share' in full_ct.lower())):
+                        continue
+                    # Step 2: extract only the merger consideration section
+                    ct=extract_targeted_section(dr.text)
+                    dp_try=extract_price_from_text(ct)
+                    if dp_try:
+                        # Step 4: validate price ratio before accepting
+                        if not validate_deal_price(dp_try, cp, ticker):
+                            continue
+                        dp=dp_try
+                        # Use full text for acquirer/close/tx — needs broader context
+                        acquirer=extract_acquirer(full_ct)
+                        close_date=extract_close_date(full_ct)
+                        tx_value=extract_transaction_value(full_ct)
+                        financing_signal=extract_financing_signal(full_ct)
+                        break
                 except: continue
             if not dp: continue
             sp_pct=((dp-cp)/cp)*100
             if sp_pct<-10 or sp_pct>60: continue
             days=(datetime.today()-datetime.strptime(src['file_date'],'%Y-%m-%d')).days
-            acquirer=KNOWN_ACQUIRERS.get(ticker,acquirer)
+            acquirer=VERIFIED_ACQUIRERS.get(ticker, acquirer)
             break_price=get_break_price(ticker,src['file_date'])
             break_price_method='historical'
             if not break_price:
@@ -757,7 +913,7 @@ def fetch_deals_from_edgar():
             seen_tickers.add(ticker)
             results.append({
                 'ticker':ticker,'acquirer':acquirer,'acquirer_type':acq_type,
-                'company':COMPANY_NAMES.get(ticker,ticker+' Corp.'),'deal_type':deal_type,
+                'company':resolve_company_name(ticker),'deal_type':deal_type,
                 'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'ann':round(ann,2),
                 'score':sc,'risk':risk,'filed':src['file_date'],'days_old':days,
                 'close_date':close_date,'tx_value':tx_value,'break_price':break_price,
@@ -769,42 +925,7 @@ def fetch_deals_from_edgar():
                 save_cache(results)
         except: continue
 
-    for fd in FALLBACK_DEALS:
-        if fd['ticker'] not in seen_tickers:
-            try:
-                h=yf.Ticker(fd['ticker']).history(period='5d')
-                if h.empty: continue
-                cp=round(h['Close'].iloc[-1],2)
-                if cp<1: continue
-                dp=fd['dp']; sp_pct=round(((dp-cp)/cp)*100,2)
-                if sp_pct<-10 or sp_pct>60: continue
-                days=(datetime.today()-datetime.strptime(fd['filed'],'%Y-%m-%d')).days
-                break_price=get_break_price(fd['ticker'],fd['filed'])
-                break_price_method='historical'
-                if not break_price:
-                    bp_calc,method=calculate_break_price(fd['dp'],None,cp,sp_pct)
-                    if bp_calc and bp_calc>0 and bp_calc<fd['dp']:
-                        break_price=bp_calc
-                        break_price_method=method or 'calculated'
-                break_downside=get_break_downside(cp,break_price)
-                reg_tags=get_regulatory_risk(fd['ticker'],fd['acquirer'],fd['tx_value'],fd['deal_type'])
-                fin_signal='committed' if fd['deal_type']=='All Cash' else 'confident'
-                sc=score_deal(sp_pct,days,fd['deal_type'],reg_tags,break_price,dp,fin_signal)
-                risk=get_risk(sp_pct,sc)
-                ann=round((sp_pct/180)*365,2)
-                acq_type=get_acquirer_type(fd['deal_type'],fd['acquirer'])
-                results.append({
-                    'ticker':fd['ticker'],'acquirer':fd['acquirer'],'acquirer_type':acq_type,
-                    'company':fd['company'],'deal_type':fd['deal_type'],'cp':cp,'dp':dp,
-                    'sp_pct':sp_pct,'ann':ann,'score':sc,'risk':risk,'filed':fd['filed'],
-                    'days_old':days,'close_date':fd['close_date'],'tx_value':fd['tx_value'],
-                    'break_price':break_price,'break_downside':break_downside,'break_price_method':break_price_method,
-                    'financing_signal':fin_signal,'reg_tags':json.dumps(reg_tags),
-                    'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
-                })
-                seen_tickers.add(fd['ticker'])
-                print(f"Fallback: {fd['ticker']} | {sp_pct:+.2f}%")
-            except: continue
+    
 
     if results:
         save_cache(results)
@@ -913,6 +1034,9 @@ async def startup_scan():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Fetch SEC ticker map first — runs in thread pool, never blocks event loop
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, fetch_sec_ticker_map)
     asyncio.create_task(auto_refresh_loop())
     asyncio.create_task(startup_scan())
     asyncio.create_task(preload_track_record_charts())
@@ -1247,6 +1371,18 @@ async def implied_probability(ticker: str):
     except Exception as e:
         print(f"Implied probability error {ticker}: {e}")
         return JSONResponse(content={"probability": None, "error": str(e)})
+@app.post("/api/clear-cache")
+async def clear_cache():
+    """Emergency cache clear — nukes all Redis deals so next scan starts clean."""
+    try:
+        requests.post(
+            f"{REDIS_URL}/del/{CACHE_KEY}",
+            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+            timeout=10
+        )
+        return JSONResponse(content={"status": "cache cleared"})
+    except Exception as e:
+        return JSONResponse(content={"status": "error", "detail": str(e)})
 @app.get("/api/debug-env")
 async def debug_env():
     return JSONResponse(content={
