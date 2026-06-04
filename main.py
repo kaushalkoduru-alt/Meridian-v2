@@ -708,7 +708,7 @@ def extract_acquirer(clean_text):
         r'(?:acquisition of|merger with)\s+.+?\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s*,|\s*\.)',
         r'([A-Z][A-Za-z0-9\s&,\.\-\']+?(?:Inc|Corp|LLC|Ltd|Company|Group|Partners|Capital|Holdings|Networks|Sciences|Pharmaceuticals|Financial|Bancorp|Bancshares|Bank|Trust|Union|Technologies|Solutions|Services|Systems))\s+(?:has agreed|will acquire|agreed|announces|today)',
     ]
-    bad=['pursuant','stockholder','common stock','the company','which','upon','each','document','exhibit','form 8','the board','the transaction','forward','investor','this agreement','subject to','following','certain']
+    bad=['pursuant','stockholder','common stock','the company','which','upon','each','document','exhibit','form 8','the board','the transaction','forward','investor','this agreement','subject to','following','certain','may not be','consummated','cannot be','will not be','is not','are not','buyer','parent','merger sub','acquisition sub','bidder','offeror','purchaser']
     candidates=[]
     for pat in patterns:
         for m in re.findall(pat,text):
@@ -720,6 +720,8 @@ def extract_acquirer(clean_text):
             if any(b in m.lower() for b in bad): continue
             if not m[0].isupper(): continue
             if m.upper()==m and len(m)>5: continue
+            if any(b in m.lower() for b in ['may not','cannot','will not','consummated','merger sub','acquisition sub']): continue
+            if len(m.split()) > 6: continue  # Acquirer names are never more than 6 words
             candidates.append(m)
     return min(candidates,key=len) if candidates else 'Undisclosed'
 
