@@ -1225,8 +1225,9 @@ function attachSpreadHistoryHover(){
       vline.setAttribute('x2',xPos.toFixed(1));
       tooltip.style.display='block';
       vline.setAttribute('opacity','1');
-      const tl=e.clientX-bbox.left+10,tt=e.clientY-bbox.top-50;
-      tooltip.style.left=Math.min(tl,bbox.width-160)+'px';
+      const containerRect=tooltip.parentElement.getBoundingClientRect();
+      const tl=e.clientX-containerRect.left+10,tt=e.clientY-containerRect.top-50;
+      tooltip.style.left=Math.min(tl,containerRect.width-160)+'px';
       tooltip.style.top=Math.max(0,tt)+'px';
     });
     rect.addEventListener('mouseleave',()=>{tooltip.style.display='none';vline.setAttribute('opacity','0');});
