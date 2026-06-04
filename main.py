@@ -75,7 +75,7 @@ def fetch_sec_ticker_map():
     # ── Fetch from SEC ─────────────────────────────────────────────────────────
     try:
         resp = requests.get(
-            'https://data.sec.gov/files/company_tickers.json',
+            'https://www.sec.gov/files/company_tickers.json',
             headers=SEC_HEADERS,
             timeout=30
         )
@@ -1383,7 +1383,7 @@ async def clear_cache():
         return JSONResponse(content={"status": "cache cleared"})
     except Exception as e:
         return JSONResponse(content={"status": "error", "detail": str(e)})
-@app.get("/api/debug-env")
+@app.get("/api/debgit coug-env")
 async def debug_env():
     return JSONResponse(content={
         "stripe_price_id": STRIPE_PRICE_ID,
