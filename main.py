@@ -304,20 +304,11 @@ SECTOR_ETF_MAP = {
     'ATVI':'XLK','ACI':'XLP',
 }
 EDGAR_QUERIES = [
-    # DEFM14A — Definitive merger proxy filed BY THE TARGET when shareholders vote on merger
-    # This form is ONLY filed by the company being acquired. Zero false positives possible.
-    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22&forms=DEFM14A&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share%22+%22merger+consideration%22&forms=DEFM14A&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'Cash + Stock', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share%22+%22stock+consideration%22&forms=DEFM14A&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'Cash + Stock', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22cash+and+stock%22+%22per+share%22&forms=DEFM14A&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'Private Equity', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22+%22sponsor%22&forms=DEFM14A&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'Private Equity', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22+%22private+equity%22&forms=DEFM14A&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    # PREM14A — Preliminary merger proxy, also filed by target. Catches deals earlier.
-    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22&forms=PREM14A&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    # SC 14D9 — Target company response to tender offer. Only filed by the target.
-    {'type': 'Tender Offer', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share%22+%22tender+offer%22&forms=SC+14D9&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    # DEFM14C — Filed by target when majority shareholder can approve without full vote
-    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22&forms=DEFM14C&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
+    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
+    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22merger+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
+    {'type': 'Cash + Stock', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22cash+and+stock%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
+    {'type': 'Private Equity', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22+%22sponsor%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
+    {'type': 'Tender Offer', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22tender+offer%22+%22per+share%22+%22definitive+agreement%22&forms=8-K&dateRange=custom&startdt=2025-06-01&enddt=2026-06-30&from={start}&size=100'},
 ]
 
 # FALLBACK_DEALS eliminated. No hardcoded deals. Zero real deals > fake deals.
