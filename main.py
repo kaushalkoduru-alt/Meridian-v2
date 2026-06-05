@@ -1056,14 +1056,7 @@ def fetch_deals_from_edgar():
             break_price_method='historical'
             if not break_price:
                 premium_pct=None
-                if tx_value and dp:
-                    try:
-                        shares_outstanding=yf.Ticker(ticker).info.get('sharesOutstanding',0)
-                        if shares_outstanding and shares_outstanding>0:
-                            implied_premium=((dp-(tx_value*1e9/shares_outstanding))/(tx_value*1e9/shares_outstanding))*100
-                            if 0<implied_premium<200:
-                                premium_pct=round(implied_premium,2)
-                    except: pass
+                pass
                 bp_calc,method=calculate_break_price(dp,premium_pct,round(cp,2),round(sp_pct,2))
                 if bp_calc and bp_calc>0 and bp_calc<dp:
                     break_price=bp_calc
