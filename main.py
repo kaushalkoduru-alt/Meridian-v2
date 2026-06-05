@@ -778,7 +778,70 @@ Filing text:
             print(f"  [LLM] Groq error {ticker}: {resp.status_code}")
     except Exception as e:
         print(f"  [LLM] Acquirer extraction error {ticker}: {e}")
-    return 'Undisclosed'    
+    return 'Undisclosed' 
+def extract_deal_metadata_llm(text_block, ticker):
+    """
+    Uses Groq to extract transaction value and expected close date when regex fails.
+    Returns dict with 'tx_value' (float in billions or None) and 'close_date' (string or None).
+    One call for both fields — minimal API usage.
+    """
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if not groq_key:
+        return {'tx_value': None, 'close_date': None}
+    try:
+        prompt = f"""You are an M&A data extractor analyzing an SEC 8-K filing.
+Extract two pieces of information from this merger announcement:
+1. Total transaction value in billions of dollars (just the number, e.g. 2.5 for $2.5 billion)
+2. Expected closing date or timeframe (e.g. "Q3 2025", "second half of 2025", "early 2026")
+
+Return ONLY a JSON object with no other text:
+{{"tx_value": 2.5, "close_date": "Q3 2025"}}
+
+If you cannot find either value, use null for that field.
+Do not include $ signs or the word billion in tx_value — just the number.
+
+Filing text:
+{text_block[:3000]}"""
+
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "llama-3.1-8b-instant",
+                "max_tokens": 100,
+                "temperature": 0,
+                "messages": [
+                    {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            timeout=15
+        )
+        if resp.status_code == 200:
+            content = resp.json()['choices'][0]['message']['content'].strip()
+            content = content.replace('```json', '').replace('```', '').strip()
+            data = json.loads(content)
+            tx = data.get('tx_value')
+            cd = data.get('close_date')
+            # Validate tx_value is a reasonable number
+            if tx and isinstance(tx, (int, float)) and 0.01 <= float(tx) <= 500:
+                tx = round(float(tx), 2)
+            else:
+                tx = None
+            # Validate close_date is a non-empty string
+            if cd and isinstance(cd, str) and len(cd) > 2 and cd.lower() not in ['null','none','tbd','unknown']:
+                cd = cd.strip()
+            else:
+                cd = None
+            if tx or cd:
+                print(f"  [LLM] {ticker} tx_value: {tx}, close_date: {cd}")
+            return {'tx_value': tx, 'close_date': cd}
+    except Exception as e:
+        print(f"  [LLM] Metadata extraction error {ticker}: {e}")
+    return {'tx_value': None, 'close_date': None}   
 def extract_close_date(clean_text):
     patterns=[
         r'expected to close.*?(?:in the\s+)?(\w+\s+(?:half of\s+)?\d{4})',
@@ -946,6 +1009,13 @@ def fetch_deals_from_edgar():
                             acquirer=extract_acquirer_llm(full_ct, ticker)
                         close_date=extract_close_date(full_ct)
                         tx_value=extract_transaction_value(full_ct)
+                        # LLM fallback for missing close_date and tx_value
+                        if close_date == 'TBD' or not tx_value:
+                            meta=extract_deal_metadata_llm(full_ct, ticker)
+                            if close_date == 'TBD' and meta['close_date']:
+                                close_date=meta['close_date']
+                            if not tx_value and meta['tx_value']:
+                                tx_value=meta['tx_value']
                         financing_signal=extract_financing_signal(full_ct)
                         break
                 except Exception as e:
