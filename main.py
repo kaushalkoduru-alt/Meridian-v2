@@ -987,11 +987,15 @@ def fetch_deals_from_edgar():
                 h=yf.Ticker(ticker).history(period='5d')
             if h.empty:
                 print(f"${ticker}: possibly delisted; no price data found  (period=5d)")
+                seen_tickers.add(ticker)
                 continue
             cp=float(h['Close'].iloc[-1])
-            if cp<1: continue
+            if cp<1:
+                seen_tickers.add(ticker)
+                continue
         except Exception as e:
             print(f"${ticker}: possibly delisted; no price data found  (period=5d) (Yahoo error = \"{e}\")")
+            seen_tickers.add(ticker)
             continue
         try:
             dp=None; acquirer='Undisclosed'; close_date='TBD'; tx_value=None; financing_signal='unknown'
