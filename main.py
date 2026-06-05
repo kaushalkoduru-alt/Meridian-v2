@@ -294,7 +294,7 @@ VERIFIED_ACQUIRERS = {
 
 EXCLUDED_TICKERS = {
     'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU',
-    'LEGO', 'LEG', 'LEGN'
+    'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM'
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
@@ -767,6 +767,11 @@ Filing text:
             data = json.loads(content)
             acquirer = data.get('acquirer')
             if acquirer and isinstance(acquirer, str) and len(acquirer) > 2:
+                # Reject if LLM returned the target ticker's own company name or acquisition sub
+                bad_llm = ['acquisition sub', 'merger sub', 'acquisition corp', 'merger corp', ticker.lower()]
+                if any(b in acquirer.lower() for b in bad_llm):
+                    print(f"  [LLM] {ticker} rejected bad acquirer: {acquirer}")
+                    return 'Undisclosed'
                 print(f"  [LLM] {ticker} acquirer: {acquirer}")
                 return acquirer
         else:
@@ -880,6 +885,15 @@ def fetch_deals_from_edgar():
         if not ticker or not cik or not accession: continue
         if ticker in seen_tickers: continue
         if ticker in EXCLUDED_TICKERS: continue
+
+        # ── SPAC filter ───────────────────────────────────────────────────────
+        # SPACs have no real merger target yet — exclude them entirely
+        spac_keywords = ['acquisition corp', 'acquisition co', 'blank check', 
+                        'special purpose acquisition', 'spac', 'business combination corp']
+        company_name_lower = str(src.get('display_names', '')).lower()
+        if any(kw in company_name_lower for kw in spac_keywords):
+            print(f"  Skip {ticker}: SPAC detected in display name")
+            continue
 
         # ── 8-K Item filter ───────────────────────────────────────────────────
         # Only process filings that include Item 1.01 (Entry into Material Definitive Agreement)
