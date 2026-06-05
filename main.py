@@ -770,9 +770,11 @@ Filing text:
             if acquirer and isinstance(acquirer, str) and len(acquirer) > 2:
                 # Reject if LLM returned the target ticker's own company name or acquisition sub
                 bad_llm = ['acquisition sub', 'merger sub', 'acquisition corp', 'merger corp']
-                # Only check ticker if it's more than 2 characters to avoid single-letter false matches
+                # Check ticker as whole word only to avoid substring matches like 'hbt' in 'HBT Financial'
+                import re as _re
                 if len(ticker) > 2:
-                    bad_llm.append(ticker.lower())
+                    if _re.search(r'\b' + ticker.lower() + r'\b', acquirer.lower()):
+                        bad_llm.append(ticker.lower())
                 if any(b in acquirer.lower() for b in bad_llm):
                     print(f"  [LLM] {ticker} rejected bad acquirer: {acquirer}")
                     return 'Undisclosed'
@@ -1010,13 +1012,13 @@ def fetch_deals_from_edgar():
                         # Use full text for acquirer/close/tx — needs broader context
                         acquirer=extract_acquirer(full_ct)
                         if acquirer == 'Undisclosed':
-                            time.sleep(1.0)  # Avoid Groq rate limit
+                            time.sleep(2.0)  # Avoid Groq rate limit
                             acquirer=extract_acquirer_llm(full_ct, ticker)
                         close_date=extract_close_date(full_ct)
                         tx_value=extract_transaction_value(full_ct)
                         # LLM fallback for missing close_date and tx_value
                         if close_date == 'TBD' or not tx_value:
-                            time.sleep(1.5)  # Avoid Groq rate limit
+                            time.sleep(2.5)  # Avoid Groq rate limit
                             meta=extract_deal_metadata_llm(full_ct, ticker)
                             if close_date == 'TBD' and meta['close_date']:
                                 close_date=meta['close_date']
