@@ -1016,10 +1016,7 @@ def fetch_deals_from_edgar():
                         dp=dp_try
                         # Use full text for acquirer/close/tx — needs broader context
                         acquirer=extract_acquirer(full_ct)
-                        if acquirer == 'Undisclosed':
-                            time.sleep(2.0)  # Avoid Groq rate limit
-                            acquirer=extract_acquirer_llm(full_ct, ticker)
-                        # If acquirer name matches ticker's own company name, this company IS the acquirer
+                        # Reject if filing company is the acquirer not target
                         if acquirer != 'Undisclosed':
                             ticker_company = resolve_company_name(ticker).lower()
                             stop_words = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group', 'holdings'}
@@ -1033,7 +1030,7 @@ def fetch_deals_from_edgar():
                         tx_value=extract_transaction_value(full_ct)
                         # LLM fallback for missing close_date and tx_value
                         if close_date == 'TBD' or not tx_value:
-                            time.sleep(2.5)  # Avoid Groq rate limit
+                            time.sleep(0.5)  # Reduced — metadata only, non-critical
                             meta=extract_deal_metadata_llm(full_ct, ticker)
                             if close_date == 'TBD' and meta['close_date']:
                                 close_date=meta['close_date']
