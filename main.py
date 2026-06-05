@@ -724,7 +724,56 @@ def extract_acquirer(clean_text):
             if len(m.split()) > 6: continue  # Acquirer names are never more than 6 words
             candidates.append(m)
     return min(candidates,key=len) if candidates else 'Undisclosed'
+def extract_acquirer_llm(text_block, ticker):
+    """
+    Fallback acquirer extraction using Groq (free tier) when regex returns Undisclosed.
+    Sends a targeted 3000-char block to Llama3 with a strict JSON prompt.
+    Groq free tier is generous enough for our scan volume — no cost.
+    Runs synchronously inside fetch_deals_from_edgar thread — safe.
+    """
+    groq_key = os.environ.get("GROQ_API_KEY", "")
+    if not groq_key:
+        return 'Undisclosed'
+    try:
+        prompt = f"""You are an M&A data extractor analyzing an SEC 8-K filing.
+Extract the name of the ACQUIRING company (the buyer) from this merger announcement text.
+The target company ticker is {ticker} — do NOT return that company as the acquirer.
+Return ONLY a JSON object with no other text: {{"acquirer": "Company Name"}}
+If you cannot identify the acquirer with confidence, return: {{"acquirer": null}}
 
+Filing text:
+{text_block[:3000]}"""
+
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "llama3-8b-8192",
+                "max_tokens": 100,
+                "temperature": 0,
+                "messages": [
+                    {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
+                    {"role": "user", "content": prompt}
+                ]
+            },
+            timeout=15
+        )
+        if resp.status_code == 200:
+            content = resp.json()['choices'][0]['message']['content'].strip()
+            content = content.replace('```json', '').replace('```', '').strip()
+            data = json.loads(content)
+            acquirer = data.get('acquirer')
+            if acquirer and isinstance(acquirer, str) and len(acquirer) > 2:
+                print(f"  [LLM] {ticker} acquirer: {acquirer}")
+                return acquirer
+        else:
+            print(f"  [LLM] Groq error {ticker}: {resp.status_code}")
+    except Exception as e:
+        print(f"  [LLM] Acquirer extraction error {ticker}: {e}")
+    return 'Undisclosed'    
 def extract_close_date(clean_text):
     patterns=[
         r'expected to close.*?(?:in the\s+)?(\w+\s+(?:half of\s+)?\d{4})',
@@ -879,6 +928,8 @@ def fetch_deals_from_edgar():
                         dp=dp_try
                         # Use full text for acquirer/close/tx — needs broader context
                         acquirer=extract_acquirer(full_ct)
+                        if acquirer == 'Undisclosed':
+                            acquirer=extract_acquirer_llm(full_ct, ticker)
                         close_date=extract_close_date(full_ct)
                         tx_value=extract_transaction_value(full_ct)
                         financing_signal=extract_financing_signal(full_ct)
