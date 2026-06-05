@@ -177,6 +177,7 @@ def save_cache(records):
     try:
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
+        df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
         clean = clean_records(df.to_dict(orient='records'))
         if len(clean) >= 3:
@@ -242,6 +243,10 @@ def rolling_merge(new_deals):
                         new_sp = round(((dp - cp) / cp) * 100, 2)
                         if new_sp < -15:
                             print(f"  Rolling drop: {deal['ticker']} — fresh spread {new_sp:.2f}%")
+                            continue
+                        ratio = dp / cp if cp > 0 else 0
+                        if ratio < 0.70 or ratio > 3.00:
+                            print(f"  Rolling drop: {deal['ticker']} — price ratio {ratio:.2f} invalid")
                             continue
                         deal['cp'] = cp
                         deal['sp_pct'] = new_sp
@@ -1014,6 +1019,16 @@ def fetch_deals_from_edgar():
                         if acquirer == 'Undisclosed':
                             time.sleep(2.0)  # Avoid Groq rate limit
                             acquirer=extract_acquirer_llm(full_ct, ticker)
+                        # If acquirer name matches ticker's own company name, this company IS the acquirer
+                        if acquirer != 'Undisclosed':
+                            ticker_company = resolve_company_name(ticker).lower()
+                            stop_words = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group', 'holdings'}
+                            ticker_words = set(ticker_company.split()) - stop_words
+                            acquirer_words = set(acquirer.lower().split()) - stop_words
+                            if len(ticker_words & acquirer_words) >= 2:
+                                print(f"  Reject {ticker}: acquirer matches own company — filing company is the acquirer")
+                                dp = None
+                        if not dp: continue
                         close_date=extract_close_date(full_ct)
                         tx_value=extract_transaction_value(full_ct)
                         # LLM fallback for missing close_date and tx_value
