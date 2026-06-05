@@ -307,7 +307,8 @@ VERIFIED_ACQUIRERS = {
 
 EXCLUDED_TICKERS = {
     'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU',
-    'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM'
+    'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC'
+}
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
@@ -970,7 +971,9 @@ def fetch_deals_from_edgar():
         # ── SPAC filter ───────────────────────────────────────────────────────
         # SPACs have no real merger target yet — exclude them entirely
         spac_keywords = ['acquisition corp', 'acquisition co', 'blank check', 
-                        'special purpose acquisition', 'spac', 'business combination corp']
+                        'special purpose acquisition', 'spac', 'business combination corp',
+                        'acquisition ii', 'acquisition iii', 'acquisition iv', 'acquisition v',
+                        'stonebridge acquisition']
         company_name_lower = str(src.get('display_names', '')).lower()
         if any(kw in company_name_lower for kw in spac_keywords):
             print(f"  Skip {ticker}: SPAC detected in display name")
@@ -988,6 +991,9 @@ def fetch_deals_from_edgar():
                 continue
         try:
             h=yf.Ticker(ticker).history(period='5d')
+            if h.empty:
+                time.sleep(2)
+                h=yf.Ticker(ticker).history(period='5d')
             if h.empty:
                 print(f"${ticker}: possibly delisted; no price data found  (period=5d)")
                 continue
