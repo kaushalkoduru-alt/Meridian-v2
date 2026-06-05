@@ -1009,35 +1009,29 @@ def fetch_deals_from_edgar():
                     # Step 2: extract only the merger consideration section
                     ct=extract_targeted_section(dr.text)
                     dp_try=extract_price_from_text(ct)
-                    if dp_try:
-                        # Step 4: validate price ratio before accepting
-                        if not validate_deal_price(dp_try, cp, ticker):
-                            continue
-                        dp=dp_try
-                        # Use full text for acquirer/close/tx — needs broader context
-                        acquirer=extract_acquirer(full_ct)
-                        # Reject if filing company is the acquirer not target
-                        if acquirer != 'Undisclosed':
-                            ticker_company = resolve_company_name(ticker).lower()
-                            stop_words = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group', 'holdings'}
-                            ticker_words = set(ticker_company.split()) - stop_words
-                            acquirer_words = set(acquirer.lower().split()) - stop_words
-                            if len(ticker_words & acquirer_words) >= 2:
-                                print(f"  Reject {ticker}: acquirer matches own company — filing company is the acquirer")
-                                dp = None
-                        if not dp: continue
-                        close_date=extract_close_date(full_ct)
-                        tx_value=extract_transaction_value(full_ct)
-                        # LLM fallback for missing close_date and tx_value
-                        if close_date == 'TBD' or not tx_value:
-                            time.sleep(0.5)  # Reduced — metadata only, non-critical
-                            meta=extract_deal_metadata_llm(full_ct, ticker)
-                            if close_date == 'TBD' and meta['close_date']:
-                                close_date=meta['close_date']
-                            if not tx_value and meta['tx_value']:
-                                tx_value=meta['tx_value']
-                        financing_signal=extract_financing_signal(full_ct)
-                        break
+                    if not dp_try:
+                        continue
+                    # Price validation runs FIRST before anything else
+                    if not validate_deal_price(dp_try, cp, ticker):
+                        continue
+                    dp=dp_try
+                    # Acquirer extraction — regex only, no LLM
+                    acquirer=extract_acquirer(full_ct)
+                    # Reject if filing company is the acquirer not target
+                    if acquirer != 'Undisclosed':
+                        ticker_company = resolve_company_name(ticker).lower()
+                        stop_words = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group', 'holdings'}
+                        ticker_words = set(ticker_company.split()) - stop_words
+                        acquirer_words = set(acquirer.lower().split()) - stop_words
+                        if len(ticker_words & acquirer_words) >= 2:
+                            print(f"  Reject {ticker}: acquirer matches own company — filing company is the acquirer")
+                            dp = None
+                    if not dp: continue
+                    # Regex extraction only — no Groq calls
+                    close_date=extract_close_date(full_ct)
+                    tx_value=extract_transaction_value(full_ct)
+                    financing_signal=extract_financing_signal(full_ct)
+                    break
                 except Exception as e:
                     print(f"  Filing parse error {ticker}: {e}")
                     continue
