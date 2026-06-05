@@ -176,6 +176,7 @@ def save_cache(records):
         return
     try:
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
+        df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
         clean = clean_records(df.to_dict(orient='records'))
         if len(clean) >= 3:
@@ -768,7 +769,10 @@ Filing text:
             acquirer = data.get('acquirer')
             if acquirer and isinstance(acquirer, str) and len(acquirer) > 2:
                 # Reject if LLM returned the target ticker's own company name or acquisition sub
-                bad_llm = ['acquisition sub', 'merger sub', 'acquisition corp', 'merger corp', ticker.lower()]
+                bad_llm = ['acquisition sub', 'merger sub', 'acquisition corp', 'merger corp']
+                # Only check ticker if it's more than 2 characters to avoid single-letter false matches
+                if len(ticker) > 2:
+                    bad_llm.append(ticker.lower())
                 if any(b in acquirer.lower() for b in bad_llm):
                     print(f"  [LLM] {ticker} rejected bad acquirer: {acquirer}")
                     return 'Undisclosed'
@@ -1011,6 +1015,7 @@ def fetch_deals_from_edgar():
                         tx_value=extract_transaction_value(full_ct)
                         # LLM fallback for missing close_date and tx_value
                         if close_date == 'TBD' or not tx_value:
+                            time.sleep(0.5)  # Avoid Groq rate limit
                             meta=extract_deal_metadata_llm(full_ct, ticker)
                             if close_date == 'TBD' and meta['close_date']:
                                 close_date=meta['close_date']
