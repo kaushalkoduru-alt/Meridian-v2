@@ -1010,12 +1010,13 @@ def fetch_deals_from_edgar():
                         # Use full text for acquirer/close/tx — needs broader context
                         acquirer=extract_acquirer(full_ct)
                         if acquirer == 'Undisclosed':
+                            time.sleep(1.0)  # Avoid Groq rate limit
                             acquirer=extract_acquirer_llm(full_ct, ticker)
                         close_date=extract_close_date(full_ct)
                         tx_value=extract_transaction_value(full_ct)
                         # LLM fallback for missing close_date and tx_value
                         if close_date == 'TBD' or not tx_value:
-                            time.sleep(0.5)  # Avoid Groq rate limit
+                            time.sleep(1.5)  # Avoid Groq rate limit
                             meta=extract_deal_metadata_llm(full_ct, ticker)
                             if close_date == 'TBD' and meta['close_date']:
                                 close_date=meta['close_date']
