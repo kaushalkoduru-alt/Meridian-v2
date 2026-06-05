@@ -949,13 +949,16 @@ def fetch_deals_from_edgar():
     for hit in all_hits:
         src = hit['_source']
         name_str = str(src.get('display_names',''))
-        tm = re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str)
+        tm = (re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str) or
+              re.search(r'\(([A-Z]{1,5})\)', name_str) or
+              re.search(r'([A-Z]{1,5})\s+\(CIK', name_str))
         t = tm.group(1) if tm else None
-        if t and t not in seen_pre:
-            seen_pre.add(t)
+        key = t if t else src.get('adsh', str(len(deduped_hits)))
+        if key not in seen_pre:
+            seen_pre.add(key)
             deduped_hits.append(hit)
     all_hits = deduped_hits
-    print(f"After deduplication: {len(all_hits)} unique tickers")
+    print(f"After deduplication: {len(all_hits)} unique hits")
 
     for i,hit in enumerate(all_hits):
         src=hit['_source']
