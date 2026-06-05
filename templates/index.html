@@ -1086,7 +1086,7 @@ async function buildTicker(){
         const items = deals.map(d=>{
             const cls  = d.sp_pct>=0?'ti-pos':'ti-neg';
             const s    = d.sp_pct>=0?'+':'';
-            return `<span class="ti"><span class="ti-sym">${d.ticker}</span><span class="${cls}">${s}${d.sp_pct.toFixed(2)}%</span></span>`;
+            return `<span class="ti"><span class="ti-sym">${d.ticker}</span><span class="${cls}">${s}${(d.sp_pct||0).toFixed(2)}%</span></span>`;
         }).join('');
         const track = document.getElementById('ticker-track');
         track.innerHTML = items + items;
@@ -1671,7 +1671,7 @@ function toggleDeal(i){
 async function loadDeals(){
     try{
         const d=await fetch('/api/deals').then(r=>r.json());
-        allDeals=d.deals||[];
+        allDeals=(d.deals||[]).filter(d => d.cp !== null && d.cp > 0 && d.sp_pct !== null);
         dealsLoaded=true;
         renderDeals(allDeals);
         buildTicker();

@@ -176,6 +176,7 @@ def save_cache(records):
         return
     try:
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
+        df = df[df['cp'].notna() & (df['cp'] > 0)]
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
