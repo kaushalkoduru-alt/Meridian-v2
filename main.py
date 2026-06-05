@@ -240,26 +240,18 @@ def rolling_merge(new_deals):
                 print(f"  Rolling drop: {deal['ticker']} — spread crashed to {sp:.2f}%")
                 continue
 
-            # Refresh stock price before carrying over
-            try:
-                h = yf.Ticker(deal['ticker']).history(period='5d')
-                if not h.empty:
-                    cp = round(float(h['Close'].iloc[-1]), 2)
-                    dp = deal.get('dp', 0)
-                    if dp and cp > 0:
-                        new_sp = round(((dp - cp) / cp) * 100, 2)
-                        if new_sp < -15:
-                            print(f"  Rolling drop: {deal['ticker']} — fresh spread {new_sp:.2f}%")
-                            continue
-                        ratio = dp / cp if cp > 0 else 0
-                        if ratio < 0.70 or ratio > 3.00:
-                            print(f"  Rolling drop: {deal['ticker']} — price ratio {ratio:.2f} invalid")
-                            continue
-                        deal['cp'] = cp
-                        deal['sp_pct'] = new_sp
-                        deal['ann'] = round((new_sp / 180) * 365, 2)
-            except:
-                pass  # Keep old price if refresh fails
+            # Validate carried deal using existing cached price — no new yfinance calls
+            cp = deal.get('cp')
+            dp = deal.get('dp', 0)
+            if cp and dp and cp > 0:
+                sp = round(((dp - cp) / cp) * 100, 2)
+                if sp < -15:
+                    print(f"  Rolling drop: {deal['ticker']} — spread {sp:.2f}%")
+                    continue
+                ratio = dp / cp
+                if ratio < 0.70 or ratio > 3.00:
+                    print(f"  Rolling drop: {deal['ticker']} — price ratio {ratio:.2f} invalid")
+                    continue
 
             carried.append(deal)
             print(f"  Rolling carry: {deal['ticker']} — {age_hours:.1f}h old")
