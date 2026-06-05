@@ -1263,7 +1263,7 @@ async function renderAnalysis(deal){
 
     // Metrics — hide Expected Close if TBD
     const metricsHtml=`
-        <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">$${deal.cp.toFixed(2)}</div></div>
+        <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">${deal.cp ? '$'+deal.cp.toFixed(2) : 'N/A'}</div></div>
         <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
         <div class="da-metric hi"><div class="da-ml">Spread</div><div class="da-mv" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div></div>
         <div class="da-metric"><div class="da-ml">Ann. Return</div><div class="da-mv sm" style="color:${spColor(deal.ann)}">${sign(deal.ann)}${deal.ann.toFixed(2)}%</div></div>
@@ -1600,7 +1600,7 @@ function renderDeals(deals){
               <div><span class="r-type ${tc}">${tl}</span></div>
               <div class="r-acq">${d.acquirer||'Undisclosed'}</div>
               <div class="r-co">${co}</div>
-              <div class="r-num">$${d.cp.toFixed(2)}</div>
+              <div class="r-num">${d.cp ? '$'+d.cp.toFixed(2) : 'N/A'}</div>
               <div class="r-num">$${d.dp.toFixed(2)}</div>
               <div class="r-spread" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
               <div class="r-num" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>

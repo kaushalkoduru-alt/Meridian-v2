@@ -228,6 +228,11 @@ def rolling_merge(new_deals):
                 print(f"  Rolling drop: {deal['ticker']} — missing for {age_hours:.1f}h")
                 continue
 
+            # Drop deals with null current price — can't calculate spread
+            if not deal.get('cp'):
+                print(f"  Rolling drop: {deal['ticker']} — null current price")
+                continue
+
             # Drop immediately if spread has gone very negative (deal broke/closed)
             sp = deal.get('sp_pct', 0)
             if sp < -15:
@@ -982,10 +987,14 @@ def fetch_deals_from_edgar():
                 continue
         try:
             h=yf.Ticker(ticker).history(period='5d')
-            if h.empty: continue
-            cp=h['Close'].iloc[-1]
+            if h.empty:
+                print(f"${ticker}: possibly delisted; no price data found  (period=5d)")
+                continue
+            cp=float(h['Close'].iloc[-1])
             if cp<1: continue
-        except: continue
+        except Exception as e:
+            print(f"${ticker}: possibly delisted; no price data found  (period=5d) (Yahoo error = \"{e}\")")
+            continue
         try:
             dp=None; acquirer='Undisclosed'; close_date='TBD'; tx_value=None; financing_signal='unknown'
             links=get_filing_links(cik,accession,headers)
@@ -1024,7 +1033,8 @@ def fetch_deals_from_edgar():
                         stop_words = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group', 'holdings'}
                         ticker_words = set(ticker_company.split()) - stop_words
                         acquirer_words = set(acquirer.lower().split()) - stop_words
-                        if len(ticker_words & acquirer_words) >= 2:
+                        overlap_count = len(ticker_words & acquirer_words)
+                        if overlap_count >= 2 or (overlap_count >= 1 and len(ticker_words) <= 2):
                             print(f"  Reject {ticker}: acquirer matches own company — filing company is the acquirer")
                             dp = None
                     if not dp: continue
@@ -1040,6 +1050,9 @@ def fetch_deals_from_edgar():
             sp_pct=((dp-cp)/cp)*100
             if sp_pct<-10 or sp_pct>60: continue
             days=(datetime.today()-datetime.strptime(src['file_date'],'%Y-%m-%d')).days
+            if days > 548:
+                print(f"  Rolling drop: {ticker} — deal is {days} days old, likely closed")
+                continue
             acquirer=VERIFIED_ACQUIRERS.get(ticker, acquirer)
             break_price=get_break_price(ticker,src['file_date'])
             break_price_method='historical'
