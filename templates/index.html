@@ -1194,7 +1194,7 @@ function buildSpreadHistorySVG(history, dp){
         <polyline points="${pts}" fill="none" stroke="${latestColor}" stroke-width="1.5"/>
         <circle cx="${xs(history.length-1).toFixed(1)}" cy="${ys(latest.spread).toFixed(1)}" r="3" fill="${latestColor}"/>
         <rect id="spread-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
-        <line id="spread-vline" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#4a9e8a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none"/>
+        <line id="spread-vline" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#4a9e8a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none" style="will-change:transform;"/>
       </svg>
       <div class="spread-chart-tooltip" id="spread-hist-tooltip"></div>
     </div>
@@ -1218,8 +1218,9 @@ function attachSpreadHistoryHover(){
       const idx=Math.max(0,Math.min(n-1,Math.round((relX/data.w)*(n-1))));
       const pt=data.history[idx];
       tooltip.innerHTML=`${pt.date}<br>Spread: +${pt.spread.toFixed(2)}%<br>Price: $${pt.close.toFixed(2)}`;
-      vline.setAttribute('x1',svgX.toFixed(1));
-      vline.setAttribute('x2',svgX.toFixed(1));
+      const clampedX=Math.max(data.PL,Math.min(data.PL+data.w,svgX));
+      vline.setAttribute('x1',clampedX.toFixed(1));
+      vline.setAttribute('x2',clampedX.toFixed(1));
       tooltip.style.display='block';
       vline.setAttribute('opacity','1');
       const parentRect=tooltip.parentElement.getBoundingClientRect();
