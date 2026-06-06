@@ -1218,9 +1218,8 @@ function attachSpreadHistoryHover(){
       const idx=Math.max(0,Math.min(n-1,Math.round((relX/data.w)*(n-1))));
       const pt=data.history[idx];
       tooltip.innerHTML=`${pt.date}<br>Spread: +${pt.spread.toFixed(2)}%<br>Price: $${pt.close.toFixed(2)}`;
-      const xPos=data.PL+((idx/(n-1))*data.w);
-      vline.setAttribute('x1',xPos.toFixed(1));
-      vline.setAttribute('x2',xPos.toFixed(1));
+      vline.setAttribute('x1',svgX.toFixed(1));
+      vline.setAttribute('x2',svgX.toFixed(1));
       tooltip.style.display='block';
       vline.setAttribute('opacity','1');
       const parentRect=tooltip.parentElement.getBoundingClientRect();
@@ -1404,13 +1403,25 @@ async function renderAnalysis(deal){
                 <div class="comp-stat"><div class="comp-stat-val red">${summary.broken}</div><div class="comp-stat-lbl">Broken</div></div>
                 <div class="comp-stat"><div class="comp-stat-val" style="color:${cc}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
             </div>
-            ${avgPeerSpread!==null?`<div style="padding:0.75rem 1rem;background:var(--bg2);border:1px solid var(--bdr);margin-bottom:0.75rem;display:flex;justify-content:space-between;align-items:center;">
-                <div style="font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;">PEER SPREAD COMPARISON</div>
-                <div style="display:flex;gap:1.5rem;align-items:center;">
-                    <div style="text-align:center"><div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--cream)">${deal.sp_pct.toFixed(2)}%</div><div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.1em">THIS DEAL</div></div>
-                    <div style="font-size:0.5rem;color:var(--dim)">vs</div>
-                    <div style="text-align:center"><div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--dim)">${avgPeerSpread}%</div><div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.1em">PEER AVG</div></div>
-                    <div style="font-family:'Cormorant Garamond',serif;font-size:0.75rem;color:${spreadColor}">${spreadSignal}</div>
+            ${avgPeerSpread!==null?`<div style="padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--bdr2);border-left:3px solid ${spreadColor};margin-bottom:1rem;">
+                <div style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.16em;margin-bottom:0.75rem;">PEER SPREAD INTELLIGENCE</div>
+                <div style="display:flex;gap:2rem;align-items:flex-end;margin-bottom:0.75rem;">
+                    <div>
+                        <div style="font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--cream);line-height:1">${deal.sp_pct.toFixed(2)}%</div>
+                        <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.12em;margin-top:0.2rem">THIS DEAL</div>
+                    </div>
+                    <div style="font-size:0.6rem;color:var(--dim);padding-bottom:0.3rem">vs</div>
+                    <div>
+                        <div style="font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--dim);line-height:1">${avgPeerSpread}%</div>
+                        <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.12em;margin-top:0.2rem">PEER AVERAGE</div>
+                    </div>
+                    <div style="margin-left:auto;text-align:right">
+                        <div style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:${spreadColor};line-height:1.2">${spreadSignal}</div>
+                        <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.1em;margin-top:0.3rem">${spreadDiff>0?'+':''}${spreadDiff}% vs peers</div>
+                    </div>
+                </div>
+                <div style="font-size:0.42rem;color:var(--dim);font-family:'Cormorant Garamond',serif;font-style:italic">
+                    ${spreadDiff>3?`This deal's spread is ${spreadDiff}% wider than comparable ${deal.deal_type} deals — the market is pricing in above-average risk. Investigate before entering.`:spreadDiff<-3?`This deal's spread is ${Math.abs(spreadDiff)}% tighter than peers — the market has high conviction this closes. Lower risk entry.`:`This deal is trading in line with comparable ${deal.deal_type} transactions. Standard risk profile.`}
                 </div>
             </div>`:''}
             <table class="comps-table">
