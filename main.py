@@ -859,11 +859,67 @@ def extract_close_date(clean_text):
         r'expected to close.*?(\w+\s+\d{4})',
         r'close.*?(?:by|in)\s+((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+\d{4})',
         r'anticipated to close.*?(?:in\s+)?((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+\d{4})',
+        r'transaction.*?(?:expected|anticipated|projected).*?(?:close|complete|consummat).*?((?:Q[1-4]|first|second|third|fourth|early|mid|late|second half|first half)\s+(?:of\s+)?\d{4})',
+        r'(?:close|complete|consummat).*?(?:by|in|during)\s+((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+(?:of\s+)?\d{4})',
+        r'(?:subject to|upon).*?(?:closing|completion).*?(?:by|in)\s+((?:Q[1-4]|\d{4}))',
+        r'((?:Q[1-4])\s+20\d{2})',
+        r'((?:first|second|third|fourth|early|mid|late)\s+(?:half\s+of\s+)?20\d{2})',
+        r'calendar year\s+(20\d{2})',
+        r'(?:fiscal|calendar)\s+(?:year\s+)?(\d{4})',
     ]
     for pat in patterns:
-        m=re.search(pat,clean_text[:3000],re.IGNORECASE)
-        if m: return m.group(1).strip()
+        m=re.search(pat,clean_text[:5000],re.IGNORECASE)
+        if m:
+            result = m.group(1).strip()
+            # Validate it looks like a real date reference
+            if any(yr in result for yr in ['2025','2026','2027']):
+                return result
     return 'TBD'
+
+def get_tender_offer_expiration(ticker, cik):
+    """
+    Queries EDGAR for SC TO-T filings to get the actual tender offer expiration date.
+    SC TO-T is filed by the acquirer but contains the offer expiration date.
+    Only runs for Tender Offer deal type.
+    """
+    try:
+        url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type=SC+TO-T&dateb=&owner=include&count=5&search_text=&output=atom"
+        resp = requests.get(url, headers=EDGAR_HEADERS, timeout=10)
+        if resp.status_code != 200:
+            return None
+        # Parse the atom feed for filing links
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        entries = soup.find_all('entry')
+        if not entries:
+            return None
+        # Get the most recent SC TO-T filing
+        filing_url = None
+        for entry in entries[:3]:
+            link = entry.find('filing-href')
+            if link:
+                filing_url = link.text.strip()
+                break
+        if not filing_url:
+            return None
+        # Fetch the filing index
+        index_resp = requests.get(filing_url, headers=EDGAR_HEADERS, timeout=10)
+        if index_resp.status_code != 200:
+            return None
+        # Look for expiration date in the filing text
+        text = BeautifulSoup(index_resp.text, 'html.parser').get_text()
+        patterns = [
+            r'(?:offer|tender offer).*?(?:expir|expire).*?(\w+\s+\d{1,2},\s+20\d{2})',
+            r'(?:expir|expire).*?(\w+\s+\d{1,2},\s+20\d{2})',
+            r'(\w+\s+\d{1,2},\s+20\d{2}).*?(?:expir|expire)',
+        ]
+        for pat in patterns:
+            m = re.search(pat, text[:10000], re.IGNORECASE)
+            if m:
+                return m.group(1).strip()
+        return None
+    except Exception as e:
+        print(f"  TO scraper error {ticker}: {e}")
+        return None
 
 def extract_transaction_value(clean_text):
     text=re.sub(r'\s+',' ',clean_text[:8000].replace('\n',' ').replace('\r',' '))
@@ -1059,6 +1115,12 @@ def fetch_deals_from_edgar():
                     if not dp: continue
                     # Regex extraction only — no Groq calls
                     close_date=extract_close_date(full_ct)
+                    # For tender offers, try to get actual expiration date from SC TO-T filing
+                    if deal_type == 'Tender Offer' and close_date == 'TBD':
+                        to_date = get_tender_offer_expiration(ticker, cik)
+                        if to_date:
+                            close_date = to_date
+                            print(f"  [TO] {ticker} expiration: {to_date}")
                     tx_value=extract_transaction_value(full_ct)
                     financing_signal=extract_financing_signal(full_ct)
                     break
