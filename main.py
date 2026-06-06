@@ -1406,7 +1406,8 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
 @app.get("/api/spread-history/{ticker}")
 async def spread_history(ticker: str, filed: str = "2024-01-01"):
-    cache_key = f"spread_hist_{ticker}"
+    today_str = datetime.utcnow().strftime('%Y-%m-%d')
+    cache_key = f"spread_hist_{ticker}_{today_str}"
     try:
         r = requests.get(
             f"{REDIS_URL}/get/{cache_key}",

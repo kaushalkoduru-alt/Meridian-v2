@@ -800,7 +800,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="da-metrics" id="da-metrics"></div>
   <div class="da-section"><div class="da-section-title">Market-Implied Close Probability</div><div id="da-implied-prob"></div></div>
-  <div class="da-section"><div class="da-section-title">Live Spread History</div><div id="da-spread-chart"></div></div>
+  <div class="da-section"><div class="da-section-title">Spread History</div><div id="da-spread-chart"></div></div>
   <div class="da-section"><div class="da-section-title">Risk / Reward Analysis</div><div class="rr-grid" id="da-rr-grid"></div></div>
   <div class="da-section"><div class="da-section-title">Acquirer Intelligence & Regulatory Risk</div><div class="acq-grid" id="da-acq-grid"></div><div class="reg-risk-list" id="da-reg-risk" style="margin-top:1rem"></div></div>
   <div class="da-section"><div class="da-section-title">Comparable Deals & Peer Spread</div><div id="da-comps"></div></div>
@@ -1177,7 +1177,7 @@ function buildSpreadHistorySVG(history, dp){
   const serial=encodeURIComponent(JSON.stringify({history,minV,maxV,PL,w,h,PT,W,H}));
   return `<div class="spread-chart-wrap" style="position:relative;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;">Daily spread % since announcement · Real market data</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;">Daily spread % since announcement · Updates daily</div>
       <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:${latestColor};font-weight:300;">+${latest.spread.toFixed(2)}% <span style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);">current</span></div>
     </div>
     <div class="spread-chart-area" style="position:relative;">
@@ -1194,7 +1194,7 @@ function buildSpreadHistorySVG(history, dp){
         <polyline points="${pts}" fill="none" stroke="${latestColor}" stroke-width="1.5"/>
         <circle cx="${xs(history.length-1).toFixed(1)}" cy="${ys(latest.spread).toFixed(1)}" r="3" fill="${latestColor}"/>
         <rect id="spread-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
-        <line id="spread-vline" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#4a9e8a" stroke-width="0.5" stroke-dasharray="2,2" opacity="0" pointer-events="none" style="will-change:transform;"/>
+        <circle id="spread-vline" cx="0" cy="${PT}" r="3" fill="#4a9e8a" opacity="0" pointer-events="none"/>
       </svg>
       <div class="spread-chart-tooltip" id="spread-hist-tooltip"></div>
     </div>
@@ -1218,9 +1218,10 @@ function attachSpreadHistoryHover(){
       const idx=Math.max(0,Math.min(n-1,Math.round((relX/data.w)*(n-1))));
       const pt=data.history[idx];
       tooltip.innerHTML=`${pt.date}<br>Spread: +${pt.spread.toFixed(2)}%<br>Price: $${pt.close.toFixed(2)}`;
-      const clampedX=Math.max(data.PL,Math.min(data.PL+data.w,svgX));
-      vline.setAttribute('x1',clampedX.toFixed(1));
-      vline.setAttribute('x2',clampedX.toFixed(1));
+      const ptX=data.PL+((idx/(n-1))*data.w);
+      const ptY=data.PT+data.h-((pt.spread-data.minV)/(data.maxV-data.minV))*data.h;
+      vline.setAttribute('cx',ptX.toFixed(1));
+      vline.setAttribute('cy',ptY.toFixed(1));
       tooltip.style.display='block';
       vline.setAttribute('opacity','1');
       const parentRect=tooltip.parentElement.getBoundingClientRect();
