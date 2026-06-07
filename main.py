@@ -175,10 +175,9 @@ def save_cache(records):
     if not records:
         return
     try:
-        # Strip temp filing text before saving to Redis
-        for r in records:
-            r.pop('_filing_text', None)
-        df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
+        # Strip temp filing text before saving to Redis — work on copies not originals
+        clean_records = [{k: v for k, v in r.items() if k != '_filing_text'} for r in records]
+        df = pd.DataFrame(clean_records).drop_duplicates(subset=['ticker'])
         df = df[df['cp'].notna() & (df['cp'] > 0)]
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
