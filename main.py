@@ -1190,7 +1190,7 @@ def fetch_deals_from_edgar():
                             "temperature": 0,
                             "messages": [
                                 {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
-                                {"role": "user", ""content": f"""You are an M&A database. Using your knowledge of this specific merger deal, provide:
+                                {"role": "user", "content": f"""You are an M&A database. Using your knowledge of this specific merger deal, provide:
 1. Total transaction value in billions (number only, e.g. 2.5 for $2.5 billion, 0.45 for $450 million)
 2. Expected or actual closing timeframe (for tender offers, this is the offer expiration date)
 
