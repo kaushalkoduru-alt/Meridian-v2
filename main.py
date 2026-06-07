@@ -1190,17 +1190,18 @@ def fetch_deals_from_edgar():
                             "temperature": 0,
                             "messages": [
                                 {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
-                                {"role": "user", "content": f"""Extract from this M&A deal:
-1. Total transaction value in billions (number only, e.g. 2.5 for $2.5B, 0.5 for $500M)
-2. Expected closing timeframe (e.g. 'Q3 2026', 'second half of 2026', 'early 2027')
+                                {"role": "user", ""content": f"""You are an M&A database. Using your knowledge of this specific merger deal, provide:
+1. Total transaction value in billions (number only, e.g. 2.5 for $2.5 billion, 0.45 for $450 million)
+2. Expected or actual closing timeframe
 
-Company: {deal.get('company')}
-Acquirer: {deal.get('acquirer')}
+Company being acquired: {deal.get('company')}
+Acquiring company: {deal.get('acquirer')}
 Deal type: {deal.get('deal_type')}
-Deal price per share: ${deal.get('dp')}
+Announced deal price per share: ${deal.get('dp')}
+Filing date: {deal.get('filed')}
 
 Return JSON only: {{"tx_value": 2.5, "close_date": "Q3 2026"}}
-Use null if unknown."""}
+If you are not confident about a value, use null. Do not guess."""}
                             ]
                         },
                         timeout=15
