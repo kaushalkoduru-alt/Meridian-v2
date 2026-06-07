@@ -1170,6 +1170,66 @@ def fetch_deals_from_edgar():
     if results:
         save_cache(results)
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan complete.")
+        # Background enrichment — fill missing tx_value and close_date via Groq
+        groq_key = os.environ.get("GROQ_API_KEY", "")
+        if groq_key:
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting background enrichment...")
+            enriched = False
+            for deal in results:
+                if deal.get('tx_value') and deal.get('close_date') != 'TBD':
+                    continue
+                ticker = deal.get('ticker')
+                try:
+                    time.sleep(2.0)
+                    resp = requests.post(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                        json={
+                            "model": "llama-3.1-8b-instant",
+                            "max_tokens": 150,
+                            "temperature": 0,
+                            "messages": [
+                                {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
+                                {"role": "user", "content": f"""Extract from this M&A deal:
+1. Total transaction value in billions (number only, e.g. 2.5 for $2.5B, 0.5 for $500M)
+2. Expected closing timeframe (e.g. 'Q3 2026', 'second half of 2026', 'early 2027')
+
+Company: {deal.get('company')}
+Acquirer: {deal.get('acquirer')}
+Deal type: {deal.get('deal_type')}
+Deal price per share: ${deal.get('dp')}
+
+Return JSON only: {{"tx_value": 2.5, "close_date": "Q3 2026"}}
+Use null if unknown."""}
+                            ]
+                        },
+                        timeout=15
+                    )
+                    if resp.status_code == 200:
+                        content = resp.json()['choices'][0]['message']['content'].strip()
+                        content = content.replace('```json','').replace('```','').strip()
+                        data = json.loads(content)
+                        tx = data.get('tx_value')
+                        cd = data.get('close_date')
+                        if tx and isinstance(tx, (int, float)) and 0.01 <= float(tx) <= 500:
+                            if not deal.get('tx_value'):
+                                deal['tx_value'] = round(float(tx), 2)
+                                enriched = True
+                                print(f"  [Enrich] {ticker} tx_value: {deal['tx_value']}B")
+                        if cd and isinstance(cd, str) and len(cd) > 2 and cd.lower() not in ['null','none','tbd','unknown']:
+                            if deal.get('close_date') == 'TBD':
+                                deal['close_date'] = cd.strip()
+                                enriched = True
+                                print(f"  [Enrich] {ticker} close_date: {cd}")
+                    elif resp.status_code == 429:
+                        print(f"  [Enrich] Rate limited, stopping enrichment")
+                        break
+                except Exception as e:
+                    print(f"  [Enrich] Error {ticker}: {e}")
+                    continue
+            if enriched:
+                save_cache(results)
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Enrichment complete — cache updated.")
     else:
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan returned no results — Redis unchanged.")
 

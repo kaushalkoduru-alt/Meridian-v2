@@ -1238,7 +1238,8 @@ async function renderAnalysis(deal){
     const tl=getTypeLabel(deal.deal_type);
     const company  =deal.company||deal.ticker+' Corp.';
     const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:null;
-    const txVal    =deal.tx_value&&!isNaN(deal.tx_value)?'$'+parseFloat(deal.tx_value).toFixed(1)+'B':'N/A';
+    const txRaw=deal.tx_value&&!isNaN(deal.tx_value)?parseFloat(deal.tx_value):null;
+    const txVal=txRaw===null?'N/A':txRaw>=1?'$'+txRaw.toFixed(1)+'B':'$'+Math.round(txRaw*1000)+'M';
     const bp=deal.break_price, bd=deal.break_downside;
     const fin=deal.financing_signal||'unknown';
     const bpMethod=deal.break_price_method||'historical';
@@ -1305,7 +1306,7 @@ async function renderAnalysis(deal){
     // Live Spread History
     document.getElementById('da-spread-chart').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading spread history...</div>';
     try{
-        const histData=await fetch(`/api/spread-history/${deal.ticker}?filed=${deal.filed}`).then(r=>r.json());
+        const histData=await fetch(`/api/spread-history/${deal.ticker}?filed=${deal.filed}&t=${Date.now()}`).then(r=>r.json());
         if(histData.history&&histData.history.length>1){
             document.getElementById('da-spread-chart').innerHTML=buildSpreadHistorySVG(histData.history,deal.dp);
             attachSpreadHistoryHover();
@@ -1614,7 +1615,8 @@ function renderDeals(deals){
             const isExp=expandedIndex===i;
             const co=d.company||d.ticker+' Corp.';
             const cd=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'?d.close_date:'TBD';
-            const tv=d.tx_value&&!isNaN(d.tx_value)?'$'+parseFloat(d.tx_value).toFixed(1)+'B':'N/A';
+            const txR=d.tx_value&&!isNaN(d.tx_value)?parseFloat(d.tx_value):null;
+            const tv=txR===null?'N/A':txR>=1?'$'+txR.toFixed(1)+'B':'$'+Math.round(txR*1000)+'M';
             const bp=d.break_price,bd=d.break_downside;
             const fin=d.financing_signal||'unknown';
             html+=`
