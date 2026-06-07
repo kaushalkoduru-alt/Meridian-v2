@@ -1203,7 +1203,10 @@ Filing text:
 {deal.get('_filing_text', '')[:2000]}
 
 Return JSON only: {{"tx_value": 2.5, "close_date": "Q3 2026"}}
-If you cannot find the value in the text, use null. Do not guess."""}
+IMPORTANT: tx_value is the TOTAL deal value in billions, NOT the per-share price. 
+Total deal values are typically described as "$X billion" or "$X million" in the aggregate.
+Per-share prices like "$31.00 per share" are NOT the transaction value.
+If you cannot find the total deal value clearly stated, use null. Do not guess."""}
                             ]
                         },
                         timeout=15
