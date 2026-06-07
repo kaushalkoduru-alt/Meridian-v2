@@ -175,6 +175,9 @@ def save_cache(records):
     if not records:
         return
     try:
+        # Strip temp filing text before saving to Redis
+        for r in records:
+            r.pop('_filing_text', None)
         df = pd.DataFrame(records).drop_duplicates(subset=['ticker'])
         df = df[df['cp'].notna() & (df['cp'] > 0)]
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
@@ -1160,6 +1163,7 @@ def fetch_deals_from_edgar():
                 'break_downside':break_downside,'break_price_method':break_price_method,
                 'financing_signal':financing_signal,
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                '_filing_text':full_ct[:3000],  # Temp field for enrichment, stripped before Redis save
             })
             if len(results) % 10 == 0:
                 save_cache(results)
@@ -1190,19 +1194,15 @@ def fetch_deals_from_edgar():
                             "temperature": 0,
                             "messages": [
                                 {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
-                                {"role": "user", "content": f"""You are an M&A database. Using your knowledge of this specific merger deal, provide:
+                                {"role": "user", "content": f"""Extract from this SEC 8-K merger filing text:
 1. Total transaction value in billions (number only, e.g. 2.5 for $2.5 billion, 0.45 for $450 million)
-2. Expected or actual closing timeframe (for tender offers, this is the offer expiration date)
+2. Expected closing timeframe (e.g. 'Q3 2026', 'second half of 2026', 'early 2027')
 
-Company being acquired: {deal.get('company')}
-Acquiring company: {deal.get('acquirer')}
-Deal type: {deal.get('deal_type')}
-Announced deal price per share: ${deal.get('dp')}
-Filing date: {deal.get('filed')}
+Filing text:
+{deal.get('_filing_text', '')[:2000]}
 
 Return JSON only: {{"tx_value": 2.5, "close_date": "Q3 2026"}}
-For tender offers, close_date should be the tender offer expiration date if known.
-If you are not confident about a value, use null. Do not guess."""}
+If you cannot find the value in the text, use null. Do not guess."""}
                             ]
                         },
                         timeout=15
