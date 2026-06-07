@@ -1183,6 +1183,8 @@ def fetch_deals_from_edgar():
                 if deal.get('tx_value') and deal.get('close_date') != 'TBD':
                     continue
                 ticker = deal.get('ticker')
+                filing_text = deal.get('_filing_text', '')
+                print(f"  [Enrich] {ticker} — filing text len: {len(filing_text)}, tx_value: {deal.get('tx_value')}, close_date: {deal.get('close_date')}")
                 try:
                     time.sleep(2.0)
                     resp = requests.post(
