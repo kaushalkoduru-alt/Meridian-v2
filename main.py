@@ -1231,7 +1231,8 @@ If you cannot find the value in the text, use null. Do not guess."""}
                     print(f"  [Enrich] Error {ticker}: {e}")
                     continue
             if enriched:
-                save_cache(results)
+                clean = [{k: v for k, v in r.items() if k != '_filing_text'} for r in results]
+                save_cache(clean)
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Enrichment complete — cache updated.")
     else:
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan returned no results — Redis unchanged.")
