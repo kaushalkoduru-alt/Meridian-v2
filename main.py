@@ -183,7 +183,7 @@ def save_cache(records):
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
-        clean = clean_records(df.to_dict(orient='records'))
+        clean = df.to_dict(orient='records')
         if len(clean) >= 3:
             merged = rolling_merge(clean)
             redis_set(merged)
