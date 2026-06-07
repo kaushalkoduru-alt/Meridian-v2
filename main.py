@@ -1208,7 +1208,7 @@ def fetch_deals_from_edgar():
                 # Acquirer enrichment
                 if needs_acquirer and filing_text:
                     try:
-                        time.sleep(2.0)
+                        time.sleep(3.0)
                         resp = requests.post(
                             "https://api.groq.com/openai/v1/chat/completions",
                             headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
@@ -1251,7 +1251,7 @@ If you cannot identify the acquirer with confidence, return: {{"acquirer": null}
                     except Exception as e:
                         print(f"  [Enrich] Acquirer error {ticker}: {e}")
                 try:
-                    time.sleep(2.0)
+                    time.sleep(3.0)
                     resp = requests.post(
                         "https://api.groq.com/openai/v1/chat/completions",
                         headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
