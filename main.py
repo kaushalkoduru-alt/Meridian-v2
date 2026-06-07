@@ -299,6 +299,10 @@ VERIFIED_ACQUIRERS = {
     'EA': 'Savvy Games Group (Saudi Arabia)',
 }
 
+VERIFIED_TX_VALUES = {
+    'WBD': 110.0,  # Paramount-WBD deal — $110B enterprise value per SEC filing
+}
+
 EXCLUDED_TICKERS = {
     'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU',
     'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC'
@@ -1137,6 +1141,8 @@ def fetch_deals_from_edgar():
                 print(f"  Rolling drop: {ticker} — deal is {days} days old, likely closed")
                 continue
             acquirer=VERIFIED_ACQUIRERS.get(ticker, acquirer)
+            if ticker in VERIFIED_TX_VALUES and not tx_value:
+                tx_value=VERIFIED_TX_VALUES[ticker]
             break_price=get_break_price(ticker,src['file_date'])
             break_price_method='historical'
             if not break_price:
@@ -1162,7 +1168,7 @@ def fetch_deals_from_edgar():
                 'break_downside':break_downside,'break_price_method':break_price_method,
                 'financing_signal':financing_signal,
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
-                '_filing_text':full_ct[:6000],  # Temp field for enrichment, stripped before Redis save
+                '_filing_text':full_ct[:10000],  # Temp field for enrichment, stripped before Redis save
             })
             if len(results) % 10 == 0:
                 save_cache(results)
