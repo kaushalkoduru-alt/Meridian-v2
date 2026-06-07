@@ -180,9 +180,9 @@ def save_cache(records):
         df = pd.DataFrame(clean_records).drop_duplicates(subset=['ticker'])
         df = df[df['cp'].notna() & (df['cp'] > 0)]
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
-        df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
-        df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
+        # Replace all NaN values with None so JSON serialization doesn't crash
+        df = df.where(pd.notnull(df), None)
         clean = df.to_dict(orient='records')
         if len(clean) >= 3:
             merged = rolling_merge(clean)
