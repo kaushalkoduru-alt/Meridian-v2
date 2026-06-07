@@ -1379,7 +1379,18 @@ async def compare(): return read_html()
 @app.get("/api/deals")
 async def get_deals():
     deals = load_cache()
-    return JSONResponse(content={"deals": deals or []})
+    # Sanitize NaN values before JSON serialization
+    import math
+    def sanitize(obj):
+        if isinstance(obj, float) and math.isnan(obj):
+            return None
+        if isinstance(obj, dict):
+            return {k: sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [sanitize(i) for i in obj]
+        return obj
+    deals = sanitize(deals or [])
+    return JSONResponse(content={"deals": deals})
 
 @app.get("/api/scan-status")
 async def scan_status():
