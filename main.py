@@ -1162,7 +1162,7 @@ def fetch_deals_from_edgar():
                 'break_downside':break_downside,'break_price_method':break_price_method,
                 'financing_signal':financing_signal,
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
-                '_filing_text':full_ct[:3000],  # Temp field for enrichment, stripped before Redis save
+                '_filing_text':full_ct[:6000],  # Temp field for enrichment, stripped before Redis save
             })
             if len(results) % 10 == 0:
                 save_cache(results)
