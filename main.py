@@ -1676,7 +1676,7 @@ async def implied_probability(ticker: str):
         return JSONResponse(content={"probability": None, "error": str(e)})
 @app.post("/api/clear-cache")
 async def clear_cache():
-    """Emergency cache clear — nukes all Redis deals so next scan starts clean."""
+    """Emergency cache clear - nukes all Redis deals so next scan starts clean."""
     try:
         requests.post(
             f"{REDIS_URL}/del/{CACHE_KEY}",
