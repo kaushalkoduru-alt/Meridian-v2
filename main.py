@@ -1201,6 +1201,10 @@ def fetch_deals_from_edgar():
                 needs_cd = deal.get('close_date') == 'TBD'
                 if not needs_acquirer and not needs_tx and not needs_cd:
                     continue
+                # Prioritize acquirer first — only do tx/cd if acquirer already known
+                if needs_acquirer:
+                    needs_tx = False
+                    needs_cd = False
                 ticker = deal.get('ticker')
                 filing_text = deal.get('_filing_text', '')
                 print(f"  [Enrich] {ticker} — acquirer: {deal.get('acquirer')}, tx_value: {deal.get('tx_value')}, close_date: {deal.get('close_date')}")
