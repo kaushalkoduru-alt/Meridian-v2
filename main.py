@@ -1192,7 +1192,7 @@ def fetch_deals_from_edgar():
                                 {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
                                 {"role": "user", ""content": f"""You are an M&A database. Using your knowledge of this specific merger deal, provide:
 1. Total transaction value in billions (number only, e.g. 2.5 for $2.5 billion, 0.45 for $450 million)
-2. Expected or actual closing timeframe
+2. Expected or actual closing timeframe (for tender offers, this is the offer expiration date)
 
 Company being acquired: {deal.get('company')}
 Acquiring company: {deal.get('acquirer')}
@@ -1201,6 +1201,7 @@ Announced deal price per share: ${deal.get('dp')}
 Filing date: {deal.get('filed')}
 
 Return JSON only: {{"tx_value": 2.5, "close_date": "Q3 2026"}}
+For tender offers, close_date should be the tender offer expiration date if known.
 If you are not confident about a value, use null. Do not guess."""}
                             ]
                         },
