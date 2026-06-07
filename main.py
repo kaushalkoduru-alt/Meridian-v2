@@ -300,7 +300,16 @@ VERIFIED_ACQUIRERS = {
 }
 
 VERIFIED_TX_VALUES = {
-    'WBD': 110.0,  # Paramount-WBD deal — $110B enterprise value per SEC filing
+    'WBD': 110.0,   # Paramount-WBD — $110B enterprise value
+    'GSAT': 11.6,   # Amazon-Globalstar — $11.6B
+    'RGR': 0.7,     # Tender offer — ~$700M based on market cap
+}
+
+VERIFIED_CLOSE_DATES = {
+    'CZR': '2027',          # Regulatory complexity, go-shop ends July 2026
+    'OGN': 'early 2027',    # Per SEC filing
+    'NATH': 'H1 2026',      # Per merger agreement
+    'GSAT': '2027',         # Per merger agreement
 }
 
 EXCLUDED_TICKERS = {
@@ -1143,6 +1152,8 @@ def fetch_deals_from_edgar():
             acquirer=VERIFIED_ACQUIRERS.get(ticker, acquirer)
             if ticker in VERIFIED_TX_VALUES and not tx_value:
                 tx_value=VERIFIED_TX_VALUES[ticker]
+            if ticker in VERIFIED_CLOSE_DATES and close_date == 'TBD':
+                close_date=VERIFIED_CLOSE_DATES[ticker]
             break_price=get_break_price(ticker,src['file_date'])
             break_price_method='historical'
             if not break_price:
