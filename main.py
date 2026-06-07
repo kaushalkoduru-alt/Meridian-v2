@@ -1196,11 +1196,60 @@ def fetch_deals_from_edgar():
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting background enrichment...")
             enriched = False
             for deal in results:
-                if deal.get('tx_value') and deal.get('close_date') != 'TBD':
+                needs_acquirer = deal.get('acquirer') == 'Undisclosed'
+                needs_tx = not deal.get('tx_value')
+                needs_cd = deal.get('close_date') == 'TBD'
+                if not needs_acquirer and not needs_tx and not needs_cd:
                     continue
                 ticker = deal.get('ticker')
                 filing_text = deal.get('_filing_text', '')
-                print(f"  [Enrich] {ticker} — filing text len: {len(filing_text)}, tx_value: {deal.get('tx_value')}, close_date: {deal.get('close_date')}")
+                print(f"  [Enrich] {ticker} — acquirer: {deal.get('acquirer')}, tx_value: {deal.get('tx_value')}, close_date: {deal.get('close_date')}")
+
+                # Acquirer enrichment
+                if needs_acquirer and filing_text:
+                    try:
+                        time.sleep(2.0)
+                        resp = requests.post(
+                            "https://api.groq.com/openai/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                            json={
+                                "model": "llama-3.1-8b-instant",
+                                "max_tokens": 100,
+                                "temperature": 0,
+                                "messages": [
+                                    {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
+                                    {"role": "user", "content": f"""Extract the acquiring company name from this SEC 8-K merger filing.
+The TARGET company ticker is {ticker} and company name is {deal.get('company')} — do NOT return this as the acquirer.
+The acquirer is the company BUYING the target.
+
+Filing text:
+{filing_text[:3000]}
+
+Return JSON only: {{"acquirer": "Company Name"}}
+If you cannot identify the acquirer with confidence, return: {{"acquirer": null}}"""}
+                                ]
+                            },
+                            timeout=15
+                        )
+                        if resp.status_code == 200:
+                            content = resp.json()['choices'][0]['message']['content'].strip()
+                            content = content.replace('```json','').replace('```','').strip()
+                            data = json.loads(content)
+                            acq = data.get('acquirer')
+                            if acq and isinstance(acq, str) and len(acq) > 2 and acq.lower() not in ['null','none','unknown']:
+                                # Reject if acquirer matches target company name
+                                stop_words = {'inc','corp','ltd','llc','the','and','of','co','group','holdings'}
+                                ticker_words = set(deal.get('company','').lower().split()) - stop_words
+                                acq_words = set(acq.lower().split()) - stop_words
+                                if len(ticker_words & acq_words) < 2:
+                                    deal['acquirer'] = acq
+                                    enriched = True
+                                    print(f"  [Enrich] {ticker} acquirer: {acq}")
+                        elif resp.status_code == 429:
+                            print(f"  [Enrich] Rate limited on acquirer, stopping")
+                            break
+                    except Exception as e:
+                        print(f"  [Enrich] Acquirer error {ticker}: {e}")
                 try:
                     time.sleep(2.0)
                     resp = requests.post(
