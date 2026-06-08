@@ -200,6 +200,23 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 .badge-md{color:var(--amber);border-color:rgba(200,148,90,0.4);background:rgba(200,148,90,0.07);}
 .badge-hi{color:var(--red);border-color:rgba(158,90,74,0.4);background:rgba(158,90,74,0.07);}
 
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  .deal-row{grid-template-columns:1fr 1fr;gap:0.5rem;padding:0.85rem 1rem;}
+  .r-acq{display:none;}
+  .r-co{display:none;}
+  .r-num{display:none;}
+  .r-badge-wrap{display:none;}
+  .dp-top{flex-direction:column;gap:1rem;}
+  .dp-metrics{grid-template-columns:1fr 1fr!important;}
+  .da-section{padding:1rem!important;}
+  .comps-summary{grid-template-columns:1fr 1fr!important;}
+  .ticker-banner{font-size:0.8rem;}
+  #page-dashboard{padding:0 0.5rem;}
+  .dash-header{padding:1rem;}
+  .detail-panel{padding:1rem;}
+}
+
 /* ── DETAIL PANEL ── */
 .detail-panel{display:none;background:var(--bg3);border-bottom:1px solid var(--bdr2);border-left:2px solid var(--teal2);padding:1.75rem 2rem 1.5rem;animation:slideDown 0.2s ease;}
 .detail-panel.open{display:block;}
