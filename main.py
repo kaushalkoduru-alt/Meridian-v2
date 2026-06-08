@@ -1772,12 +1772,7 @@ async def clear_cache():
         return JSONResponse(content={"status": "cache cleared"})
     except Exception as e:
         return JSONResponse(content={"status": "error", "detail": str(e)})
-@app.get("/api/debgit coug-env")
-async def debug_env():
-    return JSONResponse(content={
-        "stripe_price_id": STRIPE_PRICE_ID,
-        "stripe_key_set": bool(stripe.api_key),
-    })
+
 @app.post("/api/create-checkout-session")
 async def create_checkout_session(request: Request):
     try:
