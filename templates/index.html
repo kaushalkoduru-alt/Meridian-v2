@@ -2351,7 +2351,6 @@ function updateModalState(){
   else if(!currentUser){ctaBtn.textContent='Sign Up & Subscribe →';signinBtn.style.display='block';hint.style.display='block';}
 }
 function showAnalysis(d){
-  if(!isSubscribed){openPaywall();return;}
   showPage('page-analysis');
   renderAnalysis(d);
 }
