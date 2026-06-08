@@ -1298,6 +1298,7 @@ function buildSpreadHistorySVG(history, dp){
       </svg>
       <div class="spread-chart-tooltip" id="spread-hist-tooltip"></div>
     </div>
+    <div style="font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.1em;margin-top:0.5rem;text-align:right;">Historical data via Yahoo Finance · Data availability varies by ticker</div>
   </div>`;
 }
 
@@ -2315,7 +2316,7 @@ let currentUser = null;
 function applyPaywallToSections(){
   if(isSubscribed) return;
   const premiumSections=[
-    'da-implied-prob','da-spread-chart','da-rr-grid',
+    'da-implied-prob','da-rr-grid',
     'da-acq-grid','da-comps','da-score-bars','da-catalyst'
   ];
   premiumSections.forEach(id=>{
