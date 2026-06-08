@@ -666,6 +666,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .modal-signin-link{font-family:'DM Mono',monospace;font-size:0.42rem;color:var(--dim);letter-spacing:0.1em;margin-top:1rem;cursor:pointer;}
 .modal-signin-link span{color:var(--teal);cursor:pointer;}
 .modal-signin-link span:hover{text-decoration:underline;}
+.paywall-section{position:relative;}
+.paywall-blur{filter:blur(4px);pointer-events:none;user-select:none;opacity:0.4;}
+.paywall-gate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;cursor:pointer;background:linear-gradient(180deg,transparent 0%,rgba(5,13,8,0.85) 40%);}
+.paywall-gate-label{font-family:'DM Mono',monospace;font-size:0.46rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--teal);margin-bottom:0.5rem;}
+.paywall-gate-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:300;color:var(--cream);margin-bottom:0.75rem;text-align:center;}
+.paywall-gate-btn{font-family:'DM Mono',monospace;font-size:0.5rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--bg);background:var(--teal);border:none;padding:0.6rem 1.5rem;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -1578,6 +1584,7 @@ async function renderAnalysis(deal){
     }catch(e){
         document.getElementById('da-catalyst').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to load catalyst calendar.</div>';
     }
+  applyPaywallToSections();
 }
 
 // ── COMPARE PAGE ──────────────────────────────────────────────────────────────
@@ -2305,6 +2312,30 @@ preloadTrackRecordCharts();
 let isSubscribed = false;
 let currentUser = null;
 
+function applyPaywallToSections(){
+  if(isSubscribed) return;
+  const premiumSections=[
+    'da-implied-prob','da-spread-chart','da-rr-grid',
+    'da-acq-grid','da-comps','da-score-bars','da-catalyst'
+  ];
+  premiumSections.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const section=el.closest('.da-section');
+    if(!section) return;
+    section.classList.add('paywall-section');
+    el.classList.add('paywall-blur');
+    if(section.querySelector('.paywall-gate')) return;
+    const gate=document.createElement('div');
+    gate.className='paywall-gate';
+    gate.innerHTML=`
+      <div class="paywall-gate-label">◈ Pro Feature</div>
+      <div class="paywall-gate-title">Unlock Full Analysis</div>
+      <button class="paywall-gate-btn" onclick="openPaywall()">Subscribe · $29.99/mo</button>
+    `;
+    section.appendChild(gate);
+  });
+}
 function openPaywall(){
   document.getElementById('paywall-modal').classList.remove('hidden');
   updateModalState();
