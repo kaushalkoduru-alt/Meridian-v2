@@ -1554,21 +1554,6 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
 @app.get("/api/spread-history/{ticker}")
 async def spread_history(ticker: str, filed: str = "2024-01-01"):
-    today_str = datetime.utcnow().strftime('%Y-%m-%d')
-    cache_key = f"spread_hist_{ticker}_{today_str}"
-    try:
-        r = requests.get(
-            f"{REDIS_URL}/get/{cache_key}",
-            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
-            timeout=5
-        )
-        result = r.json().get('result')
-        if result:
-            data = json.loads(result) if isinstance(result, str) else json.loads(result.get('value', '{}'))
-            if data.get('history'):
-                return JSONResponse(content=data)
-    except:
-        pass
     try:
         end_date = datetime.utcnow().strftime('%Y-%m-%d')
         h = yf.Ticker(ticker).history(start=filed, end=end_date)
@@ -1585,16 +1570,6 @@ async def spread_history(ticker: str, filed: str = "2024-01-01"):
             if cp > 0 and dp > 0:
                 spread = round(((dp - cp) / cp) * 100, 2)
                 history.append({"date": date.strftime('%Y-%m-%d'), "spread": spread, "close": cp})
-        payload = json.dumps({"history": history, "ticker": ticker, "dp": dp})
-        try:
-            requests.post(
-                f"{REDIS_URL}/set/{cache_key}",
-                headers={"Authorization": f"Bearer {REDIS_TOKEN}", "Content-Type": "application/json"},
-                json={"value": payload, "ex": 3600},
-                timeout=10
-            )
-        except:
-            pass
         return JSONResponse(content={"history": history, "ticker": ticker, "dp": dp})
     except Exception as e:
         print(f"Spread history error {ticker}: {e}")
