@@ -1155,7 +1155,7 @@ def fetch_deals_from_edgar():
             acquirer=VERIFIED_ACQUIRERS.get(ticker, acquirer)
             if ticker in VERIFIED_TX_VALUES and not tx_value:
                 tx_value=VERIFIED_TX_VALUES[ticker]
-            if ticker in VERIFIED_CLOSE_DATES and close_date == 'TBD':
+            if ticker in VERIFIED_CLOSE_DATES:
                 close_date=VERIFIED_CLOSE_DATES[ticker]
             break_price=get_break_price(ticker,src['file_date'])
             break_price_method='historical'
