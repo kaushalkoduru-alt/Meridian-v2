@@ -240,8 +240,12 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 
   .dp-top{flex-direction:column;gap:1rem;}
   .dp-metrics{grid-template-columns:1fr 1fr!important;}
+  .dp-metrics .da-metric{min-width:0;overflow:hidden;}
+  .break-banner{grid-template-columns:1fr!important;}
+  .break-banner-cell{border-right:none!important;border-bottom:1px solid rgba(158,90,74,0.15);}
   .da-section{padding:1rem!important;}
   .comps-summary{grid-template-columns:1fr 1fr!important;}
+  .comp-stat-val{font-size:1rem!important;}
   .acq-grid{grid-template-columns:1fr!important;}
 
   .ticker-banner{font-size:0.65rem;}
@@ -1519,7 +1523,7 @@ async function renderAnalysis(deal){
             </div>
             ${avgPeerSpread!==null?`<div style="padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--bdr2);border-left:3px solid ${spreadColor};margin-bottom:1rem;">
                 <div style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.16em;margin-bottom:0.75rem;">PEER SPREAD INTELLIGENCE</div>
-                <div style="display:flex;gap:2rem;align-items:flex-end;margin-bottom:0.75rem;">
+                <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;margin-bottom:0.75rem;">
                     <div>
                         <div style="font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--cream);line-height:1">${deal.sp_pct.toFixed(2)}%</div>
                         <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.12em;margin-top:0.2rem">THIS DEAL</div>
@@ -1529,7 +1533,7 @@ async function renderAnalysis(deal){
                         <div style="font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--dim);line-height:1">${avgPeerSpread}%</div>
                         <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.12em;margin-top:0.2rem">PEER AVERAGE</div>
                     </div>
-                    <div style="margin-left:auto;text-align:right">
+                    <div style="text-align:left;width:100%;">
                         <div style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:${spreadColor};line-height:1.2">${spreadSignal}</div>
                         <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.1em;margin-top:0.3rem">${spreadDiff>0?'+':''}${spreadDiff}% vs peers</div>
                     </div>
