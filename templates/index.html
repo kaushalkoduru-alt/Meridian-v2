@@ -226,6 +226,7 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
   .r-badge-wrap{display:block!important;}
   .r-type{display:none;}
   .deal-list-header{display:none!important;}
+  .tbl-header{display:none!important;}
   .mstrip{grid-template-columns:1fr 1fr!important;gap:1px;margin:0.75rem!important;}
   .mc{padding:0.6rem 0.75rem!important;}
   .mc-v{font-size:1.2rem!important;}
@@ -239,12 +240,16 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
   .catalyst-step-dot{width:14px!important;height:14px!important;}
 
   .dp-top{flex-direction:column;gap:1rem;}
-  .dp-metrics{grid-template-columns:1fr 1fr!important;}
+  .dp-metrics{grid-template-columns:1fr 1fr 1fr!important;}
   .dp-metrics .da-metric{min-width:0;overflow:hidden;}
   .break-banner{grid-template-columns:1fr!important;}
   .break-banner-cell{border-right:none!important;border-bottom:1px solid rgba(158,90,74,0.15);}
   .da-section{padding:1rem!important;}
   .comps-summary{grid-template-columns:1fr 1fr!important;}
+  .comps-table{font-size:0.55rem!important;}
+  .comps-table th:nth-child(2),.comps-table td:nth-child(2){display:none;}
+  .comps-table th:nth-child(3),.comps-table td:nth-child(3){display:none;}
+  .comps-table th:nth-child(6),.comps-table td:nth-child(6){display:none;}
   .comp-stat-val{font-size:1rem!important;}
   .acq-grid{grid-template-columns:1fr!important;}
 
