@@ -306,15 +306,18 @@ VERIFIED_TX_VALUES = {
 }
 
 VERIFIED_CLOSE_DATES = {
-    'CZR': '2027',          # Regulatory complexity, go-shop ends July 2026
-    'OGN': 'early 2027',    # Per SEC filing
-    'NATH': 'H1 2026',      # Per merger agreement
-    'GSAT': '2027',         # Per merger agreement
+    'CZR': '2027',
+    'OGN': 'early 2027',
+    'NATH': 'H1 2026',
+    'GSAT': '2027',
+    'CLST': 'H2 2026',
+    'CPRX': 'H2 2026',
+    'ASRT': 'H2 2026',
 }
 
 EXCLUDED_TICKERS = {
     'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU',
-    'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC'
+    'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC', 'HBT'
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
