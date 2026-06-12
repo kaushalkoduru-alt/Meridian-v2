@@ -747,14 +747,14 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <p class="hero-desc">Institutional-grade merger arbitrage intelligence, sourced directly from SEC EDGAR. Every active deal <b>tracked, scored, and updated hourly</b> so you can act with conviction.</p>
     <div class="stats">
       <div class="stat"><div class="stat-v" id="landing-deal-count">--</div><div class="stat-l">Active Deals Tracked</div></div>
-      <div class="stat"><div class="stat-v accent-teal">93.7%</div><div class="stat-l">Deal Close Prediction</div></div>
+      <div class="stat"><div class="stat-v accent-teal">V3</div><div class="stat-l">Scoring Model</div></div>
       <div class="stat"><div class="stat-v accent-sky">1hr</div><div class="stat-l">Data Refresh Cycle</div></div>
       <div class="stat"><div class="stat-v accent-amber">SEC</div><div class="stat-l">Primary Data Source</div></div>
     </div>
     <div class="methodology-banner" onclick="showMethodology()">
       <div>
         <div class="methodology-banner-title">◈ Proprietary V3 Scoring Model</div>
-        <div class="methodology-banner-desc">93.7% accuracy on 154 historical deals · 6 factors including financing signal, regulatory complexity, and deal premium · Very Low + Low Risk: 0% break rate across 116 deals</div>
+        <div class="methodology-banner-desc">Six-factor analytical framework applied to live deals · Spread, regulatory complexity, financing signal, deal premium, acquirer type, and days pending · Historical backtest dataset under re-verification</div>
       </div>
       <div class="methodology-banner-arrow">→</div>
     </div>
@@ -789,30 +789,30 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 
   <div class="scoring">
     <div class="s-title">The V3 Scoring System</div>
-    <div class="s-sub">◈ Empirical break rates from 154 historical deals · 2020–2025</div>
+    <div class="s-sub">◈ Six-factor analytical framework · Applied to live deals · Not backtested</div>
     <div class="s-grid">
       <div class="s-card vl">
         <div class="s-range">Very Low</div>
         <div class="s-name">Spread under 8% · Score 75+</div>
-        <div class="s-stat">0% break rate · 80 historical deals</div>
-        <div class="s-desc">Market has maximum conviction. These are the positions institutional arb funds hold with full sizing. Zero breaks in our 154-deal backtest.</div>
+        <div class="s-stat">Spread under 8% · Score 75+</div>
+        <div class="s-desc">Market has maximum conviction. Spread below 8% reflects strong market confidence in deal closure.</div>
       </div>
       <div class="s-card lo">
         <div class="s-range">Low</div>
         <div class="s-name">Spread under 8% · Score 55–74</div>
-        <div class="s-stat">0% break rate · 36 historical deals</div>
+        <div class="s-stat">Spread under 8% · Score 55–74</div>
         <div class="s-desc">Tight spread with minor score uncertainty from deal structure or regulatory complexity. Still strong risk-adjusted returns historically.</div>
       </div>
       <div class="s-card md">
         <div class="s-range">Medium</div>
         <div class="s-name">Spread 8–12% · Score 60+</div>
-        <div class="s-stat">44% break rate · 9 historical deals</div>
+        <div class="s-stat">Spread 8–12% · Uncertain Zone</div>
         <div class="s-desc">Uncertain Zone. Market skepticism is meaningful. Size positions carefully and monitor spread direction for signals of deterioration.</div>
       </div>
       <div class="s-card hi">
         <div class="s-range">High</div>
         <div class="s-name">Spread 12%+ · or Score below 60</div>
-        <div class="s-stat">82% break rate · 34 historical deals</div>
+        <div class="s-stat">Spread above 12% · Elevated Risk</div>
         <div class="s-desc">Market pricing in near-certain failure. 82% of High Risk deals in our dataset broke. Approach only with full understanding of downside.</div>
       </div>
     </div>
@@ -843,24 +843,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="tr-header">
         <div>
           <div class="tr-label">Model Performance</div>
-          <div class="tr-title">Track <em>Record</em></div>
-          <div class="tr-sub">Every call shown exactly as rated at announcement. Real price data. Verified outcomes. Including misses.</div>
-        </div>
-        <div class="tr-stats">
-          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--green)">20/22</div><div class="tr-stat-lbl">Correct Calls</div></div>
-          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--green)">90.9%</div><div class="tr-stat-lbl">Accuracy</div></div>
-          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--teal)">+8.1%</div><div class="tr-stat-lbl">Avg Ann. Return</div></div>
-          <div class="tr-stat"><div class="tr-stat-val" style="color:var(--amber)">2</div><div class="tr-stat-lbl">Disclosed Misses</div></div>
+          <div class="tr-title">Forward <em>Track Record</em></div>
+          <div class="tr-sub">Scoring begins June 2026. Every live deal scored at detection and logged as outcomes resolve.</div>
         </div>
       </div>
-      <div class="tr-disclaimer">Historical model calls. Live tracking began May 2026. All calls shown as rated at announcement, including misses.</div>
-      <div class="tr-layout">
-        <div class="tr-sidebar" id="tr-sidebar"></div>
-        <div class="tr-detail" id="tr-detail">
-          <div class="tr-detail-empty">
-            <div style="font-family:'DM Mono',monospace;font-size:0.5rem;color:var(--dim);letter-spacing:0.2em;text-transform:uppercase;">Select a deal from the left to view full analysis</div>
-          </div>
-        </div>
+      <div style="text-align:center;padding:2rem 0;">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);font-weight:300;line-height:1.8;max-width:560px;margin:0 auto;">Meridian's forward track record begins June 2026 — every live deal is scored at detection, timestamped, and logged publicly as outcomes resolve. Retrospective backtest results return with our EDGAR-verified historical dataset.</div>
       </div>
     </div>
   </div>
@@ -871,7 +859,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <button class="footer-link" onclick="showMethodology()">Methodology</button>
       <button class="footer-link" onclick="showCompare()">Historical Deals</button>
     </div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>Backtested · 154 historical deals · 2020–2025</div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>V3 Model · Six-factor analytical framework</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
@@ -911,7 +899,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <button class="footer-link" onclick="showCompare()">Historical Deals</button>
       <button class="footer-link" onclick="showMethodology()">Methodology</button>
     </div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>V3 Model · 154 deals backtested</div>
+    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>V3 Model · Six-factor analytical framework</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results.</div>
 </div>
@@ -975,13 +963,13 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <button class="dnav-link" onclick="showMethodology()">Methodology</button>
     </div>
     <div class="dnav-r">
-      <div class="dlive"><span class="ddot"></span>154 Historical Deals</div>
+      <div class="dlive"><span class="ddot"></span>Historical DB Rebuilding</div>
     </div>
   </nav>
   <div class="compare-hero">
     <div class="compare-title">Historical <em>Deal</em> Database</div>
-    <div class="compare-sub">◈ 154 Closed and Broken Deals · 2020–2025 · V3 Backtest Dataset</div>
-    <p class="compare-desc">Every deal used to build and validate the V3 scoring model. Filter by deal type, outcome, or spread range. Sort any column. This is the data behind the 93.7% accuracy claim.</p>
+    <div class="compare-sub">◈ Historical Database · Under Re-Verification</div>
+    <p class="compare-desc">Our historical database is being rebuilt from the ground up, with every deal discovered and verified directly from SEC EDGAR filings. Returning soon.</p>
   </div>
   <div class="compare-filters">
     <button class="filter-btn active" onclick="filterCompare('all',this)">All Deals</button>
@@ -995,20 +983,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <button class="filter-btn" onclick="filterCompare('wide',this)">Spread 12%+</button>
   </div>
   <div class="compare-stats" id="compare-stats"></div>
-  <div class="compare-table-wrap">
-    <table class="compare-table" id="compare-table">
-      <thead>
-        <tr>
-          <th onclick="sortCompare('ticker')">Ticker</th>
-          <th onclick="sortCompare('acquirer')">Acquirer</th>
-          <th onclick="sortCompare('deal_type')">Type</th>
-          <th class="r" onclick="sortCompare('spread_at_announce')">Spread at Ann.</th>
-          <th class="r" onclick="sortCompare('outcome')">Outcome</th>
-          <th class="r" onclick="sortCompare('days_to_close')">Days to Close</th>
-        </tr>
-      </thead>
-      <tbody id="compare-tbody"></tbody>
-    </table>
+  <div style="padding:4rem 2.5rem;text-align:center;">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);font-weight:300;line-height:1.8;max-width:520px;margin:0 auto;">Our historical database is being rebuilt from the ground up, with every deal discovered and verified directly from SEC EDGAR filings. Returning soon.</div>
   </div>
   <footer style="margin-top:2rem;">
     <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
@@ -1016,7 +992,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <button class="footer-link" onclick="showDashboard()">Live Deals</button>
       <button class="footer-link" onclick="showMethodology()">Methodology</button>
     </div>
-    <div class="footer-info">154 historical deals · 2020–2025<br>V3 Backtest Dataset</div>
+    <div class="footer-info">Historical database · Under re-verification<br>SEC EDGAR sourced</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Past model performance does not guarantee future results.</div>
 </div>
@@ -1036,27 +1012,24 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </nav>
   <div class="meth-hero">
     <div class="meth-title">The V3 <em>Scoring</em> Model</div>
-    <div class="meth-sub">◈ Methodology · Backtest Results · 154 Historical Deals</div>
-    <p class="meth-desc">Meridian's V3 model combines empirical spread-based break rates with five additional factors that real merger arb traders use. The result: 93.7% overall accuracy, 0% break rate in the Very Low and Low Risk buckets, and 82% break identification in the High Risk bucket.</p>
+    <div class="meth-sub">◈ Methodology · V3 Analytical Framework · Live Deals</div>
+    <p class="meth-desc">Meridian's V3 model combines six factors that real merger arb traders use to assess deal risk: spread at announcement, regulatory complexity, financing signal, deal premium, acquirer type, and days pending. The score is analytical context applied to live deals. Historical backtest statistics are being rebuilt from a fully EDGAR-verified dataset and will be published when complete.</p>
   </div>
   <div class="backtest-strip">
-    <div class="bt-cell"><div class="bt-val">93.7%</div><div class="bt-label">Overall Accuracy</div><div class="bt-sub">Predicting close or break · 154 deals · 2020–2025</div></div>
-    <div class="bt-cell"><div class="bt-val">0%</div><div class="bt-label">Very Low + Low Break Rate</div><div class="bt-sub">116 deals in these buckets · zero broke</div></div>
-    <div class="bt-cell"><div class="bt-val">82.4%</div><div class="bt-label">High Risk Break Rate</div><div class="bt-sub">28 of 34 High Risk deals correctly identified</div></div>
-    <div class="bt-cell"><div class="bt-val">+8.2%</div><div class="bt-label">Avg Ann. Return</div><div class="bt-sub">On correctly predicted closed deals</div></div>
+    <div class="bt-cell"><div class="bt-val">6</div><div class="bt-label">Scoring Factors</div><div class="bt-sub">Spread · Regulatory · Financing · Premium · Acquirer · Days</div></div>
+    <div class="bt-cell"><div class="bt-val">SEC</div><div class="bt-label">Data Source</div><div class="bt-sub">EDGAR full-text search · Hourly pipeline</div></div>
+    <div class="bt-cell"><div class="bt-val">Live</div><div class="bt-label">Deal Scoring</div><div class="bt-sub">Every deal scored at detection · Not backtested</div></div>
   </div>
   <div class="base-rate-banner">
-    <div class="base-rate-title">◈ Model Lift Over Base Rate</div>
-    <div class="base-rate-grid">
+    <div class="base-rate-title">◈ Industry Context</div>
+    <div class="base-rate-grid" style="grid-template-columns:1fr;">
       <div class="base-rate-item"><div class="base-rate-val">~73%</div><div class="base-rate-lbl">Historical M&A Close Rate</div></div>
-      <div class="base-rate-item"><div class="base-rate-val">100%</div><div class="base-rate-lbl">Very Low + Low Risk Close Rate</div></div>
-      <div class="base-rate-item"><div class="base-rate-val">+27pts</div><div class="base-rate-lbl">Lift Over Base Rate</div></div>
     </div>
-    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's Very Low and Low Risk buckets combined showed a 0% break rate across 116 historical deals, which is 27 percentage points above the market baseline These numbers reflect backtesting on historical data and do not guarantee future performance.</div>
+    <div class="base-rate-note">Historically approximately 73% of announced M&A deals close. Meridian's risk buckets use spread range as the primary signal to separate high-confidence deals from elevated-risk ones. Historical backtest statistics are being rebuilt from a fully EDGAR-verified dataset.</div>
   </div>
   <div class="meth-section">
-    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight: Spread Predicts Outcome</div><div class="meth-section-weight">Empirical Break Rates · 154 Historical Deals · Primary Classification Rule</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The most important discovery in building V3: spread range alone predicts deal outcomes with remarkable accuracy. Below 8%, no deals in our 154-deal dataset broke. Above 12%, 87% broke. These historical rates form the primary classification rule and the score is a secondary tiebreaker.</p>
+    <div class="meth-section-header"><div class="meth-section-num">01</div><div><div class="meth-section-title">The Key Insight: Spread Predicts Outcome</div><div class="meth-section-weight">Spread Range · Primary Classification Rule · Applied to Live Deals</div></div></div>
+    <p class="factor-note" style="margin-bottom:1rem;">The most important signal in merger arbitrage: spread range correlates strongly with deal outcome. Deals trading below 8% spread reflect market confidence in closure. Deals above 12% reflect elevated break risk. This spread-based classification is the primary rule; the V3 score provides analytical context within each bucket.</p>
     <table class="spread-rules">
       <thead><tr><th>Spread Range</th><th>Deals</th><th>Broken</th><th class="r">Break Rate</th><th class="r">V3 Classification</th></tr></thead>
       <tbody>
@@ -1072,7 +1045,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="meth-section">
     <div class="meth-section-header"><div class="meth-section-num">02</div><div><div class="meth-section-title">Six-Factor Base Score</div><div class="meth-section-weight">Base 50 · Normalized to 0–100 · Used as Secondary Tiebreaker in 8–12% Uncertain Zone</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">The V3 score starts at 50 and is adjusted by six factors. For deals under 8% spread, the score separates Very Low from Low risk. For deals in the 8-12% Uncertain Zone, score above 60 gives Medium, below 60 gives High. The score alone produced 88.7% accuracy. Combined with spread rules it reaches 93.7%.</p>
+    <p class="factor-note" style="margin-bottom:1rem;">The V3 score starts at 50 and is adjusted by six factors. For deals under 8% spread, the score separates Very Low from Low risk. For deals in the 8-12% Uncertain Zone, the score provides additional context. The score is analytical context applied to live deals — not derived from a backtested dataset.</p>
     <table class="factor-table">
       <thead><tr><th>Factor</th><th>Condition</th><th>Signal</th><th class="r">Adjustment</th></tr></thead>
       <tbody>
@@ -1111,12 +1084,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="meth-section">
     <div class="meth-section-header"><div class="meth-section-num">03</div><div><div class="meth-section-title">Risk Classification Logic</div><div class="meth-section-weight">V3 · Spread Rules First · Score as Tiebreaker</div></div></div>
-    <p class="factor-note" style="margin-bottom:1rem;">Spread determines the bucket. Score refines within bucket. This two-layer system is what pushed accuracy from 88.7% to 93.7%.</p>
+    <p class="factor-note" style="margin-bottom:1rem;">Spread determines the bucket. Score refines within bucket. This two-layer system separates deals by both market-implied risk and fundamental deal quality.</p>
     <div class="threshold-grid">
-      <div class="threshold-cell vl"><div class="threshold-range">Very Low</div><div class="threshold-name">Spread under 8% · Score 75+</div><div class="threshold-desc">0% break rate across 80 historical deals. Maximum conviction bucket.</div></div>
-      <div class="threshold-cell lo"><div class="threshold-range">Low</div><div class="threshold-name">Spread under 8% · Score 55–74</div><div class="threshold-desc">0% break rate across 36 historical deals. Minor score uncertainty.</div></div>
-      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 60+</div><div class="threshold-desc">44% break rate. Uncertain Zone — monitor spread direction carefully.</div></div>
-      <div class="threshold-cell hi"><div class="threshold-range">High</div><div class="threshold-name">Spread 12%+ · or 8–12% Score below 60</div><div class="threshold-desc">82% break rate. Market pricing in near-certain failure.</div></div>
+      <div class="threshold-cell vl"><div class="threshold-range">Very Low</div><div class="threshold-name">Spread under 8% · Score 75+</div><div class="threshold-desc">Maximum conviction bucket. Spread below 8% reflects strong market confidence in deal closure.</div></div>
+      <div class="threshold-cell lo"><div class="threshold-range">Low</div><div class="threshold-name">Spread under 8% · Score 55–74</div><div class="threshold-desc">High confidence bucket. Minor score uncertainty relative to Very Low.</div></div>
+      <div class="threshold-cell md"><div class="threshold-range">Medium</div><div class="threshold-name">Spread 8–12% · Score 60+</div><div class="threshold-desc">Uncertain Zone. Monitor spread direction and catalyst timeline carefully.</div></div>
+      <div class="threshold-cell hi"><div class="threshold-range">High</div><div class="threshold-name">Spread 12%+ · or 8–12% Score below 60</div><div class="threshold-desc">Elevated risk. Wide spread reflects market pricing in significant break probability.</div></div>
     </div>
   </div>
   <div class="meth-section">
@@ -1144,7 +1117,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <button class="footer-link" onclick="showDashboard()">Live Deals</button>
       <button class="footer-link" onclick="showCompare()">Historical Deals</button>
     </div>
-    <div class="footer-info">Backtested · 154 historical deals · 2020–2025<br>Model V3 · June 2026</div>
+    <div class="footer-info">V3 Analytical Framework · Six factors · Live deals<br>Historical database under re-verification · June 2026</div>
   </footer>
   <div class="footer-disclaimer">For informational purposes only. Not financial advice. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
 </div>
@@ -1264,7 +1237,7 @@ function finDesc(sig){
 // ── RISK FACTORS ──────────────────────────────────────────────────────────────
 function getRiskFactors(d){
     const f=[];
-    if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. In our 154-deal backtest, 87% of deals with spreads above 12% broke. The market is pricing in near-certain deal failure.`});
+    if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. Wide spreads above 12% reflect elevated break probability. The market is pricing in significant deal risk.`});
     if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the Uncertain Zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
     if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread: stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
     if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
@@ -1273,7 +1246,7 @@ function getRiskFactors(d){
     if(d.deal_type==='Tender Offer') f.push({l:'lo',t:'Tender offers typically close faster than mergers and have higher completion rates. The direct shareholder approach bypasses board resistance and accelerates timeline.'});
     if(d.deal_type==='Private Equity') f.push({l:'md',t:'PE acquisitions depend on financing conditions. Rising rates or tightening credit markets can increase break risk for leveraged buyouts. Watch the financing signal.'});
     if(d.close_date==='TBD')      f.push({l:'md',t:'No expected close date publicly disclosed. Annualized return calculations are approximate. Timeline uncertainty adds risk to position sizing decisions.'});
-    if(f.length===0)              f.push({l:'lo',t:'Spread under 8% — 0% break rate across 116 historical deals in our dataset. Standard merger completion risks apply: regulatory review and shareholder approval.'});
+    if(f.length===0)              f.push({l:'lo',t:'Spread under 8% — market reflecting high confidence in deal closure. Standard merger completion risks apply: regulatory review and shareholder approval.'});
     return f.slice(0,4);
 }
 
@@ -1295,7 +1268,7 @@ function getScoreBreakdown(d){
     else if(d.days_old<500) ts=60;
     else                    ts=40;
     const finScore=d.financing_signal==='committed'?95:d.financing_signal==='confident'?65:d.financing_signal==='contingent'?20:50;
-    const spreadLabel=d.sp_pct<8?'under 8% — 0% historical break rate':d.sp_pct<12?'8-12% Uncertain Zone — 36% break rate':'above 12% — 87%+ break rate';
+    const spreadLabel=d.sp_pct<8?'under 8% — high market confidence in closure':d.sp_pct<12?'8-12% Uncertain Zone — elevated monitoring required':'above 12% — elevated break risk';
     return [
         {label:'Spread Quality',   score:sq,      color:getScoreColor(sq),      desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
         {label:'Deal Structure',   score:ds,      color:getScoreColor(ds),      desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
@@ -1527,20 +1500,11 @@ async function renderAnalysis(deal){
         </div>
     `;
 
-    // Comps
-    if(!compsCache[deal.ticker]){
-        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.46rem;color:var(--dim);letter-spacing:0.14em;">Loading comparable deals...</div>';
-        try{
-            const cd=await fetch(`/api/comps/${deal.ticker}?deal_type=${encodeURIComponent(deal.deal_type)}&spread=${deal.sp_pct}`).then(r=>r.json());
-            compsCache[deal.ticker]=cd;
-        }catch(e){ compsCache[deal.ticker]={comps:[],summary:{total:0,closed:0,broken:0,close_rate:0,avg_days:0}}; }
-    }
-    const cd=compsCache[deal.ticker];
-    const comps=cd.comps||[];
-    const summary=cd.summary||{};
-    if(comps.length===0){
-        document.getElementById('da-comps').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">No comparable deals found in our 154-deal historical database for this deal type and spread range.</div>';
-    } else {
+    // Comps — disabled pending EDGAR-verified dataset
+    document.getElementById('da-comps').innerHTML='<div style="padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);font-style:italic;">Comparable deal analysis returns with our EDGAR-verified historical dataset.</div>';
+    const comps=[];
+    const summary={};
+    if(false){
         const cc=summary.close_rate>=70?'var(--green)':summary.close_rate>=50?'var(--amber)':'var(--red)';
         const avgPeerSpread=comps.length?Math.round(comps.reduce((s,c)=>s+c.spread_at_announce,0)/comps.length*10)/10:null;
         const spreadDiff=avgPeerSpread!==null?Math.round((deal.sp_pct-avgPeerSpread)*10)/10:null;
@@ -1578,7 +1542,7 @@ async function renderAnalysis(deal){
                 <thead><tr><th>Ticker</th><th>Acquirer</th><th>Type</th><th class="r">Spread at Ann.</th><th class="r">Outcome</th><th class="r">Days to Close</th></tr></thead>
                 <tbody>${comps.map(c=>`<tr><td>${c.ticker}</td><td>${c.acquirer}</td><td>${c.deal_type}</td><td class="r">${c.spread_at_announce.toFixed(1)}%</td><td class="r ${c.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${c.outcome}</td><td class="r">${c.days_to_close} days</td></tr>`).join('')}</tbody>
             </table>
-            <div class="comps-note">Matched by deal type (${deal.deal_type}) and spread range from our 154-deal historical database. ${summary.close_rate}% of comparable deals closed. Avg time to completion: ${summary.avg_days} days. Historical data 2020–2025.</div>
+            <div class="comps-note">Comparable deal analysis returns with our EDGAR-verified historical dataset.</div>
         `;
     }
 
@@ -1638,15 +1602,7 @@ async function renderAnalysis(deal){
 
 // ── COMPARE PAGE ──────────────────────────────────────────────────────────────
 async function loadCompare(){
-    if(compareData.length>0){ renderCompare(); return; }
-    document.getElementById('compare-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--dim);font-family:\'DM Mono\',monospace;font-size:0.5rem;letter-spacing:0.15em;">Loading historical deals...</td></tr>';
-    try{
-        const d=await fetch('/api/comps/all').then(r=>r.json());
-        compareData=d.comps||[];
-        renderCompare();
-    }catch(e){
-        document.getElementById('compare-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--red);font-family:\'DM Mono\',monospace;font-size:0.5rem;">Error loading data</td></tr>';
-    }
+    // Historical database disabled pending EDGAR re-verification
 }
 
 function filterCompare(f,btn){
@@ -1656,47 +1612,9 @@ function filterCompare(f,btn){
     renderCompare();
 }
 
-function sortCompare(col){
-    if(compareSortCol===col) compareSortDir*=-1;
-    else{ compareSortCol=col; compareSortDir=-1; }
-    renderCompare();
-}
+function sortCompare(col){ }
 
-function renderCompare(){
-    let data=[...compareData];
-    if(compareFilter==='Closed')      data=data.filter(d=>d.outcome==='Closed');
-    else if(compareFilter==='Broken') data=data.filter(d=>d.outcome==='Broken');
-    else if(compareFilter==='tight')  data=data.filter(d=>d.spread_at_announce<8);
-    else if(compareFilter==='wide')   data=data.filter(d=>d.spread_at_announce>=12);
-    else if(compareFilter!=='all')    data=data.filter(d=>d.deal_type===compareFilter);
-    data.sort((a,b)=>{
-        const av=a[compareSortCol],bv=b[compareSortCol];
-        if(typeof av==='string') return compareSortDir*(av.localeCompare(bv));
-        return compareSortDir*(av-bv);
-    });
-    const closed=data.filter(d=>d.outcome==='Closed').length;
-    const broken=data.filter(d=>d.outcome==='Broken').length;
-    const avgSpread=data.length?Math.round(data.reduce((s,d)=>s+d.spread_at_announce,0)/data.length*10)/10:0;
-    const avgDays  =data.length?Math.round(data.reduce((s,d)=>s+d.days_to_close,0)/data.length):0;
-    const closeRate=data.length?Math.round(closed/data.length*100):0;
-    document.getElementById('compare-stats').innerHTML=`
-        <div class="cs-cell"><div class="cs-val" style="color:var(--sky)">${data.length}</div><div class="cs-lbl">Total Deals</div></div>
-        <div class="cs-cell"><div class="cs-val" style="color:var(--green)">${closed}</div><div class="cs-lbl">Closed</div></div>
-        <div class="cs-cell"><div class="cs-val" style="color:var(--red)">${broken}</div><div class="cs-lbl">Broken</div></div>
-        <div class="cs-cell"><div class="cs-val" style="color:${closeRate>=70?'var(--green)':closeRate>=50?'var(--amber)':'var(--red)'}">${closeRate}%</div><div class="cs-lbl">Close Rate</div></div>
-        <div class="cs-cell"><div class="cs-val" style="color:var(--teal)">${avgSpread}%</div><div class="cs-lbl">Avg Spread</div></div>
-    `;
-    document.getElementById('compare-tbody').innerHTML=data.map(d=>`
-        <tr>
-            <td>${d.ticker}</td>
-            <td>${d.acquirer}</td>
-            <td><span class="r-type ${getTypeClass(d.deal_type)}" style="font-size:0.34rem">${getTypeLabel(d.deal_type)}</span></td>
-            <td class="r">${d.spread_at_announce.toFixed(1)}%</td>
-            <td class="r ${d.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${d.outcome}</td>
-            <td class="r">${d.days_to_close} days</td>
-        </tr>
-    `).join('');
-}
+
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function toggleSection(id){
@@ -1957,160 +1875,12 @@ function refreshData(){
     },900000);
 }
 // ── TRACK RECORD DATA ─────────────────────────────────────────────────────────
-const TRACK_RECORD_DEALS=[
-  {ticker:'CACC',acquirer:'Stellantis',company:'Credit Acceptance Corp',deal_type:'All Cash',spread:4.0,rating:'Very Low',score:72,outcome:'Closed',ann_return:8.7,days:167,filed:'2024-01-15',closed:'2024-07-01',tx_value:1.7,break_price:42.10,premium:28,implied_certainty:96,compression_rate:2.4,sector_avg_days:180,correct:true},
-  {ticker:'NTCT',acquirer:'Broadcom',company:'NetScout Systems',deal_type:'All Cash',spread:5.0,rating:'Very Low',score:74,outcome:'Closed',ann_return:15.9,days:115,filed:'2024-02-20',closed:'2024-06-15',tx_value:0.98,break_price:18.20,premium:32,implied_certainty:95,compression_rate:4.4,sector_avg_days:180,correct:true},
-  {ticker:'NUAN',acquirer:'Microsoft',company:'Nuance Communications',deal_type:'All Cash',spread:2.0,rating:'Very Low',score:71,outcome:'Closed',ann_return:2.0,days:365,filed:'2021-04-12',closed:'2022-04-04',tx_value:19.7,break_price:38.50,premium:23,implied_certainty:98,compression_rate:0.5,sector_avg_days:300,correct:true},
-  {ticker:'SGEN',acquirer:'Pfizer',company:'Seagen Inc.',deal_type:'All Cash',spread:5.0,rating:'Very Low',score:75,outcome:'Closed',ann_return:6.6,days:277,filed:'2023-03-13',closed:'2023-12-14',tx_value:43.0,break_price:165.40,premium:33,implied_certainty:95,compression_rate:1.8,sector_avg_days:250,correct:true},
-  {ticker:'CCXI',acquirer:'AstraZeneca',company:'ChemoCentryx',deal_type:'All Cash',spread:4.0,rating:'Very Low',score:76,outcome:'Closed',ann_return:10.4,days:140,filed:'2022-08-08',closed:'2022-12-26',tx_value:3.7,break_price:34.20,premium:55,implied_certainty:96,compression_rate:2.8,sector_avg_days:180,correct:true},
-  {ticker:'AZPN',acquirer:'Emerson Electric',company:'Aspen Technology',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:73,outcome:'Closed',ann_return:4.9,days:223,filed:'2022-10-11',closed:'2023-05-22',tx_value:7.6,break_price:185.30,premium:42,implied_certainty:97,compression_rate:1.3,sector_avg_days:200,correct:true},
-  {ticker:'QDEL',acquirer:'Ortho Clinical',company:'QuidelOrtho Corp',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:74,outcome:'Closed',ann_return:7.7,days:142,filed:'2022-05-27',closed:'2022-10-16',tx_value:6.0,break_price:72.10,premium:28,implied_certainty:97,compression_rate:2.1,sector_avg_days:180,correct:true},
-  {ticker:'ONCE',acquirer:'Roche',company:'Spark Therapeutics',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:78,outcome:'Closed',ann_return:12.4,days:88,filed:'2019-12-17',closed:'2020-12-17',tx_value:4.3,break_price:52.30,premium:122,implied_certainty:97,compression_rate:3.4,sector_avg_days:150,correct:true},
-  {ticker:'ARRY',acquirer:'Pfizer',company:'Array BioPharma',deal_type:'All Cash',spread:3.0,rating:'Very Low',score:76,outcome:'Closed',ann_return:7.5,days:145,filed:'2019-06-17',closed:'2019-07-30',tx_value:11.4,break_price:38.20,premium:62,implied_certainty:97,compression_rate:2.1,sector_avg_days:150,correct:true},
-  {ticker:'FMBI',acquirer:'Old National Bancorp',company:'First Midwest Bancorp',deal_type:'Cash + Stock',spread:4.0,rating:'Low',score:62,outcome:'Closed',ann_return:6.9,days:210,filed:'2021-06-01',closed:'2022-02-15',tx_value:2.9,break_price:17.40,premium:18,implied_certainty:96,compression_rate:1.9,sector_avg_days:220,correct:true},
-  {ticker:'NTRA',acquirer:'Roper Technologies',company:'Natera Inc.',deal_type:'Cash + Stock',spread:3.0,rating:'Low',score:64,outcome:'Closed',ann_return:6.6,days:167,filed:'2023-09-11',closed:'2024-03-01',tx_value:3.1,break_price:52.10,premium:26,implied_certainty:97,compression_rate:1.8,sector_avg_days:180,correct:true},
-  {ticker:'EPAY',acquirer:'Bottomline Tech',company:'Bottomline Technologies',deal_type:'Tender Offer',spread:2.0,rating:'Low',score:66,outcome:'Closed',ann_return:5.0,days:145,filed:'2022-01-12',closed:'2022-06-06',tx_value:2.6,break_price:48.20,premium:31,implied_certainty:98,compression_rate:1.4,sector_avg_days:120,correct:true},
-  {ticker:'GTES',acquirer:'Blackstone',company:'Gates Industrial Corp',deal_type:'Private Equity',spread:3.0,rating:'Very Low',score:74,outcome:'Closed',ann_return:9.4,days:117,filed:'2024-01-22',closed:'2024-05-18',tx_value:5.7,break_price:14.10,premium:19,implied_certainty:97,compression_rate:3.2,sector_avg_days:150,correct:true},
-  {ticker:'PING',acquirer:'Thoma Bravo',company:'Ping Identity',deal_type:'Private Equity',spread:3.0,rating:'Very Low',score:72,outcome:'Closed',ann_return:5.5,days:200,filed:'2022-08-03',closed:'2023-02-19',tx_value:2.8,break_price:18.40,premium:63,implied_certainty:97,compression_rate:1.5,sector_avg_days:180,correct:true},
-  {ticker:'PCTY',acquirer:'Vista Equity Partners',company:'Paylocity Holding',deal_type:'Private Equity',spread:4.0,rating:'Very Low',score:73,outcome:'Closed',ann_return:9.7,days:151,filed:'2024-03-05',closed:'2024-08-03',tx_value:4.4,break_price:142.30,premium:22,implied_certainty:96,compression_rate:2.6,sector_avg_days:150,correct:true},
-  {ticker:'COUP',acquirer:'Vista Equity Partners',company:'Coupa Software',deal_type:'Private Equity',spread:2.0,rating:'Very Low',score:75,outcome:'Closed',ann_return:9.5,days:77,filed:'2022-12-12',closed:'2023-02-27',tx_value:8.0,break_price:52.40,premium:77,implied_certainty:98,compression_rate:2.6,sector_avg_days:120,correct:true},
-  {ticker:'SAVE',acquirer:'JetBlue Airways',company:'Spirit Airlines',deal_type:'All Cash',spread:35.0,rating:'High',score:28,outcome:'Broken',ann_return:null,days:585,filed:'2022-07-28',closed:null,tx_value:3.8,break_price:8.20,premium:0,implied_certainty:65,compression_rate:null,sector_avg_days:300,correct:true},
-  {ticker:'CHNG',acquirer:'UnitedHealth Group',company:'Change Healthcare',deal_type:'All Cash',spread:22.0,rating:'High',score:25,outcome:'Broken',ann_return:null,days:714,filed:'2022-01-06',closed:null,tx_value:13.0,break_price:14.30,premium:41,implied_certainty:78,compression_rate:null,sector_avg_days:300,correct:true},
-  {ticker:'SGFY',acquirer:'CVS Health',company:'Signify Health',deal_type:'All Cash',spread:12.0,rating:'High',score:42,outcome:'Broken',ann_return:null,days:397,filed:'2022-09-05',closed:null,tx_value:8.0,break_price:18.40,premium:55,implied_certainty:88,compression_rate:null,sector_avg_days:250,correct:true},
-  {ticker:'IRBT',acquirer:'Amazon',company:'iRobot Corporation',deal_type:'All Cash',spread:22.0,rating:'High',score:29,outcome:'Broken',ann_return:null,days:517,filed:'2022-08-05',closed:null,tx_value:1.7,break_price:28.40,premium:19,implied_certainty:78,compression_rate:null,sector_avg_days:300,correct:true},
-  {ticker:'ATVI',acquirer:'Microsoft',company:'Activision Blizzard',deal_type:'All Cash',spread:25.0,rating:'High',score:41,outcome:'Closed',ann_return:3.8,days:633,filed:'2022-01-18',closed:'2023-10-13',tx_value:68.7,break_price:62.30,premium:45,implied_certainty:75,compression_rate:0.4,sector_avg_days:400,correct:false},
-  {ticker:'ACI',acquirer:'Kroger',company:'Albertsons Companies',deal_type:'All Cash',spread:15.0,rating:'High',score:52,outcome:'Closed',ann_return:6.2,days:878,filed:'2022-10-14',closed:'2025-01-15',tx_value:24.6,break_price:18.40,premium:33,implied_certainty:85,compression_rate:0.2,sector_avg_days:400,correct:false},
-];
 
-const MACRO_DATA={
-  'CACC':{fed:{signal:'Tailwind',desc:'Rate cuts expected, favorable for deal financing'},sector_ma:{signal:'Active',desc:'Auto finance M&A at multi-year high in 2024'},rates:{signal:'Neutral',desc:'Stable rates, no material impact on deal economics'},regulatory:{signal:'Favorable',desc:'Standard HSR review only, no concentration concerns'},deal_size:{signal:'Manageable',desc:'$1.7B well within Stellantis balance sheet capacity'}},
-  'NTCT':{fed:{signal:'Tailwind',desc:'Easing cycle supporting M&A deal activity broadly'},sector_ma:{signal:'Very Active',desc:'Tech infrastructure M&A at record levels in 2024'},rates:{signal:'Neutral',desc:'Rates neutral, no financing headwinds'},regulatory:{signal:'Elevated',desc:'Broadcom under heightened FTC scrutiny post-VMware'},deal_size:{signal:'Manageable',desc:'Sub-$1B, easily digestible for Broadcom'}},
-  'NUAN':{fed:{signal:'Tailwind',desc:'Near-zero rates ideal for large acquisitions'},sector_ma:{signal:'Active',desc:'Healthcare AI M&A surging in 2021'},rates:{signal:'Tailwind',desc:'Historically low rates reduced Microsoft financing cost'},regulatory:{signal:'Standard',desc:'No concentration concerns in healthcare AI space'},deal_size:{signal:'Large',desc:'$19.7B significant but well within Microsoft capacity'}},
-  'SGEN':{fed:{signal:'Neutral',desc:'Fed hiking cycle creating some financing headwinds'},sector_ma:{signal:'Very Active',desc:'Biopharma M&A extremely active in 2023'},rates:{signal:'Headwind',desc:'Rising rates increased deal financing cost for Pfizer'},regulatory:{signal:'Elevated',desc:'FTC scrutiny high on pharmaceutical consolidation'},deal_size:{signal:'Very Large',desc:'$43B large but Pfizer balance sheet fully supports it'}},
-  'CCXI':{fed:{signal:'Neutral',desc:'Rate environment neutral for biopharma deals'},sector_ma:{signal:'Very Active',desc:'Rare disease acquisitions booming in 2022'},rates:{signal:'Headwind',desc:'Rising rates slightly elevated cost of deal financing'},regulatory:{signal:'Standard',desc:'No antitrust concerns in rare disease space'},deal_size:{signal:'Manageable',desc:'$3.7B manageable for AstraZeneca'}},
-  'AZPN':{fed:{signal:'Neutral',desc:'Rate environment stable for industrial software deals'},sector_ma:{signal:'Active',desc:'Industrial software M&A consolidating rapidly'},rates:{signal:'Headwind',desc:'Rising rates increased financing cost modestly'},regulatory:{signal:'Standard',desc:'No significant concentration concerns identified'},deal_size:{signal:'Manageable',desc:'$7.6B within Emerson Electric financing capacity'}},
-  'QDEL':{fed:{signal:'Neutral',desc:'Fed rate environment neutral for diagnostics sector'},sector_ma:{signal:'Active',desc:'Diagnostics consolidation accelerating post-COVID'},rates:{signal:'Neutral',desc:'Rates stable during deal pending period'},regulatory:{signal:'Standard',desc:'Standard HSR review, no material concerns'},deal_size:{signal:'Manageable',desc:'$6B within Ortho Clinical capacity'}},
-  'ONCE':{fed:{signal:'Tailwind',desc:'COVID-era near-zero rates favorable for deal financing'},sector_ma:{signal:'Very Active',desc:'Gene therapy M&A exploding in 2019-2020'},rates:{signal:'Tailwind',desc:'Historically low rates minimized Roche financing cost'},regulatory:{signal:'Standard',desc:'No antitrust concerns in gene therapy'},deal_size:{signal:'Manageable',desc:'$4.3B easily within Roche capacity'}},
-  'ARRY':{fed:{signal:'Tailwind',desc:'Low rate environment ideal for deal financing'},sector_ma:{signal:'Very Active',desc:'Oncology acquisitions at all-time high in 2019'},rates:{signal:'Tailwind',desc:'Low rates reduced Pfizer deal cost significantly'},regulatory:{signal:'Standard',desc:'No concentration concerns in oncology space'},deal_size:{signal:'Manageable',desc:'$11.4B within Pfizer balance sheet capacity'}},
-  'FMBI':{fed:{signal:'Tailwind',desc:'Low rates favorable for bank merger financing'},sector_ma:{signal:'Very Active',desc:'Regional bank consolidation wave in 2021'},rates:{signal:'Tailwind',desc:'Near-zero rates reduced Old National financing cost'},regulatory:{signal:'Standard',desc:'Community bank merger, no market concentration issue'},deal_size:{signal:'Small',desc:'$2.9B small regional bank deal, low complexity'}},
-  'NTRA':{fed:{signal:'Neutral',desc:'Rate environment stabilizing for healthcare deals'},sector_ma:{signal:'Active',desc:'Healthcare tech M&A active in 2023'},rates:{signal:'Headwind',desc:'Higher rates increased financing complexity modestly'},regulatory:{signal:'Standard',desc:'No antitrust concerns in genomics'},deal_size:{signal:'Manageable',desc:'$3.1B within Roper Technologies capacity'}},
-  'EPAY':{fed:{signal:'Tailwind',desc:'Low rate environment favorable for PE deal financing'},sector_ma:{signal:'Very Active',desc:'Fintech M&A surging in 2022'},rates:{signal:'Neutral',desc:'Stable rates during deal processing period'},regulatory:{signal:'Standard',desc:'Standard review, no concentration concerns'},deal_size:{signal:'Small',desc:'$2.6B small deal, no financing complexity'}},
-  'GTES':{fed:{signal:'Tailwind',desc:'Rate cuts supportive of leveraged PE transactions'},sector_ma:{signal:'Active',desc:'Industrial PE activity picking up in 2024'},rates:{signal:'Neutral',desc:'Easing rates helped Blackstone financing economics'},regulatory:{signal:'Standard',desc:'No antitrust concerns in industrial components'},deal_size:{signal:'Manageable',desc:'$5.7B manageable leveraged buyout for Blackstone'}},
-  'PING':{fed:{signal:'Neutral',desc:'Rate environment mixed for PE deal financing'},sector_ma:{signal:'Very Active',desc:'Cybersecurity PE deals at record levels'},rates:{signal:'Headwind',desc:'Rising rates increased Thoma Bravo financing cost'},regulatory:{signal:'Standard',desc:'No market concentration concerns in identity security'},deal_size:{signal:'Manageable',desc:'$2.8B manageable for Thoma Bravo fund size'}},
-  'PCTY':{fed:{signal:'Tailwind',desc:'Rate cuts improving PE deal economics in 2024'},sector_ma:{signal:'Active',desc:'HR software consolidation accelerating'},rates:{signal:'Neutral',desc:'Rates declining, supportive of leveraged financing'},regulatory:{signal:'Standard',desc:'No antitrust concerns in payroll software'},deal_size:{signal:'Manageable',desc:'$4.4B manageable for Vista Equity fund'}},
-  'COUP':{fed:{signal:'Neutral',desc:'Rate environment mixed but manageable for PE'},sector_ma:{signal:'Very Active',desc:'Procurement software M&A very active in 2022'},rates:{signal:'Headwind',desc:'Rising rates increased Vista Equity financing cost'},regulatory:{signal:'Standard',desc:'No concentration concerns in spend management'},deal_size:{signal:'Manageable',desc:'$8B within Vista Equity fund capacity'}},
-  'SAVE':{fed:{signal:'Headwind',desc:'Rate hikes pressuring airline balance sheets broadly'},sector_ma:{signal:'Low',desc:'Airline M&A historically rare due to regulatory risk'},rates:{signal:'Headwind',desc:'Rising rates increased deal financing complexity'},regulatory:{signal:'Hostile',desc:'DOJ filed lawsuit to block on competition grounds'},deal_size:{signal:'Manageable',desc:'$3.8B manageable but DOJ opposition proved fatal'}},
-  'CHNG':{fed:{signal:'Neutral',desc:'Rate environment neutral for healthcare deals'},sector_ma:{signal:'Active',desc:'Healthcare IT consolidation active but slowing'},rates:{signal:'Headwind',desc:'Rising rates a secondary concern to regulatory risk'},regulatory:{signal:'Hostile',desc:'DOJ antitrust lawsuit filed, deal ultimately withdrawn'},deal_size:{signal:'Large',desc:'$13B large acquisition attracted full DOJ scrutiny'}},
-  'SGFY':{fed:{signal:'Neutral',desc:'Rate environment neutral for healthcare services'},sector_ma:{signal:'Active',desc:'Home health M&A active in 2022'},rates:{signal:'Headwind',desc:'Rising rates increased CVS financing cost modestly'},regulatory:{signal:'Hostile',desc:'FTC challenged deal on vertical integration grounds'},deal_size:{signal:'Large',desc:'$8B attracted significant FTC attention'}},
-  'IRBT':{fed:{signal:'Neutral',desc:'Rate environment neutral for consumer tech deals'},sector_ma:{signal:'Active',desc:'Consumer robotics M&A picking up'},rates:{signal:'Headwind',desc:'Rising rates increased Amazon financing cost slightly'},regulatory:{signal:'Hostile',desc:'European Commission blocked deal on competition concerns'},deal_size:{signal:'Small',desc:'$1.7B small deal but EU regulatory environment hostile'}},
-  'ATVI':{fed:{signal:'Headwind',desc:'Rate hikes creating headwinds for mega deals'},sector_ma:{signal:'Active',desc:'Gaming consolidation wave continuing in 2022'},rates:{signal:'Headwind',desc:'Rising rates increased Microsoft financing complexity'},regulatory:{signal:'Hostile',desc:'FTC attempted to block, model missed this close despite hostility'},deal_size:{signal:'Very Large',desc:'$68.7B one of the largest tech deals ever, attracted global regulatory scrutiny'}},
-  'ACI':{fed:{signal:'Headwind',desc:'Rate hikes creating headwinds for leveraged deals'},sector_ma:{signal:'Active',desc:'Grocery consolidation continuing despite headwinds'},rates:{signal:'Headwind',desc:'Rising rates increased Kroger financing cost'},regulatory:{signal:'Hostile',desc:'FTC sued to block, model missed this eventual close after 878 days'},deal_size:{signal:'Very Large',desc:'$24.6B attracted maximum FTC scrutiny over grocery competition'}},
-};
-const SECTOR_ETF_MAP={
-  'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
-  'AZPN':'XLK','QDEL':'XLV','ONCE':'XLV','ARRY':'XLV','FMBI':'XLF',
-  'NTRA':'XLV','EPAY':'XLF','GTES':'XLI','PING':'XLK','PCTY':'XLK',
-  'COUP':'XLK','SAVE':'XTN','CHNG':'XLV','SGFY':'XLV','IRBT':'XLK',
-  'ATVI':'XLK','ACI':'XLP',
-};
 
-const SPREAD_MILESTONES={
-  'CACC':[{date:'Jan 2024',val:4.0},{date:'Feb 2024',val:3.2},{date:'Feb 2024',val:2.8},{date:'Mar 2024',val:2.2},{date:'Apr 2024',val:1.8},{date:'May 2024',val:0.9},{date:'Jun 2024',val:0.4},{date:'Jul 2024',val:0.0}],
-  'NTCT':[{date:'Feb 2024',val:5.0},{date:'Mar 2024',val:4.2},{date:'Mar 2024',val:3.8},{date:'Apr 2024',val:2.8},{date:'Apr 2024',val:2.1},{date:'May 2024',val:1.2},{date:'May 2024',val:0.8},{date:'Jun 2024',val:0.0}],
-  'NUAN':[{date:'Apr 2021',val:2.0},{date:'Jun 2021',val:1.8},{date:'Aug 2021',val:1.6},{date:'Oct 2021',val:1.4},{date:'Dec 2021',val:1.2},{date:'Feb 2022',val:0.5},{date:'Mar 2022',val:0.2},{date:'Apr 2022',val:0.0}],
-  'SGEN':[{date:'Mar 2023',val:5.0},{date:'Apr 2023',val:4.4},{date:'Jun 2023',val:3.8},{date:'Jul 2023',val:3.0},{date:'Sep 2023',val:2.2},{date:'Oct 2023',val:1.4},{date:'Nov 2023',val:0.6},{date:'Dec 2023',val:0.0}],
-  'CCXI':[{date:'Aug 2022',val:4.0},{date:'Sep 2022',val:3.2},{date:'Sep 2022',val:2.9},{date:'Oct 2022',val:2.2},{date:'Oct 2022',val:1.6},{date:'Nov 2022',val:0.9},{date:'Nov 2022',val:0.5},{date:'Dec 2022',val:0.0}],
-  'AZPN':[{date:'Oct 2022',val:3.0},{date:'Nov 2022',val:2.7},{date:'Jan 2023',val:2.4},{date:'Feb 2023',val:2.0},{date:'Mar 2023',val:1.5},{date:'Apr 2023',val:0.8},{date:'May 2023',val:0.3},{date:'May 2023',val:0.0}],
-  'QDEL':[{date:'May 2022',val:3.0},{date:'Jun 2022',val:2.6},{date:'Jul 2022',val:2.2},{date:'Aug 2022',val:1.7},{date:'Sep 2022',val:1.1},{date:'Sep 2022',val:0.6},{date:'Oct 2022',val:0.2},{date:'Oct 2022',val:0.0}],
-  'ONCE':[{date:'Dec 2019',val:3.0},{date:'Feb 2020',val:2.7},{date:'Mar 2020',val:2.4},{date:'May 2020',val:1.9},{date:'Jun 2020',val:1.5},{date:'Sep 2020',val:0.9},{date:'Nov 2020',val:0.4},{date:'Dec 2020',val:0.0}],
-  'ARRY':[{date:'Jun 2019',val:3.0},{date:'Jun 2019',val:2.4},{date:'Jun 2019',val:1.8},{date:'Jul 2019',val:1.2},{date:'Jul 2019',val:0.5},{date:'Jul 2019',val:0.2},{date:'Jul 2019',val:0.0}],
-  'FMBI':[{date:'Jun 2021',val:4.0},{date:'Aug 2021',val:3.4},{date:'Sep 2021',val:3.1},{date:'Nov 2021',val:2.4},{date:'Dec 2021',val:1.8},{date:'Jan 2022',val:1.0},{date:'Jan 2022',val:0.5},{date:'Feb 2022',val:0.0}],
-  'NTRA':[{date:'Sep 2023',val:3.0},{date:'Oct 2023',val:2.6},{date:'Nov 2023',val:2.2},{date:'Dec 2023',val:1.6},{date:'Jan 2024',val:1.1},{date:'Feb 2024',val:0.5},{date:'Feb 2024',val:0.2},{date:'Mar 2024',val:0.0}],
-  'EPAY':[{date:'Jan 2022',val:2.0},{date:'Feb 2022',val:1.7},{date:'Feb 2022',val:1.5},{date:'Mar 2022',val:1.1},{date:'Apr 2022',val:0.8},{date:'May 2022',val:0.4},{date:'May 2022',val:0.2},{date:'Jun 2022',val:0.0}],
-  'GTES':[{date:'Jan 2024',val:3.0},{date:'Feb 2024',val:2.5},{date:'Feb 2024',val:2.3},{date:'Mar 2024',val:1.8},{date:'Apr 2024',val:1.2},{date:'Apr 2024',val:0.6},{date:'May 2024',val:0.2},{date:'May 2024',val:0.0}],
-  'PING':[{date:'Aug 2022',val:3.0},{date:'Sep 2022',val:2.7},{date:'Oct 2022',val:2.5},{date:'Nov 2022',val:1.8},{date:'Dec 2022',val:1.4},{date:'Jan 2023',val:0.8},{date:'Jan 2023',val:0.4},{date:'Feb 2023',val:0.0}],
-  'PCTY':[{date:'Mar 2024',val:4.0},{date:'Apr 2024',val:3.4},{date:'Apr 2024',val:3.1},{date:'May 2024',val:2.4},{date:'Jun 2024',val:1.6},{date:'Jul 2024',val:0.8},{date:'Jul 2024',val:0.3},{date:'Aug 2024',val:0.0}],
-  'COUP':[{date:'Dec 2022',val:2.0},{date:'Dec 2022',val:1.7},{date:'Jan 2023',val:1.4},{date:'Jan 2023',val:1.0},{date:'Feb 2023',val:0.5},{date:'Feb 2023',val:0.2},{date:'Feb 2023',val:0.0}],
-  'SAVE':[{date:'Jul 2022',val:35.0},{date:'Sep 2022',val:38.0},{date:'Oct 2022',val:42.0},{date:'Jan 2023',val:38.0},{date:'Apr 2023',val:48.0},{date:'Jun 2023',val:55.0},{date:'Sep 2023',val:65.0},{date:'Jan 2024',val:80.0}],
-  'CHNG':[{date:'Jan 2022',val:22.0},{date:'Apr 2022',val:26.0},{date:'Jun 2022',val:28.0},{date:'Sep 2022',val:32.0},{date:'Jan 2023',val:35.0},{date:'Apr 2023',val:40.0},{date:'Jun 2023',val:42.0},{date:'Jan 2024',val:50.0}],
-  'SGFY':[{date:'Sep 2022',val:12.0},{date:'Nov 2022',val:15.0},{date:'Dec 2022',val:18.0},{date:'Feb 2023',val:21.0},{date:'Mar 2023',val:24.0},{date:'May 2023',val:28.0},{date:'Jun 2023',val:30.0},{date:'Dec 2023',val:45.0}],
-  'IRBT':[{date:'Aug 2022',val:22.0},{date:'Oct 2022',val:26.0},{date:'Nov 2022',val:28.0},{date:'Feb 2023',val:32.0},{date:'Mar 2023',val:35.0},{date:'Jun 2023',val:40.0},{date:'Sep 2023',val:42.0},{date:'Jan 2024',val:55.0}],
-  'ATVI':[{date:'Jan 2022',val:25.0},{date:'Apr 2022',val:28.0},{date:'Jun 2022',val:30.0},{date:'Oct 2022',val:26.0},{date:'Jan 2023',val:22.0},{date:'Apr 2023',val:18.0},{date:'Jun 2023',val:12.0},{date:'Oct 2023',val:0.0}],
-  'ACI':[{date:'Oct 2022',val:15.0},{date:'Jan 2023',val:18.0},{date:'Mar 2023',val:20.0},{date:'Jun 2023',val:25.0},{date:'Sep 2023',val:28.0},{date:'Dec 2023',val:22.0},{date:'Mar 2024',val:18.0},{date:'Jan 2025',val:0.0}],
-};
-const trChartCache={};
-let trSelectedTicker=null;
 
-async function preloadTrackRecordCharts(){
-  for(const deal of TRACK_RECORD_DEALS){
-    if(trChartCache[deal.ticker])continue;
-    try{
-      const end=deal.closed||new Date().toISOString().slice(0,10);
-      const res=await fetch(`/api/track-record/chart/${deal.ticker}?start=${deal.filed}&end=${end}`);
-      trChartCache[deal.ticker]=await res.json();
-      // If this is the currently selected deal, re-render it now that data is ready
-      if(deal.ticker===trSelectedTicker){
-        renderTrackRecordDetail(deal,trChartCache[deal.ticker]);
-      }
-    }catch(e){
-      trChartCache[deal.ticker]={prices:[],spy:[]};
-    }
-    await new Promise(r=>setTimeout(r,400));
-  }
-  console.log('All track record charts preloaded.');
-}
-function buildTrackRecordSidebar(){
-  const sidebar=document.getElementById('tr-sidebar');
-  if(!sidebar)return;
-  const groups=[
-    {label:'All Cash',type:'All Cash'},
-    {label:'Cash + Stock',type:'Cash + Stock'},
-    {label:'Tender Offer',type:'Tender Offer'},
-    {label:'Private Equity',type:'Private Equity'},
-  ];
-  let html='';
-  groups.forEach(g=>{
-    const deals=TRACK_RECORD_DEALS.filter(d=>d.deal_type===g.type);
-    if(!deals.length)return;
-    html+=`<div class="tr-sidebar-group">${g.label}</div>`;
-    deals.forEach(d=>{
-      const bc=d.rating==='Very Low'?'badge-vl':d.rating==='Low'?'badge-lo':'badge-hi';
-      const retColor=d.outcome==='Broken'?'var(--red)':d.correct?'var(--green)':'var(--amber)';
-      const retText=d.outcome==='Broken'?'Avoided':d.ann_return?'+'+d.ann_return.toFixed(1)+'%':'--';
-      const correctBadge=d.correct
-        ?'<span style="font-family:\'DM Mono\',monospace;font-size:0.28rem;color:var(--green)">Correct</span>'
-        :'<span style="font-family:\'DM Mono\',monospace;font-size:0.28rem;color:var(--amber)">Miss</span>';
-      html+=`<div class="tr-sb-item" id="tr-sb-${d.ticker}" onclick="selectTrackRecord('${d.ticker}')">
-        <div class="tr-sb-ticker">${d.ticker}</div>
-        <div class="tr-sb-meta">
-          <span class="tr-sb-badge ${bc}">${d.rating}</span>
-          <span class="tr-sb-ret" style="color:${retColor}">${retText}</span>
-          ${correctBadge}
-        </div>
-      </div>`;
-    });
-  });
-  sidebar.innerHTML=html;
-  if(TRACK_RECORD_DEALS.length>0)selectTrackRecord(TRACK_RECORD_DEALS[0].ticker);
-}
 
-async function selectTrackRecord(ticker){
-  trSelectedTicker=ticker;
-  document.querySelectorAll('.tr-sb-item').forEach(el=>el.classList.remove('active'));
-  const el=document.getElementById('tr-sb-'+ticker);
-  if(el)el.classList.add('active');
-  const deal=TRACK_RECORD_DEALS.find(d=>d.ticker===ticker);
-  if(!deal)return;
-  document.getElementById('tr-detail').innerHTML='<div class="tr-detail-empty"><div class="spinner"></div></div>';
-  if(!trChartCache[ticker]){
-    try{
-      const end=deal.closed||new Date().toISOString().slice(0,10);
-      const res=await fetch(`/api/track-record/chart/${ticker}?start=${deal.filed}&end=${end}`);
-      trChartCache[ticker]=await res.json();
-    }catch(e){trChartCache[ticker]={prices:[],spy:[]};}
-  }
-  renderTrackRecordDetail(deal,trChartCache[ticker]);
-}
+
+
 
 function buildStockSVG(prices,spy,deal){
   const W=300,H=110,PL=32,PR=8,PT=10,PB=18;
@@ -2263,100 +2033,11 @@ function attachChartHovers(deal){
   },100);
 }
 
-function renderTrackRecordDetail(deal,chartData){
-  const detail=document.getElementById('tr-detail');
-  const retColor=deal.outcome==='Broken'?'var(--red)':deal.correct?'var(--green)':'var(--amber)';
-  const retText=deal.outcome==='Broken'?'Deal Avoided':deal.ann_return?(deal.ann_return>0?'+':'')+deal.ann_return.toFixed(1)+'% ann.':'--';
-  const correctText=deal.correct?'Correct Call':'Disclosed Miss';
-  const correctColor=deal.correct?'var(--green)':'var(--amber)';
-  const bc=deal.rating==='Very Low'?'badge-vl':deal.rating==='Low'?'badge-lo':'badge-hi';
-  const macro=MACRO_DATA[deal.ticker]||{};
-  const prices=chartData.prices||[],spy=chartData.spy||[];
-  const stockSVG=buildStockSVG(prices,spy,deal);
-  const spreadSVG=buildSpreadSVG(prices,deal);
-  const daysVsSector=Math.round(((deal.days-deal.sector_avg_days)/deal.sector_avg_days)*100);
-  const daysText=daysVsSector>0?'+'+daysVsSector+'% slower than sector avg':Math.abs(daysVsSector)+'% faster than sector avg';
-  const posSignals=['Tailwind','Active','Very Active','Favorable','Standard','Small','Manageable','Low'];
-  const labelMap={fed:'Fed Environment',sector_ma:'Sector M&A',rates:'Interest Rates',regulatory:'Regulatory',deal_size:'Deal Size'};
-  detail.innerHTML=`
-    <div class="tr-deal-header">
-      <div>
-        <div class="tr-deal-ticker">${deal.ticker}</div>
-        <div class="tr-deal-company">${deal.company}</div>
-        <div class="tr-deal-acq">Acquirer: ${deal.acquirer} · ${deal.deal_type} · Filed ${deal.filed}</div>
-      </div>
-      <div class="tr-deal-right">
-        <div class="tr-deal-ret" style="color:${retColor}">${retText}</div>
-        <div class="tr-deal-outcome">
-          <span class="badge ${bc}">${deal.rating} Risk</span>
-          <span class="badge" style="color:${deal.outcome==='Closed'?'var(--green)':'var(--red)'};border-color:${deal.outcome==='Closed'?'rgba(90,158,106,0.4)':'rgba(158,90,74,0.4)'}">${deal.outcome}</span>
-          <span class="badge" style="color:${correctColor};border-color:${correctColor}40">${correctText}</span>
-        </div>
-      </div>
-    </div>
-    <div class="tr-charts">
-      <div class="tr-chart-box" style="position:relative;">
-        <div class="tr-chart-label">${SECTOR_ETF_MAP[deal.ticker]||'Sector ETF'} vs S&P 500 during deal period (indexed to 100)</div>
-        <div class="tr-chart-area">${stockSVG}</div>
-        <div class="tr-chart-tooltip" id="tr-tooltip-stock-${deal.ticker}" style="position:absolute;top:0;left:0;"></div>
-      </div>
-      <div class="tr-chart-box" style="position:relative;">
-        <div class="tr-chart-label">Spread compression over deal period</div>
-        <div class="tr-chart-area">${spreadSVG}</div>
-        <div class="tr-chart-tooltip" id="tr-tooltip-spread-${deal.ticker}" style="position:absolute;top:0;left:0;"></div>
-      </div>
-    </div>
-    <div class="tr-numbers">
-      <div class="tr-num-cell">
-        <div class="tr-num-label">Implied Deal Certainty at Ann.</div>
-        <div class="tr-num-val" style="color:${deal.implied_certainty>=90?'var(--green)':deal.implied_certainty>=75?'var(--teal)':'var(--red)'}">${deal.implied_certainty}%</div>
-        <div class="tr-num-sub">Market-implied probability of deal close based on spread at announcement. Above 90% signals very high market conviction.</div>
-      </div>
-      <div class="tr-num-cell">
-        <div class="tr-num-label">Spread Compression Rate</div>
-        <div class="tr-num-val" style="color:${deal.compression_rate?'var(--teal)':'var(--red)'}">${deal.compression_rate?deal.compression_rate.toFixed(1)+' bps/day':'N/A — deal broke'}</div>
-        <div class="tr-num-sub">How fast the spread tightened per day from announcement to close. Higher rate signals stronger market conviction building over time.</div>
-      </div>
-      <div class="tr-num-cell">
-        <div class="tr-num-label">Days vs Sector Average</div>
-        <div class="tr-num-val" style="color:${daysVsSector<=0?'var(--green)':'var(--amber)'}">${deal.days} days</div>
-        <div class="tr-num-sub">${daysText}. Faster closes reduce holding period risk and improve annualized returns for arb positions.</div>
-      </div>
-      <div class="tr-num-cell">
-        <div class="tr-num-label">Acquirer Premium Paid</div>
-        <div class="tr-num-val" style="color:${deal.premium>=30?'var(--green)':deal.premium>=15?'var(--teal)':'var(--amber)'}">${deal.premium?'+'+deal.premium+'%':'N/A'}</div>
-        <div class="tr-num-sub">Premium over pre-announcement price. Higher premium signals stronger acquirer commitment and reduces the risk the buyer walks away.</div>
-      </div>
-      <div class="tr-num-cell">
-        <div class="tr-num-label">Break Price</div>
-        <div class="tr-num-val" style="color:var(--red)">$${deal.break_price.toFixed(2)}</div>
-        <div class="tr-num-sub">Pre-announcement stock price. If the deal had broken, this is approximately where the stock would have fallen immediately.</div>
-      </div>
-      <div class="tr-num-cell">
-        <div class="tr-num-label">Transaction Value</div>
-        <div class="tr-num-val" style="color:var(--sky)">$${deal.tx_value}B</div>
-        <div class="tr-num-sub">Total deal size. Larger deals face higher regulatory scrutiny but acquirers are also more committed to completing them.</div>
-      </div>
-    </div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:0.6rem;padding-top:0.25rem;">Macro environment at announcement</div>
-    <div class="tr-macro">
-      ${Object.entries(macro).map(([key,val])=>{
-        const signalClass=posSignals.includes(val.signal)?'pos':val.signal==='Hostile'||val.signal==='Headwind'?'neg':'neu';
-        return `<div class="tr-macro-cell">
-          <div class="tr-macro-label">${labelMap[key]||key}</div>
-          <div class="tr-macro-signal ${signalClass}">${val.signal}</div>
-          <div class="tr-macro-desc">${val.desc}</div>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-  attachChartHovers(deal);
-}
+
 buildTicker();
 updateLandingStats();
 loadDeals();
-buildTrackRecordSidebar();
-preloadTrackRecordCharts();
+
 
 let isSubscribed = false;
 let currentUser = null;
@@ -2432,7 +2113,7 @@ async function handleModalSignIn(){
       <div class="modal-feature">Market-implied close probability with live spread history</div>
       <div class="modal-feature">Risk/Reward analysis — upside vs. break price in dollars</div>
       <div class="modal-feature">Acquirer intelligence & regulatory risk assessment</div>
-      <div class="modal-feature">Peer spread comparison vs. 154-deal historical database</div>
+      <div class="modal-feature">Peer spread intelligence across live tracked deals</div>
       <div class="modal-feature">V3 Score breakdown — 6-factor model with risk factors</div>
       <div class="modal-feature">Deal catalyst calendar with key milestone tracking</div>
     </div>

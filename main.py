@@ -1465,22 +1465,14 @@ async def scan_status():
 
 @app.get("/api/comps/all")
 async def get_all_comps():
-    return JSONResponse(content={"comps": COMPS_DATA, "total": len(COMPS_DATA)})
+    return JSONResponse(content={"comps": [], "total": 0, "status": "Dataset under EDGAR re-verification"})
 
 @app.get("/api/comps/{ticker}")
 async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.0):
-    comps  = get_comparable_deals(deal_type, spread, ticker)
-    closed = sum(1 for c in comps if c['outcome']=='Closed')
-    broken = sum(1 for c in comps if c['outcome']=='Broken')
     return JSONResponse(content={
-        "comps": comps,
-        "summary": {
-            "total":      len(comps),
-            "closed":     closed,
-            "broken":     broken,
-            "close_rate": round(closed/len(comps)*100) if comps else 0,
-            "avg_days":   round(sum(c['days_to_close'] for c in comps)/len(comps)) if comps else 0,
-        }
+        "comps": [],
+        "summary": {"total": 0, "closed": 0, "broken": 0, "close_rate": 0, "avg_days": 0},
+        "status": "Dataset under EDGAR re-verification"
     })
 
 @app.post("/api/trigger-scan")
