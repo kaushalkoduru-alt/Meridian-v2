@@ -1141,6 +1141,20 @@ def fetch_deals_from_edgar():
                             print(f"  [TO] {ticker} expiration: {to_date}")
                     tx_value=extract_transaction_value(full_ct)
                     financing_signal=extract_financing_signal(full_ct)
+                    # Reclassify deal type from filing text — overrides query-assigned type
+                    full_ct_lower = full_ct.lower()
+                    has_cash = 'per share in cash' in full_ct_lower or 'per common share in cash' in full_ct_lower
+                    has_stock = any(kw in full_ct_lower for kw in ['stock consideration','equity consideration','shares of common stock','per share in a combination'])
+                    has_tender = 'tender offer' in full_ct_lower
+                    has_pe = any(kw in full_ct_lower for kw in ['equity sponsor','private equity sponsor','portfolio company of','backed by']) and not has_cash
+                    if has_tender:
+                        deal_type = 'Tender Offer'
+                    elif has_pe:
+                        deal_type = 'Private Equity'
+                    elif has_cash and has_stock:
+                        deal_type = 'Cash + Stock'
+                    elif has_cash:
+                        deal_type = 'All Cash'
                     break
                 except Exception as e:
                     print(f"  Filing parse error {ticker}: {e}")
