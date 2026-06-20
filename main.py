@@ -312,12 +312,18 @@ VERIFIED_CLOSE_DATES = {
     'GSAT': '2027',
     'CLST': 'H2 2026',
     'CPRX': 'H2 2026',
-    'ASRT': 'H2 2026',
+    'PAYO': 'mid-2027',       # Nuvei/Payoneer, $7.40/share all-cash — confirmed 6/15/26 press release + 8-K
+    'ALOT': 'Q3 2026',        # AstroNova/Arcline, $29/share all-cash PE take-private
+    'WBD': 'Q3 2026',         # Paramount/WBD, $31/share all-cash merger
+    'AES': 'late 2026',
+    'GBTG': 'second half 2026',  # Long Lake, $9.50/share all-cash, still arranging financing as of 6/8/26
+    'AVNS': 'second half 2026',
 }
-
 EXCLUDED_TICKERS = {
     'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU',
-    'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC', 'HBT', 'MCW', 'RGR'
+    'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC', 'HBT', 'MCW', 'RGR',
+    'KALV',  # Chiesi acquisition closed and became effective 6/11/2026
+    'ASRT',  # Closed 6/16/2026
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
@@ -569,9 +575,18 @@ def get_risk(spread_pct, score):
 
 def get_acquirer_type(deal_type, acquirer):
     if deal_type == 'Private Equity': return 'Private Equity'
-    pe_kw = ['capital','partners','equity','ventures','holdings','fund','blackstone','kkr','apollo','carlyle','vista','thoma','francisco','advent','permira','clearlake','general atlantic']
+    pe_kw = ['capital','partners','equity','ventures','holdings','fund','blackstone','kkr','apollo','carlyle','vista','thoma','francisco','advent','permira','clearlake','general atlantic','arcline']
     if acquirer and any(kw in acquirer.lower() for kw in pe_kw): return 'Private Equity'
     return 'Strategic'
+
+# VERIFIED_DEAL_TYPES — manual override for deals where the scanner's stale-filing
+# classification stuck (e.g. an early tender-offer 8-K that the deal later moved past).
+# Reclassification only fires on fresh EDGAR hits, not on deals carried forward in
+# the rolling-carry path — see handoff doc for the structural gap.
+VERIFIED_DEAL_TYPES = {
+    'WBD': 'All Cash',   # was stuck on 'Tender Offer' from the dead Dec'25-Jan'26 hostile Paramount bid; live deal is a shareholder-approved $31/share all-cash merger
+    'ALOT': 'All Cash',  # was stuck on 'Tender Offer'; live deal is a $29/share all-cash PE take-private by Arcline — acquirer_type now correctly derives to Private Equity via the Arcline keyword added above
+}
 
 # ─── EXTRACTION HELPERS ──────────────────────────────────────────────────────
 
@@ -1171,6 +1186,8 @@ def fetch_deals_from_edgar():
                 tx_value=VERIFIED_TX_VALUES[ticker]
             if ticker in VERIFIED_CLOSE_DATES:
                 close_date=VERIFIED_CLOSE_DATES[ticker]
+            if ticker in VERIFIED_DEAL_TYPES:
+                deal_type=VERIFIED_DEAL_TYPES[ticker]
             break_price=get_break_price(ticker,src['file_date'])
             break_price_method='historical'
             if not break_price:
