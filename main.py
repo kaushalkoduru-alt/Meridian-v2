@@ -324,6 +324,7 @@ EXCLUDED_TICKERS = {
     'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC', 'HBT', 'MCW', 'RGR',
     'KALV',  # Chiesi acquisition closed and became effective 6/11/2026
     'ASRT',  # Closed 6/16/2026
+    'KROS',  # Keros Therapeutics issuer self-tender (buyback, $194M capital return, expired 11/18/2025) — never an acquisition
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
