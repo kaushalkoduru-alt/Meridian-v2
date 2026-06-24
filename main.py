@@ -1216,6 +1216,39 @@ def fetch_deals_from_edgar():
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 '_filing_text':full_ct[:10000],  # Temp field for enrichment, stripped before Redis save
             })
+            # At-detection: cheap checks only (no extra EDGAR calls).
+            # Completion check and age-out run in daily_validation_loop instead.
+            try:
+                cheap_flags = []
+                # Check 1: SC TO-I form type
+                if form_type and 'TO-I' in form_type.upper():
+                    cheap_flags.append({
+                        'check': 'SELF_TENDER_FORM',
+                        'reason': f'Form type is {form_type} (issuer self-tender/buyback by SEC definition)',
+                    })
+                # Check 2: same-entity name match (Jaccard >= 0.6)
+                company_name = resolve_company_name(ticker)
+                if acquirer and company_name:
+                    score = _name_overlap_score(acquirer, company_name)
+                    if score >= 0.6:
+                        cheap_flags.append({
+                            'check': 'SAME_ENTITY',
+                            'reason': (f'Acquirer "{acquirer}" closely matches company name '
+                                       f'"{company_name}" (overlap {score:.2f} >= 0.6)'),
+                        })
+                if cheap_flags:
+                    VALIDATION_FLAGS.append({
+                        'ticker': ticker,
+                        'detected_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        'source': 'at_detection',
+                        'flags': cheap_flags,
+                    })
+                    print(f'  [Validate] {ticker}: {len(cheap_flags)} flag(s) at detection — see /api/admin/validation-flags')
+                else:
+                    print(f'  [Validate] {ticker}: clean at detection')
+            except Exception as ve:
+                print(f'  [Validate] {ticker}: detection check error — {ve}')
+
             if len(results) % 10 == 0:
                 save_cache(results)
         except: continue
@@ -1361,6 +1394,48 @@ async def run_background_scan():
         _scan_running = False
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background scan finished.")
 
+async def daily_validation_loop():
+    """
+    Runs all four validation checks (including the EDGAR-call-heavy completion
+    check) against every deal in the feed, once per day. Starts 1 hour after
+    startup to avoid competing with the initial scan.
+    Flags go to VALIDATION_FLAGS for review — nothing is auto-removed.
+    """
+    await asyncio.sleep(3600)
+    while True:
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Daily validation starting...")
+        deals = load_cache() or []
+        for deal in deals:
+            ticker   = deal.get('ticker', '')
+            acquirer = deal.get('acquirer', '')
+            filed    = deal.get('filed', '')
+            cik      = SEC_CIK_MAP.get(ticker, '')
+            company  = resolve_company_name(ticker)
+            if not ticker or not filed or not cik:
+                continue
+            try:
+                v_flags = validate_deal(ticker, acquirer, cik, company, filed)
+                if v_flags:
+                    already = any(f['ticker'] == ticker for f in VALIDATION_FLAGS)
+                    if not already:
+                        VALIDATION_FLAGS.append({
+                            'ticker': ticker,
+                            'detected_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                            'source': 'daily_check',
+                            'flags': v_flags,
+                        })
+                        print(f'  [Validate-daily] {ticker}: {len(v_flags)} flag(s)')
+                    else:
+                        print(f'  [Validate-daily] {ticker}: already flagged, skipping')
+                else:
+                    print(f'  [Validate-daily] {ticker}: clean')
+                await asyncio.sleep(2)
+            except Exception as e:
+                print(f'  [Validate-daily] {ticker}: error — {e}')
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Daily validation complete. "
+              f"{len(VALIDATION_FLAGS)} total flag(s) in queue.")
+        await asyncio.sleep(86400)
+
 async def auto_refresh_loop():
     while True:
         await asyncio.sleep(3600)
@@ -1451,7 +1526,7 @@ async def lifespan(app: FastAPI):
     await loop.run_in_executor(None, fetch_sec_ticker_map)
     asyncio.create_task(auto_refresh_loop())
     asyncio.create_task(startup_scan())
-    asyncio.create_task(preload_track_record_charts())
+    asyncio.create_task(daily_validation_loop())
     yield
 
 # ─── APP & ROUTES ─────────────────────────────────────────────────────────────
@@ -1495,6 +1570,252 @@ async def get_deals():
 async def scan_status():
     return JSONResponse(content={"running": _scan_running})
 
+# ─── ADMIN + VALIDATION ───────────────────────────────────────────────────────
+
+ADMIN_TOKEN     = os.environ.get('ADMIN_TOKEN', '')
+REVIEW_QUEUE    = []   # close-date abstentions from Groq enrichment
+VALIDATION_FLAGS = []  # deals flagged by validate_deal() — reviewed before any removal
+
+import re as _re
+
+SELF_TENDER_SIGNALS = [
+    'repurchase of its common stock',
+    "repurchase of the company's common stock",
+    'capital return program',
+    'issuer tender offer',
+    'offer to purchase shares of its own',
+    'offer to purchase its own',
+    'return capital to shareholders',
+    'return of capital to stockholders',
+]
+
+VALIDATION_MERGER_SIGNALS = [
+    'agreement and plan of merger', 'merger agreement', 'definitive agreement',
+    'to be acquired by', 'acquire all of the outstanding', 'entered into a merger',
+]
+
+VALIDATION_IRRELEVANT_SIGNALS = [
+    'sale of', 'disposition of', 'divestiture', 'spinoff', 'spin-off', 'asset sale',
+]
+
+DEREGISTRATION_FORMS = {"25", "25-NSE", "15", "15-12B", "15-12G"}
+
+
+def _name_overlap_score(name_a, name_b):
+    """Jaccard similarity on word sets. >= 0.6 = same entity (self-tender signal)."""
+    suffixes = {'inc','corp','ltd','llc','plc','co','company','corporation',
+                'incorporated','limited','holdings','group'}
+    def words(s):
+        return set(w for w in _re.sub(r'[^a-z0-9 ]', '', s.lower()).split()
+                   if w not in suffixes and len(w) > 1)
+    a, b = words(name_a), words(name_b)
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def _get_text_for_validation(url):
+    """Fetch and plain-text a filing URL for validation checks. Short timeout, best-effort."""
+    try:
+        r = requests.get(url, headers=EDGAR_HEADERS, timeout=10)
+        time.sleep(0.12)
+        if r.status_code != 200:
+            return None
+        from html.parser import HTMLParser
+        class TE(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.chunks = []
+            def handle_data(self, d):
+                self.chunks.append(d)
+        p = TE()
+        p.feed(r.text)
+        return ' '.join(p.chunks)
+    except Exception:
+        return None
+
+
+def _find_announcement_filing_for_validation(cik, announced_date_str, window_days=7):
+    """
+    Find the 8-K / tender-offer form filed within window_days of the deal's
+    announcement date. Anchored on the stored filed date — the same technique
+    that fixed the 'earliest Item 1.01' bug in validate_feed.py which was
+    matching decade-old unrelated filings.
+    Returns (filing_date, accession, form_type, text) or None.
+    """
+    try:
+        ann_date = datetime.strptime(announced_date_str[:10], "%Y-%m-%d")
+    except Exception:
+        return None
+    window_start = ann_date - timedelta(days=window_days)
+    window_end   = ann_date + timedelta(days=window_days)
+
+    try:
+        sub = requests.get(
+            f"https://data.sec.gov/submissions/CIK{cik}.json",
+            headers=EDGAR_HEADERS, timeout=10
+        ).json()
+        time.sleep(0.12)
+    except Exception:
+        return None
+
+    recent = sub.get("filings", {}).get("recent", {})
+    forms   = recent.get("form", [])
+    accs    = recent.get("accessionNumber", [])
+    items   = recent.get("items", [])
+    dates   = recent.get("filingDate", [])
+    docs    = recent.get("primaryDocument", [])
+
+    candidates = []
+    for form, acc, item, date_str, doc in zip(forms, accs, items, dates, docs):
+        if not doc:
+            continue
+        try:
+            fdate = datetime.strptime(date_str, "%Y-%m-%d")
+        except Exception:
+            continue
+        if window_start <= fdate <= window_end:
+            if form in ("8-K", "SC TO-T", "SC TO-I", "SC 13E-3", "SC 14D9"):
+                candidates.append((date_str, acc, form, doc,
+                                   abs((fdate - ann_date).days)))
+
+    candidates.sort(key=lambda x: x[4])
+    for date_str, acc, form, doc, _ in candidates:
+        acc_clean = acc.replace("-", "")
+        url = (f"https://www.sec.gov/Archives/edgar/data/"
+               f"{int(cik)}/{acc_clean}/{doc}")
+        text = _get_text_for_validation(url)
+        if text and any(s in text.lower() for s in VALIDATION_MERGER_SIGNALS):
+            return date_str, acc, form, text
+    # No merger language found — return closest candidate anyway (flagged by caller)
+    if candidates:
+        date_str, acc, form, doc, _ = candidates[0]
+        acc_clean = acc.replace("-", "")
+        url = (f"https://www.sec.gov/Archives/edgar/data/"
+               f"{int(cik)}/{acc_clean}/{doc}")
+        text = _get_text_for_validation(url)
+        return date_str, acc, form, (text or "")
+    return None
+
+
+def validate_deal(ticker, acquirer, cik, company_name, announced_date_str):
+    """
+    Runs four validation checks against a deal. Returns a list of flag dicts,
+    empty if the deal is clean.
+
+    Check 1 — SC TO-I form type (issuer self-tender = buyback, not an acquisition)
+    Check 2 — Self-tender text signals + same-entity name check (Jaccard >= 0.6)
+    Check 3 — Post-announcement completion signal (Form 25/15 or Item 2.01 8-K
+               filed AFTER the announcement date, acquirer-mention verified)
+    Check 4 — 180-day age-out (still pending > 180 days after announcement)
+
+    This is FLAG-FIRST: flags go to VALIDATION_FLAGS for review, never auto-remove.
+    """
+    flags = []
+    now = datetime.utcnow()
+
+    # ── Announcement filing (anchored on filed date, not "earliest Item 1.01") ──
+    ann_result = _find_announcement_filing_for_validation(cik, announced_date_str)
+    ann_form = ann_text = None
+    if ann_result:
+        _, _, ann_form, ann_text = ann_result
+
+    # Check 1: SC TO-I form type
+    if ann_form and "TO-I" in ann_form.upper():
+        flags.append({
+            "check": "SELF_TENDER_FORM",
+            "reason": f"Form type is {ann_form} (issuer self-tender/buyback by SEC definition)",
+        })
+
+    # Check 2: self-tender text + same-entity
+    if ann_text:
+        text_lower = ann_text.lower()
+        for sig in SELF_TENDER_SIGNALS:
+            if sig in text_lower:
+                flags.append({
+                    "check": "SELF_TENDER_TEXT",
+                    "reason": f"Filing text contains self-tender signal: \"{sig}\"",
+                })
+                break
+        if acquirer and company_name:
+            score = _name_overlap_score(acquirer, company_name)
+            if score >= 0.6:
+                flags.append({
+                    "check": "SAME_ENTITY",
+                    "reason": (f"Acquirer \"{acquirer}\" closely matches company name "
+                               f"\"{company_name}\" (overlap {score:.2f} >= 0.6)"),
+                })
+
+    # Check 3: post-announcement completion signal
+    try:
+        ann_date = datetime.strptime(announced_date_str[:10], "%Y-%m-%d")
+        sub = requests.get(
+            f"https://data.sec.gov/submissions/CIK{cik}.json",
+            headers=EDGAR_HEADERS, timeout=10
+        ).json()
+        time.sleep(0.12)
+        recent   = sub.get("filings", {}).get("recent", {})
+        r_forms  = recent.get("form", [])
+        r_accs   = recent.get("accessionNumber", [])
+        r_items  = recent.get("items", [])
+        r_dates  = recent.get("filingDate", [])
+        r_docs   = recent.get("primaryDocument", [])
+
+        acq_key = (acquirer or "").lower().split()[0] if acquirer else ""
+
+        for form, acc, item, date_str, doc in zip(r_forms, r_accs, r_items, r_dates, r_docs):
+            try:
+                fdate = datetime.strptime(date_str, "%Y-%m-%d")
+            except Exception:
+                continue
+            if fdate <= ann_date:
+                continue  # CRITICAL: only post-announcement filings
+
+            item_str = str(item) if item else ""
+
+            if form in DEREGISTRATION_FORMS:
+                flags.append({
+                    "check": "COMPLETION_DEREGISTRATION",
+                    "reason": (f"Form {form} (deregistration) filed {date_str} "
+                               f"after announcement {announced_date_str}, accession {acc}"),
+                })
+
+            elif form == "8-K" and "2.01" in item_str and doc:
+                acc_clean = acc.replace("-", "")
+                url = (f"https://www.sec.gov/Archives/edgar/data/"
+                       f"{int(cik)}/{acc_clean}/{doc}")
+                text = _get_text_for_validation(url)
+                if text:
+                    text_lower = text.lower()
+                    is_irrelevant = any(s in text_lower for s in VALIDATION_IRRELEVANT_SIGNALS)
+                    acq_mentioned = bool(acq_key) and acq_key in text_lower
+                    if acq_mentioned and not is_irrelevant:
+                        idx = text_lower.find(acq_key)
+                        snippet = text[max(0,idx-80):idx+120].replace("\n"," ").strip()
+                        flags.append({
+                            "check": "COMPLETION_8K",
+                            "reason": (f"Item 2.01 8-K filed {date_str} after announcement, "
+                                       f"acquirer \"{acquirer}\" mentioned. "
+                                       f"Snippet: \"...{snippet}...\""),
+                        })
+    except Exception as e:
+        print(f"  [Validate] completion check error for {ticker}: {e}")
+
+    # Check 4: 180-day age-out
+    try:
+        ann_date = datetime.strptime(announced_date_str[:10], "%Y-%m-%d")
+        age_days = (now - ann_date).days
+        if age_days > 180:
+            flags.append({
+                "check": "AGE_OUT",
+                "reason": f"Announcement is {age_days} days old (> 180-day threshold)",
+            })
+    except Exception:
+        pass
+
+    return flags
+
+
 @app.get("/api/comps/all")
 async def get_all_comps():
     return JSONResponse(content={"comps": [], "total": 0, "status": "Dataset under EDGAR re-verification"})
@@ -1506,6 +1827,24 @@ async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.
         "summary": {"total": 0, "closed": 0, "broken": 0, "close_rate": 0, "avg_days": 0},
         "status": "Dataset under EDGAR re-verification"
     })
+
+
+
+@app.get("/api/admin/validation-flags")
+async def get_validation_flags(token: str = ""):
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    return JSONResponse(content={
+        "flags": VALIDATION_FLAGS,
+        "count": len(VALIDATION_FLAGS),
+        "note": "Flag-for-review only. Nothing is auto-removed. Confirm before adding to EXCLUDED_TICKERS."
+    })
+
+@app.get("/api/admin/close-date-review-queue")
+async def get_close_date_review_queue(token: str = ""):
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    return JSONResponse(content={"queue": REVIEW_QUEUE, "count": len(REVIEW_QUEUE)})
 
 @app.post("/api/trigger-scan")
 async def trigger_scan():
