@@ -297,6 +297,9 @@ def is_cache_fresh(max_age_minutes=50):
 # VERIFIED_ACQUIRERS contains only manually confirmed overrides.
 VERIFIED_ACQUIRERS = {
     'EA': 'Savvy Games Group (Saudi Arabia)',
+    'CZR':  'Fertitta Entertainment',        # confirmed 5/28/26 8-K + press release
+    'NATH': 'Smithfield Foods',              # confirmed 1/21/26 8-K
+    'AES':  'GIP / EQT Consortium',          # confirmed 3/2/26 8-K — lead acquirers GIP (BlackRock) + EQT
 }
 
 VERIFIED_TX_VALUES = {
@@ -306,17 +309,17 @@ VERIFIED_TX_VALUES = {
 }
 
 VERIFIED_CLOSE_DATES = {
-    'CZR': '2027',
-    'OGN': 'early 2027',
-    'NATH': 'H1 2026',
+    'CZR':  'mid-to-late 2027',              # Fertitta Entertainment — confirmed 5/28/26 8-K
+    'OGN':  'early 2027',
+    'NATH': 'H2 2026',                       # updated: CFIUS delay shifted from H1 — confirmed updated 8-K
     'GSAT': '2027',
     'CLST': 'H2 2026',
     'CPRX': 'H2 2026',
-    'PAYO': 'mid-2027',       # Nuvei/Payoneer, $7.40/share all-cash — confirmed 6/15/26 press release + 8-K
-    'ALOT': 'Q3 2026',        # AstroNova/Arcline, $29/share all-cash PE take-private
-    'WBD': 'Q3 2026',         # Paramount/WBD, $31/share all-cash merger
-    'AES': 'late 2026',
-    'GBTG': 'second half 2026',  # Long Lake, $9.50/share all-cash, still arranging financing as of 6/8/26
+    'PAYO': 'mid-2027',                      # Nuvei/Payoneer — confirmed 6/15/26 press release + 8-K
+    'ALOT': 'Q3 2026',                       # AstroNova/Arcline
+    'WBD':  'Q3 2026',                       # Paramount/WBD
+    'AES':  'late 2026 or early 2027',       # GIP/EQT Consortium — confirmed 3/2/26 8-K
+    'GBTG': 'second half 2026',              # Long Lake
     'AVNS': 'second half 2026',
 }
 EXCLUDED_TICKERS = {
@@ -1189,6 +1192,23 @@ def fetch_deals_from_edgar():
                 close_date=VERIFIED_CLOSE_DATES[ticker]
             if ticker in VERIFIED_DEAL_TYPES:
                 deal_type=VERIFIED_DEAL_TYPES[ticker]
+            # Log missing fields to REVIEW_QUEUE for hand-fill via VERIFIED_* dicts
+            missing_fields = []
+            if not acquirer or acquirer == 'Undisclosed':
+                missing_fields.append('acquirer')
+            if not close_date or close_date == 'TBD':
+                missing_fields.append('close_date')
+            if not tx_value:
+                missing_fields.append('tx_value')
+            if missing_fields:
+                REVIEW_QUEUE.append({
+                    'ticker': ticker,
+                    'accession': accession,
+                    'missing_fields': missing_fields,
+                    'detected_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'note': 'Add verified values to VERIFIED_ACQUIRERS / VERIFIED_CLOSE_DATES / VERIFIED_TX_VALUES',
+                })
+                print(f"  [Review] {ticker}: missing {missing_fields} — logged to /api/admin/close-date-review-queue")
             break_price=get_break_price(ticker,src['file_date'])
             break_price_method='historical'
             if not break_price:
@@ -1829,6 +1849,35 @@ async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.
     })
 
 
+
+@app.get("/api/admin/field-completeness")
+async def field_completeness(token: str = ""):
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    deals = load_cache() or []
+    rows = []
+    for d in deals:
+        def confident(val, bad_vals=('TBD','nan','Undisclosed','not yet disclosed',None,'')):
+            if val is None: return False
+            s = str(val).strip()
+            return s not in bad_vals and not s.lower().startswith('of 202')
+        rows.append({
+            "ticker":     d.get("ticker"),
+            "acquirer":   {"value": d.get("acquirer"), "confident": confident(d.get("acquirer"))},
+            "close_date": {"value": d.get("close_date"), "confident": confident(d.get("close_date"))},
+            "tx_value":   {"value": d.get("tx_value"),  "confident": d.get("tx_value") not in (None, 0, "")},
+            "deal_type":  {"value": d.get("deal_type"), "confident": d.get("deal_type") not in (None, "")},
+        })
+    incomplete = [r for r in rows if not all(
+        v["confident"] for v in [r["acquirer"], r["close_date"], r["tx_value"], r["deal_type"]]
+    )]
+    return JSONResponse(content={
+        "total_deals": len(rows),
+        "complete": len(rows) - len(incomplete),
+        "incomplete": len(incomplete),
+        "deals": rows,
+        "needs_attention": incomplete,
+    })
 
 @app.get("/api/admin/validation-flags")
 async def get_validation_flags(token: str = ""):

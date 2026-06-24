@@ -1359,7 +1359,8 @@ async function renderAnalysis(deal){
     const tc=getTypeClass(deal.deal_type);
     const tl=getTypeLabel(deal.deal_type);
     const company  =deal.company||deal.ticker+' Corp.';
-    const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'?deal.close_date:null;
+    const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'&&deal.close_date!=='not yet disclosed'&&!deal.close_date.toLowerCase().includes('of 202')?deal.close_date:null;
+    const closeDateDisplay=closeDate||'Not yet disclosed';
     const txRaw=deal.tx_value&&!isNaN(deal.tx_value)?parseFloat(deal.tx_value):null;
     const txVal=txRaw===null?'N/A':txRaw>=1?'$'+txRaw.toFixed(1)+'B':'$'+Math.round(txRaw*1000)+'M';
     const bp=deal.break_price, bd=deal.break_downside;
@@ -1368,7 +1369,7 @@ async function renderAnalysis(deal){
 
     document.getElementById('da-ticker').textContent  =deal.ticker;
     document.getElementById('da-company').textContent =company;
-    document.getElementById('da-acquirer').textContent=deal.acquirer||'Undisclosed';
+    document.getElementById('da-acquirer').textContent=deal.acquirer&&deal.acquirer!=='Undisclosed'?deal.acquirer:'Not yet disclosed';
     const spreadEl=document.getElementById('da-spread');
     spreadEl.textContent=sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
     spreadEl.style.color=spColor(deal.sp_pct);
@@ -1388,7 +1389,7 @@ async function renderAnalysis(deal){
         <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
         <div class="da-metric hi"><div class="da-ml">Spread</div><div class="da-mv" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div></div>
         <div class="da-metric"><div class="da-ml">Ann. Return</div><div class="da-mv sm" style="color:${spColor(deal.ann)}">${sign(deal.ann)}${deal.ann.toFixed(2)}%</div></div>
-        ${closeDate?`<div class="da-metric"><div class="da-ml">Expected Close</div><div class="da-mv sm">${closeDate}</div></div>`:''}
+        <div class="da-metric"><div class="da-ml">Expected Close</div><div class="da-mv sm">${closeDateDisplay}</div></div>
         <div class="da-metric"><div class="da-ml">Transaction Value</div><div class="da-mv sm">${txVal}</div></div>
     `;
     document.getElementById('da-metrics').innerHTML=metricsHtml;
@@ -1482,7 +1483,7 @@ async function renderAnalysis(deal){
     document.getElementById('da-acq-grid').innerHTML=`
         <div class="acq-cell highlight">
             <div class="acq-label">Acquirer</div>
-            <div class="acq-value" style="font-size:1rem">${deal.acquirer||'Undisclosed'}</div>
+            <div class="acq-value" style="font-size:1rem">${deal.acquirer&&deal.acquirer!=='Undisclosed'?deal.acquirer:'Not yet disclosed'}</div>
             <div class="acq-sub" style="margin-top:0.4rem">${acqType} buyer · ${deal.deal_type}</div>
         </div>
         <div class="acq-cell highlight">
@@ -1682,7 +1683,7 @@ function renderDeals(deals){
             const tl=getTypeLabel(d.deal_type);
             const isExp=expandedIndex===i;
             const co=d.company||d.ticker+' Corp.';
-            const cd=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'?d.close_date:'TBD';
+            const cd=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'&&!d.close_date.toLowerCase().includes('of 202')?d.close_date:'Not yet disclosed';
             const txR=d.tx_value&&!isNaN(d.tx_value)?parseFloat(d.tx_value):null;
             const tv=txR===null?'N/A':txR>=1?'$'+txR.toFixed(1)+'B':'$'+Math.round(txR*1000)+'M';
             const bp=d.break_price,bd=d.break_downside;
@@ -1691,7 +1692,7 @@ function renderDeals(deals){
             <div class="deal-row ${isExp?'expanded':''}" onclick="toggleDeal(${i})">
               <div class="r-ticker">${d.ticker}</div>
               <div><span class="r-type ${tc}">${tl}</span></div>
-              <div class="r-acq">${d.acquirer||'Undisclosed'}</div>
+              <div class="r-acq">${d.acquirer&&d.acquirer!=='Undisclosed'?d.acquirer:'Not yet disclosed'}</div>
               <div class="r-co">${co}</div>
               <div class="r-num">${d.cp ? '$'+d.cp.toFixed(2) : 'N/A'}</div>
               <div class="r-num">$${d.dp.toFixed(2)}</div>
@@ -1706,7 +1707,7 @@ function renderDeals(deals){
                   <div class="dp-acq-lbl">Target Company</div>
                   <div class="dp-acq-name">${co}</div>
                   <div class="dp-acq-lbl" style="margin-top:0.6rem">Being acquired by</div>
-                  <div class="dp-acq-name">${d.acquirer||'Undisclosed'}</div>
+                  <div class="dp-acq-name">${d.acquirer&&d.acquirer!=='Undisclosed'?d.acquirer:'Not yet disclosed'}</div>
                 </div>
                 <div style="text-align:right">
                   <span class="badge ${bc}" style="font-size:0.48rem;padding:4px 10px">${d.risk} Risk</span>
