@@ -890,27 +890,46 @@ Filing text:
         print(f"  [LLM] Metadata extraction error {ticker}: {e}")
     return {'tx_value': None, 'close_date': None}   
 def extract_close_date(clean_text):
+    # Patterns ordered specific-to-general: qualified phrases first, greedy catch-alls last.
+    # [-\s]+ allows hyphenated forms like "mid-2027" as well as spaced "mid 2027".
     patterns=[
-        r'expected to close.*?(?:in the\s+)?(\w+\s+(?:half of\s+)?\d{4})',
-        r'expected to be completed.*?(?:in the\s+)?(\w+\s+(?:half of\s+)?\d{4})',
-        r'expected to close.*?(\w+\s+\d{4})',
-        r'close.*?(?:by|in)\s+((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+\d{4})',
-        r'anticipated to close.*?(?:in\s+)?((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+\d{4})',
-        r'transaction.*?(?:expected|anticipated|projected).*?(?:close|complete|consummat).*?((?:Q[1-4]|first|second|third|fourth|early|mid|late|second half|first half)\s+(?:of\s+)?\d{4})',
-        r'(?:close|complete|consummat).*?(?:by|in|during)\s+((?:Q[1-4]|first|second|third|fourth|early|mid|late)\s+(?:of\s+)?\d{4})',
-        r'(?:subject to|upon).*?(?:closing|completion).*?(?:by|in)\s+((?:Q[1-4]|\d{4}))',
-        r'((?:Q[1-4])\s+20\d{2})',
-        r'((?:first|second|third|fourth|early|mid|late)\s+(?:half\s+of\s+)?20\d{2})',
-        r'calendar year\s+(20\d{2})',
-        r'(?:fiscal|calendar)\s+(?:year\s+)?(\d{4})',
+        # Specific: qualifier words anchored to close/complete/anticipated language
+        r'(?:expected|anticipated|projected)\s+to\s+close.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:half[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
+        r'(?:expected|anticipated|projected)\s+to\s+be\s+completed.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:half[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
+        r'transaction.*?(?:expected|anticipated|projected).*?(?:close|complete|consummat).*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late|second half|first half)[-\s]+(?:of\s+)?20\d{2})',
+        r'(?:close|complete|consummat).*?(?:by|in|during)\s+((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
+        r'anticipated\s+to\s+close.*?(?:in\s+)?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
+        r'close.*?(?:by|in)\s+((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
+        # Standalone qualifier patterns (no surrounding close language required)
+        r'\b(Q[1-4]\s+20\d{2})\b',
+        r'\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:half[-\s]+of[-\s]+)?20\d{2})\b',
+        r'calendar\s+year\s+(20\d{2})',
+        r'(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})',
+        # Greedy catch-alls last — only fire if nothing above matched
+        r'(?:expected|anticipated)\s+to\s+(?:close|complete).*?(?:in\s+(?:the\s+)?)?((?:first|second|third|fourth|early|mid-?|late)[-\s]+(?:half[-\s]+of[-\s]+)?20\d{2})',
+        r'(?:expected|anticipated)\s+to\s+(?:close|complete).*?(\w+[-\s]+20\d{2})',
     ]
+
+    QUALIFIER_WORDS = {
+        'q1','q2','q3','q4','first','second','third','fourth',
+        'early','mid','late','half','calendar','fiscal',
+    }
+
     for pat in patterns:
-        m=re.search(pat,clean_text[:5000],re.IGNORECASE)
+        m=re.search(pat, clean_text[:5000], re.IGNORECASE)
         if m:
             result = m.group(1).strip()
-            # Validate it looks like a real date reference
-            if any(yr in result for yr in ['2025','2026','2027']):
-                return result
+            if not any(yr in result for yr in ['2025','2026','2027','2028']):
+                continue
+            # Abstention guard: reject bare "of 2026", "the 2026", "in 2026" fragments
+            first_word = re.split(r'[-\s]', result)[0].lower()
+            if first_word in ('of', 'the', 'in'):
+                continue
+            # Bare word+year with no qualifier context → abstain
+            if len(re.split(r'[-\s]', result)) == 2 and first_word not in QUALIFIER_WORDS:
+                continue
+            return result
+
     return 'TBD'
 
 def get_tender_offer_expiration(ticker, cik):
