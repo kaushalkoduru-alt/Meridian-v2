@@ -978,7 +978,7 @@ def get_tender_offer_expiration(ticker, cik):
         return None
 
 def extract_transaction_value(clean_text):
-    text=re.sub(r'\s+',' ',clean_text[:8000].replace('\n',' ').replace('\r',' '))
+    text=re.sub(r'\s+',' ',clean_text[:25000].replace('\n',' ').replace('\r',' '))
     patterns=[
         r'total\s+(?:transaction\s+)?value\s+(?:of\s+)?(?:approximately\s+)?\$(\d+(?:\.\d+)?)\s*(billion|million)',
         r'implies\s+a\s+total\s+(?:value|consideration)\s+(?:of\s+)?(?:approximately\s+)?\$(\d+(?:\.\d+)?)\s*(billion|million)',
@@ -995,9 +995,29 @@ def extract_transaction_value(clean_text):
         m=re.search(pat,text,re.IGNORECASE)
         if m:
             value=float(m.group(1)); unit=m.group(2).lower()
-            if unit=='billion' and 0.05<=value<=500: return round(value,2)
-            if unit=='million' and 50<=value<=500000: return round(value/1000,2)
-    return None
+            if unit=='billion' and 0.05<=value<=500: return round(value,2), 'regex_enterprise'
+            if unit=='million' and 50<=value<=500000: return round(value/1000,2), 'regex_enterprise'
+    return None, None
+
+def compute_equity_tx_fallback(dp, ticker):
+    """
+    Fallback only: equity value = deal_price x shares_outstanding from yfinance.
+    Returns (value_in_billions, 'equity_calc_approx') or (None, None).
+    Convention: EQUITY value (understates enterprise value for leveraged deals).
+    Only fires for per-share all-cash deals when regex fails.
+    Labeled 'equity_calc_approx' so regulatory threshold logic can treat it as approximate.
+    """
+    try:
+        info = yf.Ticker(ticker).info
+        shares = info.get('sharesOutstanding')
+        if not shares or shares <= 0:
+            return None, None
+        equity_b = round(dp * shares / 1e9, 2)
+        if 0.01 <= equity_b <= 1000:
+            return equity_b, 'equity_calc_approx'
+    except Exception as e:
+        print(f"  [TxFallback] {ticker}: equity calc error — {e}")
+    return None, None
 
 def clean_records(records):
     cleaned=[]
@@ -1177,7 +1197,12 @@ def fetch_deals_from_edgar():
                         if to_date:
                             close_date = to_date
                             print(f"  [TO] {ticker} expiration: {to_date}")
-                    tx_value=extract_transaction_value(full_ct)
+                    tx_value, tx_value_source = extract_transaction_value(full_ct)
+                    # Equity calc fallback — only for cash deals when regex failed
+                    if tx_value is None and deal_type in ('All Cash', 'Tender Offer') and dp:
+                        tx_value, tx_value_source = compute_equity_tx_fallback(dp, ticker)
+                    if tx_value is None:
+                        tx_value_source = None
                     financing_signal=extract_financing_signal(full_ct)
                     # Reclassify deal type from filing text — overrides query-assigned type
                     full_ct_lower = full_ct.lower()
@@ -1207,6 +1232,7 @@ def fetch_deals_from_edgar():
             acquirer=VERIFIED_ACQUIRERS.get(ticker, acquirer)
             if ticker in VERIFIED_TX_VALUES and not tx_value:
                 tx_value=VERIFIED_TX_VALUES[ticker]
+                tx_value_source='verified_hardcode'
             if ticker in VERIFIED_CLOSE_DATES:
                 close_date=VERIFIED_CLOSE_DATES[ticker]
             if ticker in VERIFIED_DEAL_TYPES:
@@ -1249,7 +1275,7 @@ def fetch_deals_from_edgar():
                 'company':resolve_company_name(ticker),'deal_type':deal_type,
                 'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'ann':round(ann,2),
                 'score':sc,'risk':risk,'filed':src['file_date'],'days_old':days,
-                'close_date':close_date,'tx_value':tx_value,'break_price':break_price,
+                'close_date':close_date,'tx_value':tx_value,'tx_value_source':tx_value_source,'break_price':break_price,
                 'break_downside':break_downside,'break_price_method':break_price_method,
                 'financing_signal':financing_signal,
                 'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
@@ -1397,6 +1423,7 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                         if tx and isinstance(tx, (int, float)) and 0.01 <= float(tx) <= 500:
                             if not deal.get('tx_value'):
                                 deal['tx_value'] = round(float(tx), 2)
+                                deal['tx_value_source'] = 'regex_enterprise'
                                 enriched = True
                                 print(f"  [Enrich] {ticker} tx_value: {deal['tx_value']}B")
                         if cd and isinstance(cd, str) and len(cd) > 2 and cd.lower() not in ['null','none','tbd','unknown']:
@@ -1904,7 +1931,7 @@ async def field_completeness(token: str = ""):
             "ticker":     d.get("ticker"),
             "acquirer":   {"value": d.get("acquirer"),   "confident": confident_str(d.get("acquirer"))},
             "close_date": {"value": d.get("close_date"), "confident": confident_str(d.get("close_date"))},
-            "tx_value":   {"value": tx_raw,              "confident": confident_num(tx_raw)},
+            "tx_value":   {"value": tx_raw, "source": d.get("tx_value_source"), "confident": confident_num(tx_raw)},
             "deal_type":  {"value": d.get("deal_type"),  "confident": confident_str(d.get("deal_type"))},
         })
 
