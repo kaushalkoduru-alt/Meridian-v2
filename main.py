@@ -1856,18 +1856,39 @@ async def field_completeness(token: str = ""):
         return JSONResponse(status_code=403, content={"error": "Forbidden"})
     deals = load_cache() or []
     rows = []
+
+    def sanitize(val):
+        """Convert nan/inf floats to None so they serialize cleanly to JSON null."""
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+            return None
+        return val
+
+    def confident_str(val):
+        """String fields: None, empty, or known placeholder strings = not confident."""
+        if val is None: return False
+        s = str(val).strip()
+        return s not in ('TBD', 'nan', 'Undisclosed', 'not yet disclosed', '') \
+               and not s.lower().startswith('of 202')
+
+    def confident_num(val):
+        """Numeric fields: None, 0, empty string, or nan/inf = not confident."""
+        if val is None: return False
+        if isinstance(val, float) and (math.isnan(val) or math.isinf(val)): return False
+        try:
+            return float(val) > 0
+        except (TypeError, ValueError):
+            return False
+
     for d in deals:
-        def confident(val, bad_vals=('TBD','nan','Undisclosed','not yet disclosed',None,'')):
-            if val is None: return False
-            s = str(val).strip()
-            return s not in bad_vals and not s.lower().startswith('of 202')
+        tx_raw = sanitize(d.get("tx_value"))
         rows.append({
             "ticker":     d.get("ticker"),
-            "acquirer":   {"value": d.get("acquirer"), "confident": confident(d.get("acquirer"))},
-            "close_date": {"value": d.get("close_date"), "confident": confident(d.get("close_date"))},
-            "tx_value":   {"value": d.get("tx_value"),  "confident": d.get("tx_value") not in (None, 0, "")},
-            "deal_type":  {"value": d.get("deal_type"), "confident": d.get("deal_type") not in (None, "")},
+            "acquirer":   {"value": d.get("acquirer"),   "confident": confident_str(d.get("acquirer"))},
+            "close_date": {"value": d.get("close_date"), "confident": confident_str(d.get("close_date"))},
+            "tx_value":   {"value": tx_raw,              "confident": confident_num(tx_raw)},
+            "deal_type":  {"value": d.get("deal_type"),  "confident": confident_str(d.get("deal_type"))},
         })
+
     incomplete = [r for r in rows if not all(
         v["confident"] for v in [r["acquirer"], r["close_date"], r["tx_value"], r["deal_type"]]
     )]
