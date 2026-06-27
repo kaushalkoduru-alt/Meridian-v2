@@ -738,34 +738,66 @@ def extract_price_from_text(clean_text):
     if not deal_prices: return None
     return max(set(deal_prices),key=deal_prices.count)
 
-def extract_acquirer(clean_text):
-    text=clean_text[:15000]
-    for g in [r'News\s*Release\s*',r'Press\s*Release\s*',r'For\s*Immediate\s*Release\s*',r'Document\w*\s*(?:News\s*)?Release\w*\s*',r'\bDocument\b\s*',r'Under\s*the\s*terms\s*of\s*the\s*(?:proposed\s*)?(?:merger\s*)?agreement[,\s]*',r'Pursuant\s*to\s*the\s*(?:terms\s*of\s*the\s*)?agreement[,\s]*',r'In\s*connection\s*with\s*the\s*(?:proposed\s*)?(?:merger|transaction)[,\s]*',r'Announces\s+Definitive\s+Agreement\s+']:
-        text=re.sub(g,' ',text,flags=re.IGNORECASE)
-    text=re.sub(r'\s+',' ',text).strip()
-    patterns=[
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:has agreed to acquire|will acquire|agreed to acquire|agrees to acquire)',
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+today announced\s+(?:it has agreed|a definitive|an agreement)',
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:to Acquire|to acquire)\s+[A-Z][a-z]',
-        r'(?:acquisition of|merger with)\s+.+?\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s*,|\s*\.)',
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?(?:Inc|Corp|LLC|Ltd|Company|Group|Partners|Capital|Holdings|Networks|Sciences|Pharmaceuticals|Financial|Bancorp|Bancshares|Bank|Trust|Union|Technologies|Solutions|Services|Systems))\s+(?:has agreed|will acquire|agreed|announces|today)',
+def extract_acquirer(clean_text, target_name=''):
+    text = clean_text[:15000]
+    for g in [
+        r'News\s*Release\s*', r'Press\s*Release\s*', r'For\s*Immediate\s*Release\s*',
+        r'Document\w*\s*(?:News\s*)?Release\w*\s*', r'\bDocument\b\s*',
+        r'Announces\s+Definitive\s+Agreement\s+', r'Announces\s+Agreement\s+',
+    ]:
+        text = re.sub(g, ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\s+', ' ', text).strip()
+    patterns = [
+        r'to\s+be\s+acquired\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s+at|\s*,|\s*\.|\s+pursuant)',
+        r'will\s+be\s+acquired\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s+at|\s*,|\s*\.)',
+        r'(?:^|[\.\,]\s*)acquired\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s+at|\s*,|\s*\.)',
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:has\s+agreed\s+to\s+acquire|agreed\s+to\s+acquire|agrees\s+to\s+acquire)',
+        r'(?:that|whereby)\s+([A-Z][A-Za-z0-9\s&\.\-\']{2,40}?)\s+will\s+acquire\b',
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+to\s+acquire\s+(?:all\s+)?(?:of\s+)?(?:the\s+)?[A-Z][a-z]',
+        r'(?:^|[\.]\s+)([A-Z][A-Za-z0-9\s&,\.\-\']{3,40}?)\s+will\s+acquire\b',
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+today\s+announced\s+(?:it\s+has\s+agreed|a\s+definitive|an\s+agreement)',
+        r'\bby\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:for\s+\$|in\s+a\s+|in\s+an\s+)',
+        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?(?:Inc|Corp|LLC|Ltd|Company|Group|Partners|Capital|Holdings|Management|Foods|Entertainment|Pharmaceuticals|Financial|Technologies|Solutions|Services|Systems))\s+(?:has\s+agreed|will\s+acquire|agreed|to\s+acquire|announced)',
     ]
-    bad=['pursuant','stockholder','common stock','the company','which','upon','each','document','exhibit','form 8','the board','the transaction','forward','investor','this agreement','subject to','following','certain','may not be','consummated','cannot be','will not be','is not','are not','buyer','parent','merger sub','acquisition sub','bidder','offeror','purchaser']
-    candidates=[]
+    BAD_PHRASES = [
+        'pursuant', 'stockholder', 'common stock', 'the company', 'which', 'upon',
+        'each', 'document', 'exhibit', 'form 8', 'the board', 'the transaction',
+        'forward', 'investor', 'this agreement', 'subject to', 'following', 'certain',
+        'may not be', 'consummated', 'cannot be', 'will not be', 'is not', 'are not',
+        'buyer', 'parent', 'merger sub', 'acquisition sub', 'bidder', 'offeror',
+        'purchaser', 'wholly-owned', 'wholly owned', 'a subsidiary', 'subsidiary',
+    ]
+    STOP_WORDS = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group',
+                  'holdings', 'plc', 'company', 'famous', 'entertainment'}
+    target_words = set(target_name.lower().split()) - STOP_WORDS if target_name else set()
+    candidates = []
     for pat in patterns:
-        for m in re.findall(pat,text):
-            m=m.strip().rstrip(',.')
-            m=re.sub(r'\s+',' ',m)
-            m=re.sub(r'\s+(?:has|have|will|today|hereby|announces|announced|entered|agrees|agreed|intends)\s*$','',m,flags=re.IGNORECASE).strip()
-            m=re.sub(r',?\s*(?:Inc|Corp|Ltd|LLC)\.?\s*$','',m).strip()
-            if not (2<len(m)<55): continue
-            if any(b in m.lower() for b in bad): continue
+        for m in re.findall(pat, text, re.IGNORECASE):
+            if not isinstance(m, str): continue
+            m = m.strip().rstrip(',.')
+            m = re.sub(r'\s+', ' ', m)
+            m = re.sub(
+                r'\s+(?:has|have|will|today|hereby|announces|announced|entered|'
+                r'agrees|agreed|intends|to\s+acquire|to\s+be)\s*$',
+                '', m, flags=re.IGNORECASE).strip()
+            m = re.sub(r',?\s*(?:Inc|Corp|Ltd|LLC)\.?\s*$', '', m).strip()
+            if not (2 < len(m) < 60): continue
+            if any(b in m.lower() for b in BAD_PHRASES): continue
             if not m[0].isupper(): continue
-            if m.upper()==m and len(m)>5: continue
-            if any(b in m.lower() for b in ['may not','cannot','will not','consummated','merger sub','acquisition sub']): continue
-            if len(m.split()) > 6: continue  # Acquirer names are never more than 6 words
+            if m.upper() == m and len(m) > 5: continue
+            if len(m.split()) > 7: continue
+            if target_words:
+                cand_words = set(m.lower().split()) - STOP_WORDS
+                overlap = len(target_words & cand_words)
+                if overlap >= 2 or (overlap >= 1 and len(target_words) <= 2):
+                    continue
             candidates.append(m)
-    return min(candidates,key=len) if candidates else 'Undisclosed'
+    if not candidates:
+        return 'Undisclosed'
+    multi_word = [c for c in candidates if len(c.split()) > 1]
+    if multi_word:
+        return min(multi_word, key=len)
+    return min(candidates, key=len)
 def extract_acquirer_llm(text_block, ticker):
     """
     Fallback acquirer extraction using Groq (free tier) when regex returns Undisclosed.
@@ -1177,7 +1209,7 @@ def fetch_deals_from_edgar():
                         continue
                     dp=dp_try
                     # Acquirer extraction — regex only, no LLM
-                    acquirer=extract_acquirer(full_ct)
+                    acquirer=extract_acquirer(full_ct, target_name=resolve_company_name(ticker))
                     # Reject if filing company is the acquirer not target
                     if acquirer != 'Undisclosed':
                         ticker_company = resolve_company_name(ticker).lower()
