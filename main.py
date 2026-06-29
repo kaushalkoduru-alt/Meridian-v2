@@ -1797,9 +1797,51 @@ def _find_announcement_filing_for_validation(cik, announced_date_str, window_day
     return None
 
 
+def find_listed_target_ticker(filing_text, filer_ticker):
+    """
+    Search filing text for a listed exchange ticker that isn't the filer's own.
+    Distinguishes Case 1 (OTC/private target — skip) from Case 2 (listed target
+    that may be trackable — surface for manual review).
+    """
+    pattern = r'\((?:NYSE|NASDAQ|AMEX|NYSE\s*American):\s*([A-Z]{1,5})\)'
+    matches = re.findall(pattern, filing_text or '', re.IGNORECASE)
+    for m in matches:
+        if m.upper() != filer_ticker.upper():
+            return m.upper()
+    return None
+
+
+def check_filer_role(ticker, company_name, acquirer, filing_text):
+    """
+    Option A: checks whether extracted acquirer matches the filer's own company name
+    (Jaccard >= 0.6). If yes, the filer is the acquirer not the target — flag for review.
+    Option B (deal-size ratio) deferred until filer_shares is stored on deal records.
+    Returns (flagged: bool, reason: str, listed_target_ticker_or_None).
+    FLAG-FIRST — never auto-removes.
+    """
+    if acquirer and acquirer != 'Undisclosed' and company_name:
+        score = _name_overlap_score(acquirer, company_name)
+        if score >= 0.6:
+            listed_target = find_listed_target_ticker(filing_text, ticker)
+            if listed_target:
+                reason = (
+                    f"Filer \"{company_name}\" appears to be the ACQUIRER "
+                    f"(acquirer \"{acquirer}\" matches filer name, overlap {score:.2f}). "
+                    f"Real target may be trackable: {listed_target} — verify before excluding."
+                )
+            else:
+                reason = (
+                    f"Filer \"{company_name}\" appears to be the ACQUIRER "
+                    f"(acquirer \"{acquirer}\" matches filer name, overlap {score:.2f}). "
+                    f"Target appears non-listed — add filer to EXCLUDED_TICKERS if confirmed."
+                )
+            return True, reason, listed_target
+    return False, '', None
+
+
 def validate_deal(ticker, acquirer, cik, company_name, announced_date_str):
     """
-    Runs four validation checks against a deal. Returns a list of flag dicts,
+    Runs five validation checks against a deal. Returns a list of flag dicts,
     empty if the deal is clean.
 
     Check 1 — SC TO-I form type (issuer self-tender = buyback, not an acquisition)
@@ -1807,6 +1849,8 @@ def validate_deal(ticker, acquirer, cik, company_name, announced_date_str):
     Check 3 — Post-announcement completion signal (Form 25/15 or Item 2.01 8-K
                filed AFTER the announcement date, acquirer-mention verified)
     Check 4 — 180-day age-out (still pending > 180 days after announcement)
+    Check 5 — Filer-as-acquirer detection (Option A name-match, zero network calls)
+               Option B (deal-size ratio) deferred until filer_shares added to deal record.
 
     This is FLAG-FIRST: flags go to VALIDATION_FLAGS for review, never auto-remove.
     """
@@ -1911,6 +1955,26 @@ def validate_deal(ticker, acquirer, cik, company_name, announced_date_str):
             })
     except Exception:
         pass
+
+    # Check 5: filer-as-acquirer detection (Option A — name match, no network calls)
+    # Option B (deal-size ratio) deferred: needs filer_shares on deal record.
+    # To enable Option B later: store shares_outstanding in compute_equity_tx_fallback
+    # and pass deal.get('filer_shares') here from the daily loop.
+    try:
+        filer_flagged, filer_reason, listed_target = check_filer_role(
+            ticker=ticker,
+            company_name=company_name,
+            acquirer=acquirer,
+            filing_text=ann_text,
+        )
+        if filer_flagged:
+            flags.append({
+                "check": "FILER_IS_ACQUIRER",
+                "reason": filer_reason,
+                "listed_target": listed_target,
+            })
+    except Exception as e:
+        print(f"  [Validate] {ticker}: filer-role check error — {e}")
 
     return flags
 
