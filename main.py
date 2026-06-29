@@ -739,6 +739,35 @@ def extract_price_from_text(clean_text):
     if not deal_prices: return None
     return max(set(deal_prices),key=deal_prices.count)
 
+LEAD_JUNK = re.compile(
+    r'^(?:'
+    r'(?:under|pursuant to|as part of|in connection with|in accordance with)'
+    r'\s+(?:the\s+)?(?:terms\s+of\s+)?(?:the\s+)?(?:agreement|merger agreement|transaction|deal)[,\s]+'
+    r'|'
+    r'(?:transaction highlights?|press release|news release|for immediate release)\s+'
+    r'|'
+    r'(?:(?:january|february|march|april|may|june|july|august|september|october|november|december)'
+    r'\s+\d{1,2},?\s*\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4})\s*'
+    r')',
+    re.IGNORECASE
+)
+
+def clean_candidate(m):
+    """Strip leading clause junk and date contamination from a raw regex match.
+    Fixes: 'Under the terms of the agreement, Nuvei' -> 'Nuvei'
+           'Transaction Highlights Paramount' -> 'Paramount'
+           'As part of the agreement, Amazon' -> 'Amazon'
+           'April 8, 2026Catalyst Bancorp' -> 'Catalyst Bancorp'
+    """
+    # Strip leading dates (handles run-together like "April 8, 2026Catalyst")
+    m = re.sub(
+        r'^(?:(?:january|february|march|april|may|june|july|august|september|'
+        r'october|november|december)\s+\d{1,2},?\s*\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4})',
+        '', m, flags=re.IGNORECASE).strip().lstrip(',. ')
+    # Strip leading clause introductions
+    m = LEAD_JUNK.sub('', m).strip().lstrip(',. ')
+    return m
+
 def extract_acquirer(clean_text, target_name=''):
     text = clean_text[:15000]
     for g in [
@@ -767,6 +796,7 @@ def extract_acquirer(clean_text, target_name=''):
         'may not be', 'consummated', 'cannot be', 'will not be', 'is not', 'are not',
         'buyer', 'parent', 'merger sub', 'acquisition sub', 'bidder', 'offeror',
         'purchaser', 'wholly-owned', 'wholly owned', 'a subsidiary', 'subsidiary',
+        'under the terms', 'as part of', 'in connection', 'transaction highlights',
     ]
     STOP_WORDS = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group',
                   'holdings', 'plc', 'company', 'famous', 'entertainment'}
@@ -782,6 +812,7 @@ def extract_acquirer(clean_text, target_name=''):
                 r'agrees|agreed|intends|to\s+acquire|to\s+be)\s*$',
                 '', m, flags=re.IGNORECASE).strip()
             m = re.sub(r',?\s*(?:Inc|Corp|Ltd|LLC)\.?\s*$', '', m).strip()
+            m = clean_candidate(m)
             if not (2 < len(m) < 60): continue
             if any(b in m.lower() for b in BAD_PHRASES): continue
             if not m[0].isupper(): continue
