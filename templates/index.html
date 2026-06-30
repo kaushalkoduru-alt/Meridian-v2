@@ -2141,6 +2141,19 @@ function renderAvatars(){
 
 async function initClerk() {
   try {
+    // Check global paywall bypass FIRST, independent of login state — this is
+    // what makes a fully logged-out visitor also see the full product when
+    // PAYWALL_DISABLED=true. check-subscription alone can't do this since it's
+    // only called below after a Clerk user is found.
+    try {
+      const pwRes = await fetch('/api/paywall-status');
+      const pwData = await pwRes.json();
+      if (pwData.paywall_disabled) {
+        isSubscribed = true;
+        applyPaywallToSections();
+      }
+    } catch(e) { console.log('Paywall status check error:', e); }
+
     await window.Clerk.load();
     clerkReady = true;
     const user = window.Clerk.user;

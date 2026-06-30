@@ -2480,6 +2480,15 @@ async def create_checkout_session(request: Request):
         print(f"Stripe error: {e}")
         return JSONResponse(content={'error': str(e)}, status_code=500)
 
+@app.get("/api/paywall-status")
+async def paywall_status():
+    """No-auth-required check for the global paywall bypass flag. The frontend
+    calls this BEFORE checking Clerk login state, so a fully logged-out visitor
+    can also see the bypass take effect — check-subscription alone can't do this
+    since it's only ever called after a Clerk user is detected."""
+    disabled = os.environ.get('PAYWALL_DISABLED', '').lower() == 'true'
+    return JSONResponse(content={'paywall_disabled': disabled})
+
 @app.get("/api/check-subscription")
 async def check_subscription(email: str = ''):
     # Temporary full-product bypass — does not touch Stripe or auth code.
