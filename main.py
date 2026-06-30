@@ -2104,6 +2104,95 @@ async def get_close_date_review_queue(token: str = ""):
         return JSONResponse(status_code=403, content={"error": "Forbidden"})
     return JSONResponse(content={"queue": REVIEW_QUEUE, "count": len(REVIEW_QUEUE)})
 
+@app.post("/api/admin/reextract-acquirers")
+async def reextract_acquirers(token: str = ""):
+    """
+    One-time re-extraction pass: re-runs the FIXED extract_acquirer against every
+    cached deal's stored filing text and updates the acquirer field where it changes.
+    Skips any ticker in VERIFIED_ACQUIRERS — those hardcodes always win and are
+    never overwritten by this pass. Flag-first in spirit: reports every change made
+    so you can review the diff, rather than silently mutating the cache.
+    """
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+
+    deals = load_cache() or []
+    changes = []
+    skipped_verified = []
+
+    for d in deals:
+        ticker = d.get('ticker', '')
+        if not ticker:
+            continue
+        if ticker in VERIFIED_ACQUIRERS:
+            skipped_verified.append(ticker)
+            continue
+
+        old_acquirer = d.get('acquirer', 'Undisclosed')
+        accession = d.get('accession', '')
+        cik = SEC_CIK_MAP.get(ticker, '')
+        if not cik:
+            continue
+
+        # Re-fetch the same filing text the original extraction used
+        filing_text = None
+        try:
+            sub = requests.get(
+                f"https://data.sec.gov/submissions/CIK{cik}.json",
+                headers=EDGAR_HEADERS, timeout=10
+            ).json()
+            time.sleep(0.12)
+            recent = sub.get("filings", {}).get("recent", {})
+            forms = recent.get("form", [])
+            accs = recent.get("accessionNumber", [])
+            docs = recent.get("primaryDocument", [])
+            items = recent.get("items", [])
+            for form, acc, doc, item in zip(forms, accs, docs, items):
+                if form == "8-K" and doc and item and "1.01" in str(item):
+                    links = get_filing_links(cik, acc, EDGAR_HEADERS)
+                    if links:
+                        for lk in links:
+                            try:
+                                dr = requests.get(lk, headers=EDGAR_HEADERS, timeout=10)
+                                time.sleep(0.12)
+                                ct = extract_targeted_section(dr.text)
+                                if ct and len(ct) > 200:
+                                    filing_text = ct
+                                    break
+                            except Exception:
+                                continue
+                    if filing_text:
+                        break
+        except Exception as e:
+            print(f"  [Reextract] {ticker}: fetch error — {e}")
+            continue
+
+        if not filing_text:
+            continue
+
+        new_acquirer = extract_acquirer(filing_text, target_name=resolve_company_name(ticker))
+
+        if new_acquirer != old_acquirer and new_acquirer != 'Undisclosed':
+            d['acquirer'] = new_acquirer
+            d['acquirer_type'] = get_acquirer_type(d.get('deal_type', 'All Cash'), new_acquirer)
+            changes.append({
+                "ticker": ticker,
+                "old_acquirer": old_acquirer,
+                "new_acquirer": new_acquirer,
+            })
+        time.sleep(0.3)
+
+    if changes:
+        clean = clean_records(deals)
+        save_cache(clean)
+
+    return JSONResponse(content={
+        "changes_made": changes,
+        "changes_count": len(changes),
+        "skipped_verified_hardcodes": skipped_verified,
+        "note": "Cache updated for changed tickers. VERIFIED_ACQUIRERS entries were never touched.",
+    })
+
 @app.post("/api/trigger-scan")
 async def trigger_scan():
     global _scan_running
