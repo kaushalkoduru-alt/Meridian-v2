@@ -753,20 +753,33 @@ LEAD_JUNK = re.compile(
 )
 
 def clean_candidate(m):
-    """Strip leading clause junk and date contamination from a raw regex match.
-    Fixes: 'Under the terms of the agreement, Nuvei' -> 'Nuvei'
-           'Transaction Highlights Paramount' -> 'Paramount'
-           'As part of the agreement, Amazon' -> 'Amazon'
-           'April 8, 2026Catalyst Bancorp' -> 'Catalyst Bancorp'
-    """
-    # Strip leading dates (handles run-together like "April 8, 2026Catalyst")
+    """Strip leading clause junk, date contamination, trailing appositives,
+    and foreign corporate suffixes from a raw regex match."""
     m = re.sub(
         r'^(?:(?:january|february|march|april|may|june|july|august|september|'
         r'october|november|december)\s+\d{1,2},?\s*\d{4}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4})',
         '', m, flags=re.IGNORECASE).strip().lstrip(',. ')
-    # Strip leading clause introductions
     m = LEAD_JUNK.sub('', m).strip().lstrip(',. ')
+    m = re.sub(r',\s+(?:a|an|the)\s+\w+.*$', '', m, flags=re.IGNORECASE).strip()
+    m = re.sub(
+        r',?\s*(?:S\.p\.A\.|S\.A\.|N\.V\.|GmbH|S\.r\.l\.|B\.V\.|A\.S\.|AG|Oyj|AB|PLC|Plc)\.?\s*$',
+        '', m, flags=re.IGNORECASE).strip().rstrip(',.')
     return m
+
+# CAPWORD/CAPRUN: bounds the acquirer capture to a short run of capitalized
+# tokens instead of unbounded lazy matching. This is the real CPRX fix — the
+# old unbounded \s+ let the match span entire run-on sentences (e.g. greedily
+# capturing the target's whole descriptive clause before reaching "has agreed
+# to acquire"). Case-sensitive by design: capitalization is what stops the
+# match at lowercase connector words ("to", "which", "a", "the").
+_CAPWORD = r"[A-Z][A-Za-z0-9&\.\-']*"
+_CAPRUN = rf"({_CAPWORD}(?:\s+{_CAPWORD}){{0,4}})"
+
+def _flex(phrase):
+    """Make only the first letter of a trigger phrase case-flexible; rest stays literal.
+    Needed because patterns below are case-sensitive (for CAPRUN to work), but trigger
+    phrases like 'has agreed to acquire' normally appear lowercase mid-sentence."""
+    return f'[{phrase[0].upper()}{phrase[0].lower()}]{re.escape(phrase[1:])}'
 
 def extract_acquirer(clean_text, target_name=''):
     text = clean_text[:15000]
@@ -777,18 +790,22 @@ def extract_acquirer(clean_text, target_name=''):
     ]:
         text = re.sub(g, ' ', text, flags=re.IGNORECASE)
     text = re.sub(r'\s+', ' ', text).strip()
+
     patterns = [
-        r'to\s+be\s+acquired\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s+at|\s*,|\s*\.|\s+pursuant)',
-        r'will\s+be\s+acquired\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s+at|\s*,|\s*\.)',
-        r'(?:^|[\.\,]\s*)acquired\s+by\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)(?:\s+for|\s+in|\s+at|\s*,|\s*\.)',
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:has\s+agreed\s+to\s+acquire|agreed\s+to\s+acquire|agrees\s+to\s+acquire)',
-        r'(?:that|whereby)\s+([A-Z][A-Za-z0-9\s&\.\-\']{2,40}?)\s+will\s+acquire\b',
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+to\s+acquire\s+(?:all\s+)?(?:of\s+)?(?:the\s+)?[A-Z][a-z]',
-        r'(?:^|[\.]\s+)([A-Z][A-Za-z0-9\s&,\.\-\']{3,40}?)\s+will\s+acquire\b',
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+today\s+announced\s+(?:it\s+has\s+agreed|a\s+definitive|an\s+agreement)',
-        r'\bby\s+([A-Z][A-Za-z0-9\s&,\.\-\']+?)\s+(?:for\s+\$|in\s+a\s+|in\s+an\s+)',
-        r'([A-Z][A-Za-z0-9\s&,\.\-\']+?(?:Inc|Corp|LLC|Ltd|Company|Group|Partners|Capital|Holdings|Management|Foods|Entertainment|Pharmaceuticals|Financial|Technologies|Solutions|Services|Systems))\s+(?:has\s+agreed|will\s+acquire|agreed|to\s+acquire|announced)',
+        rf'{_flex("pursuant to which")} {_CAPRUN}\s+{_flex("has agreed to acquire")}',
+        rf'{_flex("pursuant to which")} {_CAPRUN}\s+{_flex("will acquire")}',
+        rf'{_CAPRUN}\s+{_flex("has agreed to acquire")}',
+        rf'{_CAPRUN}\s+{_flex("agreed to acquire")}',
+        rf'{_CAPRUN}\s+{_flex("agrees to acquire")}',
+        rf'{_CAPRUN}\s+{_flex("will acquire")}',
+        rf'{_CAPRUN}\s+{_flex("to acquire")}\s+(?:all\s+)?(?:of\s+)?(?:the\s+)?{_CAPWORD}',
+        rf'{_flex("to be acquired by")}\s+{_CAPRUN}',
+        rf'{_flex("will be acquired by")}\s+{_CAPRUN}',
+        rf'{_flex("acquired by")}\s+{_CAPRUN}',
+        rf'{_CAPRUN}\s+{_flex("today announced")}',
+        rf'{_flex("by")}\s+{_CAPRUN}\s+{_flex("for")} \$',
     ]
+
     BAD_PHRASES = [
         'pursuant', 'stockholder', 'common stock', 'the company', 'which', 'upon',
         'each', 'document', 'exhibit', 'form 8', 'the board', 'the transaction',
@@ -801,17 +818,13 @@ def extract_acquirer(clean_text, target_name=''):
     STOP_WORDS = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group',
                   'holdings', 'plc', 'company', 'famous', 'entertainment'}
     target_words = set(target_name.lower().split()) - STOP_WORDS if target_name else set()
+
     candidates = []
     for pat in patterns:
-        for m in re.findall(pat, text, re.IGNORECASE):
+        for m in re.findall(pat, text):  # case-sensitive — required for CAPRUN bounding
             if not isinstance(m, str): continue
             m = m.strip().rstrip(',.')
             m = re.sub(r'\s+', ' ', m)
-            m = re.sub(
-                r'\s+(?:has|have|will|today|hereby|announces|announced|entered|'
-                r'agrees|agreed|intends|to\s+acquire|to\s+be)\s*$',
-                '', m, flags=re.IGNORECASE).strip()
-            m = re.sub(r',?\s*(?:Inc|Corp|Ltd|LLC)\.?\s*$', '', m).strip()
             m = clean_candidate(m)
             if not (2 < len(m) < 60): continue
             if any(b in m.lower() for b in BAD_PHRASES): continue
@@ -824,6 +837,7 @@ def extract_acquirer(clean_text, target_name=''):
                 if overlap >= 2 or (overlap >= 1 and len(target_words) <= 2):
                     continue
             candidates.append(m)
+
     if not candidates:
         return 'Undisclosed'
     multi_word = [c for c in candidates if len(c.split()) > 1]
@@ -1289,7 +1303,7 @@ def fetch_deals_from_edgar():
             if not dp: continue
             sp_pct=((dp-cp)/cp)*100
             if sp_pct<-10 or sp_pct>60: continue
-            days=(datetime.today()-datetime.strptime(src['file_date'],'%Y-%m-%d')).days
+            days=(datetime.utcnow().date()-datetime.strptime(src['file_date'],'%Y-%m-%d').date()).days
             if days > 548:
                 print(f"  Rolling drop: {ticker} — deal is {days} days old, likely closed")
                 continue
@@ -2378,6 +2392,11 @@ async def create_checkout_session(request: Request):
 
 @app.get("/api/check-subscription")
 async def check_subscription(email: str = ''):
+    # Temporary full-product bypass — does not touch Stripe or auth code.
+    # Set PAYWALL_DISABLED=true in Railway env vars to show full product to everyone.
+    # Set back to false (or remove the var) to restore normal paywall behavior.
+    if os.environ.get('PAYWALL_DISABLED', '').lower() == 'true':
+        return JSONResponse(content={'subscribed': True})
     if not email:
         return JSONResponse(content={'subscribed': False})
     try:
