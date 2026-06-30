@@ -329,6 +329,7 @@ EXCLUDED_TICKERS = {
     'ASRT',  # Closed 6/16/2026
     'KROS',  # Keros Therapeutics issuer self-tender (buyback, $194M capital return, expired 11/18/2025) — never an acquisition
     'CLST',  # Catalyst Bancorp is the ACQUIRER of Lakeside Bancshares (OTC: LKSB), not a target — wrongly ingested from Catalyst's own merger 8-K
+    'TBPH',  # temporary — CVR deal (Zymeworks, $17/share cash + contingent value right), model doesn't handle CVR spread/close-date correctly yet
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
