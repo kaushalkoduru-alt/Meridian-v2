@@ -754,7 +754,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div class="methodology-banner" onclick="showMethodology()">
       <div>
         <div class="methodology-banner-title">◈ Proprietary V3 Scoring Model</div>
-        <div class="methodology-banner-desc">Six-factor analytical framework applied to live deals · Spread, regulatory complexity, financing signal, deal premium, acquirer type, and days pending · Historical backtest dataset under re-verification</div>
+        <div class="methodology-banner-desc">Six-factor analytical framework applied to live deals · Spread, regulatory complexity, financing signal, deal premium, acquirer type, and days elapsed · Historical backtest dataset under re-verification</div>
       </div>
       <div class="methodology-banner-arrow">→</div>
     </div>
@@ -828,7 +828,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div class="how-card">
         <div class="how-n">02</div>
         <div class="how-t">6-Factor V3 Scoring</div>
-        <div class="how-d">Spread quality, deal type, time pending, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use. No black box.</div>
+        <div class="how-d">Spread quality, deal type, days elapsed, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use. No black box.</div>
       </div>
       <div class="how-card">
         <div class="how-n">03</div>
@@ -1013,7 +1013,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <div class="meth-hero">
     <div class="meth-title">The V3 <em>Scoring</em> Model</div>
     <div class="meth-sub">◈ Methodology · V3 Analytical Framework · Live Deals</div>
-    <p class="meth-desc">Meridian's V3 model combines six factors that real merger arb traders use to assess deal risk: spread at announcement, regulatory complexity, financing signal, deal premium, acquirer type, and days pending. The score is analytical context applied to live deals. Historical backtest statistics are being rebuilt from a fully EDGAR-verified dataset and will be published when complete.</p>
+    <p class="meth-desc">Meridian's V3 model combines six factors that real merger arb traders use to assess deal risk: spread at announcement, regulatory complexity, financing signal, deal premium, acquirer type, and days elapsed. The score is analytical context applied to live deals. Historical backtest statistics are being rebuilt from a fully EDGAR-verified dataset and will be published when complete.</p>
   </div>
   <div class="backtest-strip">
     <div class="bt-cell"><div class="bt-val">6</div><div class="bt-label">Scoring Factors</div><div class="bt-sub">Spread · Regulatory · Financing · Premium · Acquirer · Days</div></div>
@@ -1060,7 +1060,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <tr><td></td><td>Tender Offer</td><td>Fast timeline, high completion rate</td><td class="pts pos r">+8 pts</td></tr>
         <tr><td></td><td>Private Equity</td><td>Financing dependent, moderate risk</td><td class="pts pos r">+5 pts</td></tr>
         <tr><td></td><td>Cash + Stock</td><td>Stock component adds complexity</td><td class="pts neu r">+0 pts</td></tr>
-        <tr><td>3. Time Pending</td><td>Under 90 days</td><td>Fresh deal, low accumulated risk</td><td class="pts pos r">+10 pts</td></tr>
+        <tr><td>3. Days Elapsed</td><td>Under 90 days</td><td>Fresh deal, low accumulated risk</td><td class="pts pos r">+10 pts</td></tr>
         <tr><td></td><td>90 to 270 days</td><td>Normal progression</td><td class="pts neu r">+0 pts</td></tr>
         <tr><td></td><td>270 to 500 days</td><td>Extended, possible complications</td><td class="pts neg r">-5 pts</td></tr>
         <tr><td></td><td>500+ days</td><td>Very extended, serious concern</td><td class="pts neg r">-15 pts</td></tr>
@@ -1272,7 +1272,7 @@ function getScoreBreakdown(d){
     return [
         {label:'Spread Quality',   score:sq,      color:getScoreColor(sq),      desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
         {label:'Deal Structure',   score:ds,      color:getScoreColor(ds),      desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
-        {label:'Time Pending',     score:ts,      color:getScoreColor(ts),      desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
+        {label:'Days Elapsed',     score:ts,      color:getScoreColor(ts),      desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
         {label:'Financing Signal', score:finScore,color:getScoreColor(finScore),desc:`${finLabel(d.financing_signal)} — ${finScore>=80?'strong positive signal, financing secured':finScore>=60?'mild positive signal':finScore>=40?'no clear signal detected':'negative signal, deal contingent on financing'}`},
         {label:'V3 Overall Score', score:d.score, color:getScoreColor(d.score), desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% Uncertain Zone`},
     ];
@@ -1722,7 +1722,7 @@ function renderDeals(deals){
                 <div class="dp-metric"><div class="dp-ml">Deal Price</div><div class="dp-mv sm">$${d.dp.toFixed(2)}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Expected Close</div><div class="dp-mv sm">${cd}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Filed</div><div class="dp-mv sm">${d.filed}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Days Pending</div><div class="dp-mv sm">${d.days_old}d</div></div>
+                <div class="dp-metric"><div class="dp-ml">Days Elapsed</div><div class="dp-mv sm">${d.days_old}d</div></div>
                 <div class="dp-metric"><div class="dp-ml">Transaction Value</div><div class="dp-mv sm">${tv}</div></div>
                 <div class="dp-metric"><div class="dp-ml">Deal Type</div><div class="dp-mv sm">${d.deal_type}</div></div>
                 <div class="dp-metric"><div class="dp-ml">V3 Score</div><div class="dp-mv sm" style="color:${getScoreColor(d.score)}">${d.score}/100</div></div>
