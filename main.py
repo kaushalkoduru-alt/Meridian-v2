@@ -1352,7 +1352,7 @@ def fetch_deals_from_edgar():
             results.append({
                 'ticker':ticker,'acquirer':acquirer,'acquirer_type':acq_type,
                 'company':resolve_company_name(ticker),'deal_type':deal_type,
-                'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'ann':round(ann,2),
+                'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'sp_pct_at_detection':round(sp_pct,2),'ann':round(ann,2),
                 'score':sc,'risk':risk,'filed':src['file_date'],'days_old':days,
                 'close_date':close_date,'tx_value':tx_value,'tx_value_source':tx_value_source,'break_price':break_price,
                 'break_downside':break_downside,'break_price_method':break_price_method,
@@ -2266,28 +2266,7 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
             print(f"Chart error {ticker} attempt {attempt+1}: {e}")
             time.sleep(1)
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
-@app.get("/api/spread-history/{ticker}")
-async def spread_history(ticker: str, filed: str = "2024-01-01"):
-    try:
-        end_date = datetime.utcnow().strftime('%Y-%m-%d')
-        h = yf.Ticker(ticker).history(start=filed, end=end_date)
-        if h.empty:
-            return JSONResponse(content={"history": [], "ticker": ticker})
-        deals = load_cache() or []
-        deal = next((d for d in deals if d['ticker'] == ticker), None)
-        dp = deal.get('dp') if deal else None
-        if not dp:
-            return JSONResponse(content={"history": [], "ticker": ticker})
-        history = []
-        for date, row in h.iterrows():
-            cp = round(float(row['Close']), 2)
-            if cp > 0 and dp > 0:
-                spread = round(((dp - cp) / cp) * 100, 2)
-                history.append({"date": date.strftime('%Y-%m-%d'), "spread": spread, "close": cp})
-        return JSONResponse(content={"history": history, "ticker": ticker, "dp": dp})
-    except Exception as e:
-        print(f"Spread history error {ticker}: {e}")
-        return JSONResponse(content={"history": [], "ticker": ticker})
+
 
 @app.get("/api/catalyst/{ticker}")
 async def get_catalyst(ticker: str, filed: str = "2024-01-01", deal_type: str = "All Cash", tx_value: float = 0):

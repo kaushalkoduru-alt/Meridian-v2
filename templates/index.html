@@ -936,7 +936,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="da-metrics" id="da-metrics"></div>
   <div class="da-section"><div class="da-section-title">Market-Implied Close Probability</div><div id="da-implied-prob"></div></div>
-  <div class="da-section"><div class="da-section-title">Spread History</div><div id="da-spread-chart"></div></div>
+  <div class="da-section"><div class="da-section-title">Spread</div><div id="da-spread-chart"></div></div>
   <div class="da-section"><div class="da-section-title">Risk / Reward Analysis</div><div class="rr-grid" id="da-rr-grid"></div></div>
   <div class="da-section"><div class="da-section-title">Acquirer Intelligence & Regulatory Risk</div><div class="acq-grid" id="da-acq-grid"></div><div class="reg-risk-list" id="da-reg-risk" style="margin-top:1rem"></div></div>
   <div class="da-section"><div class="da-section-title">Comparable Deals & Peer Spread</div><div id="da-comps"></div></div>
@@ -1279,80 +1279,7 @@ function getScoreBreakdown(d){
 }
 
 // ── RENDER ANALYSIS ───────────────────────────────────────────────────────────
-function buildSpreadHistorySVG(history, dp){
-  if(!history||history.length<2) return '<div style="padding:2rem;text-align:center;font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading spread history...</div>';
-  const W=600,H=140,PL=36,PR=12,PT=12,PB=22;
-  const w=W-PL-PR,h=H-PT-PB;
-  const spreads=history.map(p=>p.spread);
-  const minV=Math.min(...spreads)*0.9,maxV=Math.max(...spreads)*1.1;
-  const xs=i=>PL+((i/(history.length-1))*w);
-  const ys=v=>PT+h-((v-minV)/(maxV-minV))*h;
-  const pts=history.map((p,i)=>`${xs(i).toFixed(1)},${ys(p.spread).toFixed(1)}`).join(' ');
-  const today=new Date();
-  const latest=history[history.length-1];
-  const latestColor=latest.spread>=12?'#9e5a4a':latest.spread>=8?'#c8945a':'#4a9e8a';
-  const x1=history[0].date.slice(0,7);
-  const x2=history[Math.floor(history.length/2)].date.slice(0,7);
-  const x3=history[history.length-1].date.slice(0,7);
-  const zeroY=ys(0);
-  const serial=encodeURIComponent(JSON.stringify({history,minV,maxV,PL,w,h,PT,W,H}));
-  return `<div class="spread-chart-wrap" style="position:relative;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;">Daily spread % since announcement · Updates daily</div>
-      <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:${latestColor};font-weight:300;">+${latest.spread.toFixed(2)}% <span style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);">current</span></div>
-    </div>
-    <div class="spread-chart-area" style="position:relative;">
-      <svg id="spread-hist-svg" viewBox="0 0 ${W} ${H}" style="width:100%;height:100%;overflow:visible;">
-        <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
-        <line x1="${PL}" y1="${PT+h}" x2="${PL+w}" y2="${PT+h}" stroke="#162a1c" stroke-width="0.5"/>
-        ${zeroY>=PT&&zeroY<=PT+h?`<line x1="${PL}" y1="${zeroY.toFixed(1)}" x2="${PL+w}" y2="${zeroY.toFixed(1)}" stroke="#162a1c" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.5"/>`:''}
-        <text x="${PL-2}" y="${PT+5}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${maxV.toFixed(1)}%</text>
-        <text x="${PL-2}" y="${PT+h/2+2}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${((maxV+minV)/2).toFixed(1)}%</text>
-        <text x="${PL-2}" y="${PT+h}" font-family="monospace" font-size="5" fill="#2a3a2a" text-anchor="end">${minV.toFixed(1)}%</text>
-        <text x="${PL}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a">${x1}</text>
-        <text x="${PL+w/2}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="middle">${x2}</text>
-        <text x="${PL+w}" y="${H-2}" font-family="monospace" font-size="4" fill="#2a3a2a" text-anchor="end">${x3}</text>
-        <polyline points="${pts}" fill="none" stroke="${latestColor}" stroke-width="1.5"/>
-        <circle cx="${xs(history.length-1).toFixed(1)}" cy="${ys(latest.spread).toFixed(1)}" r="3" fill="${latestColor}"/>
-        <rect id="spread-hr" x="${PL}" y="${PT}" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;" data-serial="${serial}"/>
-        <circle id="spread-vline" cx="0" cy="${PT}" r="0" fill="none" opacity="0" pointer-events="none"/>
-      </svg>
-      <div class="spread-chart-tooltip" id="spread-hist-tooltip"></div>
-    </div>
-    <div style="font-family:'DM Mono',monospace;font-size:0.36rem;color:var(--dim);letter-spacing:0.1em;margin-top:0.5rem;text-align:right;">Historical data via Yahoo Finance · Data availability varies by ticker</div>
-  </div>`;
-}
 
-function attachSpreadHistoryHover(){
-  setTimeout(()=>{
-    const rect=document.getElementById('spread-hr');
-    const tooltip=document.getElementById('spread-hist-tooltip');
-    const vline=document.getElementById('spread-vline');
-    if(!rect||!tooltip||!vline)return;
-    const data=JSON.parse(decodeURIComponent(rect.dataset.serial));
-    rect.addEventListener('mousemove',e=>{
-      const svg=rect.closest('svg');
-      const bbox=svg.getBoundingClientRect();
-      const svgX=(e.clientX-bbox.left)*(data.W/bbox.width);
-      const relX=svgX-data.PL;
-      if(relX<0||relX>data.w){tooltip.style.display='none';vline.setAttribute('opacity','0');return;}
-      const n=data.history.length;
-      const idx=Math.max(0,Math.min(n-1,Math.round((relX/data.w)*(n-1))));
-      const pt=data.history[idx];
-      tooltip.innerHTML=`${pt.date}<br>Spread: +${pt.spread.toFixed(2)}%<br>Price: $${pt.close.toFixed(2)}`;
-      const ptX=data.PL+((idx/(n-1))*data.w);
-      vline.setAttribute('cx',ptX.toFixed(1));
-      tooltip.style.display='block';
-      vline.setAttribute('opacity','1');
-      const parentRect=tooltip.parentElement.getBoundingClientRect();
-      const tl=e.clientX-parentRect.left+10;
-      const tt=e.clientY-parentRect.top-50;
-      tooltip.style.left=Math.min(tl,parentRect.width-160)+'px';
-      tooltip.style.top=Math.max(0,tt)+'px';
-    });
-    rect.addEventListener('mouseleave',()=>{tooltip.style.display='none';vline.setAttribute('opacity','0');});
-  },200);
-}
 
 async function renderAnalysis(deal){
     const bc=getBadgeClass(deal.risk);
@@ -1426,19 +1353,34 @@ async function renderAnalysis(deal){
         document.getElementById('da-implied-prob').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to calculate implied probability.</div>';
     }
 
-    // Live Spread History
-    document.getElementById('da-spread-chart').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading spread history...</div>';
-    try{
-        const histData=await fetch(`/api/spread-history/${deal.ticker}?filed=${deal.filed}&t=${Date.now()}`).then(r=>r.json());
-        if(histData.history&&histData.history.length>1){
-            document.getElementById('da-spread-chart').innerHTML=buildSpreadHistorySVG(histData.history,deal.dp);
-            attachSpreadHistoryHover();
-        } else {
-            document.getElementById('da-spread-chart').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Spread history unavailable — insufficient price data since announcement.</div>';
-        }
-    }catch(e){
-        document.getElementById('da-spread-chart').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to load spread history.</div>';
-    }
+    // Spread at detection vs now — honest two-point display replacing fabricated chart
+    (()=>{
+      const cur = deal.sp_pct != null ? deal.sp_pct : null;
+      const init = deal.sp_pct_at_detection != null ? deal.sp_pct_at_detection : null;
+      const detDate = deal.detected_at ? deal.detected_at.slice(0,10) : deal.filed || '—';
+      const curColor = cur != null ? (cur>=8?'var(--red)':cur>=4?'var(--amber)':'var(--teal)') : 'var(--dim)';
+      const initColor = init != null ? (init>=8?'var(--red)':init>=4?'var(--amber)':'var(--teal)') : 'var(--dim)';
+      const arrow = (cur != null && init != null)
+        ? (cur < init ? ' ↓ compressed' : cur > init ? ' ↑ widened' : ' → unchanged')
+        : '';
+      document.getElementById('da-spread-chart').innerHTML = `
+        <div style="background:var(--bg2);border:1px solid var(--bdr);padding:1.25rem;">
+          <div style="display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">Current Spread</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:${curColor};">${cur != null ? '+'+cur.toFixed(2)+'%' : '—'}</div>
+            </div>
+            ${init != null ? `<div>
+              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">At Detection · ${detDate}</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:${initColor};">+${init.toFixed(2)}%</div>
+            </div>` : `<div>
+              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">Detected</div>
+              <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-top:0.35rem;">${detDate}</div>
+            </div>`}
+          </div>
+          ${arrow ? `<div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.1em;margin-top:0.75rem;">Spread has${arrow} since detection · Real-time snapshot history begins recording from this deploy</div>` : ''}
+        </div>`;
+    })();
 
     // Risk/Reward — only show downside if break price is available
     const invs=[1000,5000,10000,50000,100000];
