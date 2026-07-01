@@ -1353,32 +1353,34 @@ async function renderAnalysis(deal){
         document.getElementById('da-implied-prob').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to calculate implied probability.</div>';
     }
 
-    // Spread at detection vs now — honest two-point display replacing fabricated chart
+    // Spread at detection vs now — honest two-point comparison
     (()=>{
-      const cur = deal.sp_pct != null ? deal.sp_pct : null;
+      const cur  = deal.sp_pct != null ? deal.sp_pct : null;
       const init = deal.sp_pct_at_detection != null ? deal.sp_pct_at_detection : null;
       const detDate = deal.detected_at ? deal.detected_at.slice(0,10) : deal.filed || '—';
-      const curColor = cur != null ? (cur>=8?'var(--red)':cur>=4?'var(--amber)':'var(--teal)') : 'var(--dim)';
+      const curColor  = cur  != null ? (cur >=8?'var(--red)':cur >=4?'var(--amber)':'var(--teal)') : 'var(--dim)';
       const initColor = init != null ? (init>=8?'var(--red)':init>=4?'var(--amber)':'var(--teal)') : 'var(--dim)';
-      const arrow = (cur != null && init != null)
-        ? (cur < init ? ' ↓ compressed' : cur > init ? ' ↑ widened' : ' → unchanged')
-        : '';
+      const delta = (cur != null && init != null) ? cur - init : null;
+      const deltaAbs = delta != null ? Math.abs(delta).toFixed(2) : null;
+      const deltaLabel = delta == null ? '' :
+        delta < -0.1 ? `tightened ${deltaAbs}% since detection (market more confident)` :
+        delta >  0.1 ? `widened +${deltaAbs}% since detection (market less confident)` :
+        'spread unchanged since detection';
+      const deltaColor = delta == null ? 'var(--dim)' : delta > 0.1 ? 'var(--red)' : delta < -0.1 ? 'var(--teal)' : 'var(--dim)';
       document.getElementById('da-spread-chart').innerHTML = `
         <div style="background:var(--bg2);border:1px solid var(--bdr);padding:1.25rem;">
-          <div style="display:flex;gap:2.5rem;align-items:flex-start;flex-wrap:wrap;">
+          <div style="display:flex;gap:3rem;align-items:flex-start;flex-wrap:wrap;">
+            <div>
+              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">At Detection · ${detDate}</div>
+              <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:${initColor};">${init != null ? '+'+init.toFixed(2)+'%' : '—'}</div>
+            </div>
+            <div style="align-self:center;color:var(--dim);font-size:1rem;padding-top:0.5rem;">→</div>
             <div>
               <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">Current Spread</div>
               <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:${curColor};">${cur != null ? '+'+cur.toFixed(2)+'%' : '—'}</div>
             </div>
-            ${init != null ? `<div>
-              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">At Detection · ${detDate}</div>
-              <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:${initColor};">+${init.toFixed(2)}%</div>
-            </div>` : `<div>
-              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">Detected</div>
-              <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);margin-top:0.35rem;">${detDate}</div>
-            </div>`}
           </div>
-          ${arrow ? `<div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.1em;margin-top:0.75rem;">Spread has${arrow} since detection · Real-time snapshot history begins recording from this deploy</div>` : ''}
+          ${deltaLabel ? `<div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:${deltaColor};letter-spacing:0.1em;margin-top:0.85rem;">${deltaLabel}</div>` : ''}
         </div>`;
     })();
 
