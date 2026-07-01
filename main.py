@@ -171,25 +171,97 @@ def redis_set(deals):
         print(f"Redis set error: {e}")
         return False
 
+def append_snapshot(deal, sp_pct, score, risk):
+    """
+    Appends one timestamped snapshot to spread_history and score_history.
+    FIFO cap of 365 entries. Index 0 (first-detection anchor) is ALWAYS preserved —
+    never aged out. Called on pre-pandas source dicts so lists never enter the DataFrame.
+    """
+    now_str = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    CAP = 365
+
+    sh = deal.get('spread_history')
+    if not isinstance(sh, list):
+        sh = []
+    sh.append({'t': now_str, 'sp': round(sp_pct, 2), 'cp': deal.get('cp')})
+    if len(sh) > CAP:
+        sh = [sh[0]] + sh[-(CAP - 1):]  # preserve index 0, FIFO rest
+    deal['spread_history'] = sh
+
+    sch = deal.get('score_history')
+    if not isinstance(sch, list):
+        sch = []
+    sch.append({'t': now_str, 'sc': score, 'risk': risk})
+    if len(sch) > CAP:
+        sch = [sch[0]] + sch[-(CAP - 1):]
+    deal['score_history'] = sch
+
+
 def save_cache(records):
     if not records:
         return
     try:
-        # Strip temp filing text before saving to Redis — work on copies not originals
-        clean_records = [{k: v for k, v in r.items() if k != '_filing_text'} for r in records]
-        df = pd.DataFrame(clean_records).drop_duplicates(subset=['ticker'])
+        # Fields that must never enter pandas — can't be round-tripped as lists.
+        # Redis is the authoritative store for history arrays.
+        LIST_FIELDS   = {'spread_history', 'score_history'}
+        FROZEN_FIELDS = {'sp_pct_at_detection', 'score_at_detection', 'risk_at_detection'}
+
+        # Build ticker-keyed lookup of pre-pandas source dicts (minus _filing_text).
+        # append_snapshot runs here — before pandas — so the fresh entry is in
+        # source_by_ticker and survives the merge back onto post-pandas dicts.
+        source_by_ticker = {}
+        for r in records:
+            t = r.get('ticker')
+            if t:
+                source_by_ticker[t] = {k: v for k, v in r.items() if k != '_filing_text'}
+
+        # Step 1: append snapshots to pre-pandas source dicts.
+        for ticker, d in source_by_ticker.items():
+            sp = d.get('sp_pct')
+            sc = d.get('score')
+            ri = d.get('risk')
+            if sp is not None and sc is not None and ri is not None:
+                append_snapshot(d, sp, sc, ri)
+
+        # Step 2: pandas handles flat scalars only — list fields excluded.
+        scalar_records = [
+            {k: v for k, v in d.items() if k not in LIST_FIELDS}
+            for d in source_by_ticker.values()
+        ]
+        df = pd.DataFrame(scalar_records).drop_duplicates(subset=['ticker'])
         df = df[df['cp'].notna() & (df['cp'] > 0)]
         df['sp_pct'] = pd.to_numeric(df['sp_pct'], errors='coerce').fillna(0)
         df = df.sort_values('sp_pct', ascending=False).reset_index(drop=True)
-        # Replace all NaN values with None so JSON serialization doesn't crash
         df = df.where(pd.notnull(df), None)
         clean = df.to_dict(orient='records')
+
+        # Step 3: merge list fields and frozen fields back from source_by_ticker
+        # onto the post-pandas scalar dicts, right before Redis.
+        # append_snapshot already ran in Step 1 so source_by_ticker has the
+        # fresh snapshot — this merge never clobbers it.
+        for d in clean:
+            ticker = d.get('ticker')
+            src = source_by_ticker.get(ticker, {})
+            for f in LIST_FIELDS:
+                if isinstance(src.get(f), list):
+                    d[f] = src[f]
+            # Write-once belt-and-suspenders: if frozen field already set, preserve it.
+            # Carried deals are protected by Redis persistence; this guard covers the
+            # edge case of a re-detected deal whose old value is still in source_by_ticker.
+            for f in FROZEN_FIELDS:
+                if src.get(f) is not None:
+                    d[f] = src[f]
+
         if len(clean) >= 3:
             merged = rolling_merge(clean)
             redis_set(merged)
             try:
                 tmp = CACHE_FILE + '.tmp'
-                pd.DataFrame(merged).to_csv(tmp, index=False)
+                # Exclude list fields from CSV — pd can't round-trip them.
+                # Redis is the authoritative store for history arrays.
+                _csv_exclude = {'spread_history', 'score_history'}
+                _csv_rows = [{k: v for k, v in d.items() if k not in _csv_exclude} for d in merged]
+                pd.DataFrame(_csv_rows).to_csv(tmp, index=False)
                 os.replace(tmp, CACHE_FILE)
             except:
                 pass
@@ -1353,7 +1425,7 @@ def fetch_deals_from_edgar():
                 'ticker':ticker,'acquirer':acquirer,'acquirer_type':acq_type,
                 'company':resolve_company_name(ticker),'deal_type':deal_type,
                 'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'sp_pct_at_detection':round(sp_pct,2),'ann':round(ann,2),
-                'score':sc,'risk':risk,'filed':src['file_date'],'days_old':days,
+                'score':sc,'risk':risk,'score_at_detection':sc,'risk_at_detection':risk,'filed':src['file_date'],'days_old':days,
                 'close_date':close_date,'tx_value':tx_value,'tx_value_source':tx_value_source,'break_price':break_price,
                 'break_downside':break_downside,'break_price_method':break_price_method,
                 'financing_signal':financing_signal,
