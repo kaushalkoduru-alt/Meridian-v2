@@ -936,7 +936,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
   <div class="da-metrics" id="da-metrics"></div>
   <div class="da-section"><div class="da-section-title">Market-Implied Close Probability</div><div id="da-implied-prob"></div></div>
-  <div class="da-section"><div class="da-section-title">Spread</div><div id="da-spread-chart"></div></div>
+  
   <div class="da-section"><div class="da-section-title">Risk / Reward Analysis</div><div class="rr-grid" id="da-rr-grid"></div></div>
   <div class="da-section"><div class="da-section-title">Acquirer Intelligence & Regulatory Risk</div><div class="acq-grid" id="da-acq-grid"></div><div class="reg-risk-list" id="da-reg-risk" style="margin-top:1rem"></div></div>
   <div class="da-section"><div class="da-section-title">Comparable Deals & Peer Spread</div><div id="da-comps"></div></div>
@@ -1353,36 +1353,7 @@ async function renderAnalysis(deal){
         document.getElementById('da-implied-prob').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to calculate implied probability.</div>';
     }
 
-    // Spread at detection vs now — honest two-point comparison
-    (()=>{
-      const cur  = deal.sp_pct != null ? deal.sp_pct : null;
-      const init = deal.sp_pct_at_detection != null ? deal.sp_pct_at_detection : null;
-      const detDate = deal.detected_at ? deal.detected_at.slice(0,10) : deal.filed || '—';
-      const curColor  = cur  != null ? (cur >=8?'var(--red)':cur >=4?'var(--amber)':'var(--teal)') : 'var(--dim)';
-      const initColor = init != null ? (init>=8?'var(--red)':init>=4?'var(--amber)':'var(--teal)') : 'var(--dim)';
-      const delta = (cur != null && init != null) ? cur - init : null;
-      const deltaAbs = delta != null ? Math.abs(delta).toFixed(2) : null;
-      const deltaLabel = delta == null ? '' :
-        delta < -0.1 ? `tightened ${deltaAbs}% since detection (market more confident)` :
-        delta >  0.1 ? `widened +${deltaAbs}% since detection (market less confident)` :
-        'spread unchanged since detection';
-      const deltaColor = delta == null ? 'var(--dim)' : delta > 0.1 ? 'var(--red)' : delta < -0.1 ? 'var(--teal)' : 'var(--dim)';
-      document.getElementById('da-spread-chart').innerHTML = `
-        <div style="background:var(--bg2);border:1px solid var(--bdr);padding:1.25rem;">
-          <div style="display:flex;gap:3rem;align-items:flex-start;flex-wrap:wrap;">
-            <div>
-              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">At Detection · ${detDate}</div>
-              <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:${initColor};">${init != null ? '+'+init.toFixed(2)+'%' : '—'}</div>
-            </div>
-            <div style="align-self:center;color:var(--dim);font-size:1rem;padding-top:0.5rem;">→</div>
-            <div>
-              <div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--dim);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:0.4rem;">Current Spread</div>
-              <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:300;color:${curColor};">${cur != null ? '+'+cur.toFixed(2)+'%' : '—'}</div>
-            </div>
-          </div>
-          ${deltaLabel ? `<div style="font-family:'DM Mono',monospace;font-size:0.62rem;color:${deltaColor};letter-spacing:0.1em;margin-top:0.85rem;">${deltaLabel}</div>` : ''}
-        </div>`;
-    })();
+    
 
     // Risk/Reward — only show downside if break price is available
     const invs=[1000,5000,10000,50000,100000];
