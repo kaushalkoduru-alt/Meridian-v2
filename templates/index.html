@@ -730,138 +730,228 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </div>
 </div>
 
-<!-- ═══════════════════════════════ LANDING ═══════════════════════════════ -->
-<div id="page-landing" class="page active">
-  <nav class="land-nav">
-    <div class="land-logo">MERI<em>DIAN</em></div>
-    <div class="land-tag">◈ Near Real-Time M&A Arbitrage Intelligence</div>
-    <div style="display:flex;align-items:center;gap:1rem;">
+<div id="page-landing" class="page active" style="background:#100e0a; background-image:radial-gradient(115% 80% at 82% -12%, rgba(92,192,173,0.09), transparent 58%); color:#efe7d6; font-family:'DM Mono', ui-monospace, monospace;">
+
+  <!-- TOP NAV -->
+  <header style="margin:0 auto; padding:22px 20px; display:flex; align-items:center; justify-content:space-between; gap:24px;">
+    <div style="display:flex; align-items:center; gap:13px; flex-shrink:0;">
+      <div style="width:11px; height:11px; transform:rotate(45deg); background:#5fe0c9; box-shadow:0 0 18px rgba(95,224,201,0.7);"></div>
+      <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:27px; letter-spacing:0.01em; line-height:1; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span></div>
+    </div>
+    <nav style="display:flex; align-items:center; gap:30px;">
+      <a href="#positioning" style="font-size:11px; letter-spacing:0.16em; color:#cdbf9f; text-transform:uppercase;">Why Meridian</a>
+      <a href="#value" style="font-size:11px; letter-spacing:0.16em; color:#cdbf9f; text-transform:uppercase;">What You Get</a>
+      <a href="#" onclick="showArbPrimer();return false;" style="font-size:11px; letter-spacing:0.16em; color:#cdbf9f; text-transform:uppercase;">Primer</a>
       <div id="user-avatar-landing"></div>
-      <button class="land-nav-enter" onclick="showDashboard()">Enter Meridian →</button>
-    </div>
-  </nav>
-  <div class="hero">
-    <div class="edition">M&A Arbitrage Intelligence · Sourced from SEC EDGAR</div>
-    <h1 class="hero-title">MERI<em>DIAN</em></h1>
-    <div class="divider"><span class="divider-sym">◈ V3 Intelligence ◈</span></div>
-    <p class="hero-desc">Institutional-grade merger arbitrage intelligence, sourced directly from SEC EDGAR. Every active deal <b>tracked, scored, and updated hourly</b> so you can act with conviction.</p>
-    <div class="stats">
-      <div class="stat"><div class="stat-v" id="landing-deal-count">--</div><div class="stat-l">Active Deals Tracked</div></div>
-      <div class="stat"><div class="stat-v accent-teal">V3</div><div class="stat-l">Scoring Model</div></div>
-      <div class="stat"><div class="stat-v accent-sky">1hr</div><div class="stat-l">Data Refresh Cycle</div></div>
-      <div class="stat"><div class="stat-v accent-amber">SEC</div><div class="stat-l">Primary Data Source</div></div>
-    </div>
-    <div class="methodology-banner" onclick="showMethodology()">
-      <div>
-        <div class="methodology-banner-title">◈ Proprietary V3 Scoring Model</div>
-        <div class="methodology-banner-desc">Six-factor analytical framework applied to live deals · Spread, regulatory complexity, financing signal, deal premium, acquirer type, and days elapsed · Historical backtest dataset under re-verification</div>
-      </div>
-      <div class="methodology-banner-arrow">→</div>
-    </div>
-    <button class="enter-btn" onclick="showDashboard()">Enter Meridian</button>
-  </div>
+      <button onclick="showDashboard()" style="display:inline-flex; align-items:center; gap:8px; padding:9px 17px; background:#5fe0c9; color:#0f1512; font-size:11px; letter-spacing:0.14em; font-weight:600; text-transform:uppercase; border:none; cursor:pointer;">Enter Meridian →</button>
+    </nav>
+  </header>
 
-  <!-- WHAT IS MERGER ARB -->
-  <div class="arb-explainer">
-    <div class="arb-explainer-inner">
-      <div class="arb-title">What is <em>Merger Arbitrage</em>?</div>
-      <div class="arb-sub">◈ A 60-second primer for new readers</div>
-      <div class="arb-grid">
-        <div class="arb-card">
-          <div class="arb-card-title">The Setup</div>
-          <div class="arb-card-body">When Company A announces it will acquire Company B for <b>$50 per share</b>, Company B's stock immediately jumps, but rarely all the way to $50. It might trade at <b>$48.50</b>. That $1.50 gap is the merger arbitrage spread.</div>
-        </div>
-        <div class="arb-card">
-          <div class="arb-card-title">The Trade</div>
-          <div class="arb-card-body">An arb trader buys Company B at $48.50 and waits for the deal to close. When it does, they receive $50 per share — a deal-driven return of <b>$1.50 per share if the deal closes</b>, regardless of where the broader market goes.</div>
-        </div>
-        <div class="arb-card">
-          <div class="arb-card-title">The Risk</div>
-          <div class="arb-card-body">If the deal breaks, blocked by regulators, financing falls through, or the buyer walks, the stock crashes back to its pre-announcement price. That's why <b>predicting deal outcomes</b> is the entire game. That's what Meridian does.</div>
-        </div>
+  <!-- HERO -->
+  <section style="margin:0 auto; padding:72px 20px 68px; display:grid; grid-template-columns:1.55fr 1fr; gap:56px; align-items:center;">
+    <div>
+      <div style="display:inline-flex; align-items:center; gap:9px; padding:5px 13px; border:1px solid rgba(95,224,201,0.3); margin-bottom:26px;">
+        <span style="width:6px; height:6px; transform:rotate(45deg); background:#5fe0c9;"></span>
+        <span style="font-size:10px; letter-spacing:0.22em; color:#6fe6d0; text-transform:uppercase;">Sourced from SEC EDGAR</span>
       </div>
-      <div class="arb-example">
-        <div class="arb-example-label">◈ A Real Example · How to Read the Dashboard</div>
-        <div class="arb-example-text">A deal shows <b>Spread: +4.2%</b> and <b>V3 Risk: Very Low</b>. That means the stock is trading 4.2% below the deal price. If the deal closes, which Meridian's model gives high confidence, you pocket that 4.2% return in roughly 6 months. Annualized, that's over 8%. With a break price of $32.10 shown below, you also know exactly where the stock falls if the deal breaks before risking a single dollar.</div>
+      <h1 style="margin:0; font-family:'Playfair Display', serif; font-weight:400; font-size:60px; line-height:1.04; color:#f6f0e3;">Merger–arbitrage intelligence,<br><span style="color:#5fe0c9;">made legible.</span></h1>
+      <p style="margin:26px 0 0; max-width:560px; font-size:16px; line-height:1.65; color:#cdc2a8; font-family:'DM Sans', sans-serif;">The clarity of a terminal, without the terminal. Live deal tracking, risk–adjusted scoring and break–price intelligence, the analysis usually buried behind thousands of dollars a year, made clear and affordable.</p>
+      <div style="margin-top:34px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+        <button onclick="showDashboard()" style="display:inline-flex; align-items:center; gap:10px; padding:14px 26px; background:#5fe0c9; color:#0f1512; font-size:13px; letter-spacing:0.14em; font-weight:600; text-transform:uppercase; box-shadow:0 0 32px -6px rgba(95,224,201,0.5); border:none; cursor:pointer;">Enter Meridian →</button>
+        <a href="#" onclick="showArbPrimer();return false;" style="display:inline-flex; align-items:center; gap:8px; font-size:12px; letter-spacing:0.1em; color:#cdbf9f; text-transform:uppercase; border-bottom:1px solid rgba(238,228,208,0.22); padding-bottom:3px;">New to merger arb? Start here</a>
       </div>
-    </div>
-  </div>
-
-  <div class="scoring">
-    <div class="s-title">The V3 Scoring System</div>
-    <div class="s-sub">◈ Six-factor analytical framework · Applied to live deals · Not backtested</div>
-    <div class="s-grid">
-      <div class="s-card vl">
-        <div class="s-range">Very Low</div>
-        <div class="s-name">Spread under 8% · Score 75+</div>
-        <div class="s-stat">Spread under 8% · Score 75+</div>
-        <div class="s-desc">Market has maximum conviction. Spread below 8% reflects strong market confidence in deal closure.</div>
-      </div>
-      <div class="s-card lo">
-        <div class="s-range">Low</div>
-        <div class="s-name">Spread under 8% · Score 55–74</div>
-        <div class="s-stat">Spread under 8% · Score 55–74</div>
-        <div class="s-desc">Tight spread with minor score uncertainty from deal structure or regulatory complexity. Still strong risk-adjusted returns historically.</div>
-      </div>
-      <div class="s-card md">
-        <div class="s-range">Medium</div>
-        <div class="s-name">Spread 8–12% · Score 60+</div>
-        <div class="s-stat">Spread 8–12% · Uncertain Zone</div>
-        <div class="s-desc">Uncertain Zone. Market skepticism is meaningful. Size positions carefully and monitor spread direction for signals of deterioration.</div>
-      </div>
-      <div class="s-card hi">
-        <div class="s-range">High</div>
-        <div class="s-name">Spread 12%+ · or Score below 60</div>
-        <div class="s-stat">Spread above 12% · Elevated Risk</div>
-        <div class="s-desc">Market pricing in near-certain failure. 82% of High Risk deals in our dataset broke. Approach only with full understanding of downside.</div>
-      </div>
-    </div>
-    <div class="s-methodology-link">
-      <button class="s-methodology-btn" onclick="showMethodology()">View Full V3 Methodology & Backtest Results →</button>
-    </div>
-    <div class="how-grid">
-      <div class="how-card">
-        <div class="how-n">01</div>
-        <div class="how-t">SEC EDGAR Monitoring</div>
-        <div class="how-d">Every hour, Meridian scans 8-K filings for definitive merger agreements, extracting deal price, acquirer name, transaction value, and expected close date directly from SEC filings.</div>
-      </div>
-      <div class="how-card">
-        <div class="how-n">02</div>
-        <div class="how-t">6-Factor V3 Scoring</div>
-        <div class="how-d">Spread quality, deal type, days elapsed, regulatory complexity, deal premium, and financing commitment language. Six factors that real arb traders actually use. No black box.</div>
-      </div>
-      <div class="how-card">
-        <div class="how-n">03</div>
-        <div class="how-t">Break Price Intelligence</div>
-        <div class="how-d">Pre-announcement stock price pulled for every deal. If this deal breaks, you see exactly where the stock falls — down to the dollar and percentage — before you invest a single cent.</div>
-      </div>
-    </div>
-  </div>
-<!-- TRACK RECORD -->
-  <div class="track-record-section">
-    <div class="tr-inner">
-      <div class="tr-header">
+      <div style="margin-top:40px; display:flex; gap:34px; padding-top:22px; border-top:1px solid rgba(238,228,208,0.1);">
         <div>
-          <div class="tr-label">Model Performance</div>
-          <div class="tr-title">Forward <em>Track Record</em></div>
-          <div class="tr-sub">Scoring begins June 2026. Every live deal scored at detection and logged as outcomes resolve.</div>
+          <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:28px; color:#5fe0c9; line-height:1;" id="landing-deal-count">--</div>
+          <div style="margin-top:6px; font-size:10px; letter-spacing:0.14em; color:#8f8772; text-transform:uppercase;">Live deals tracked</div>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:28px; color:#f4eee0; line-height:1;">100%</div>
+          <div style="margin-top:6px; font-size:10px; letter-spacing:0.14em; color:#8f8772; text-transform:uppercase;">Sourced from filings</div>
+        </div>
+        <div>
+          <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:28px; color:#f4eee0; line-height:1;">$29.99</div>
+          <div style="margin-top:6px; font-size:10px; letter-spacing:0.14em; color:#8f8772; text-transform:uppercase;">/mo vs $2k/mo terminal</div>
         </div>
       </div>
-      <div style="text-align:center;padding:2rem 0;">
-        <div style="font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--muted);font-weight:300;line-height:1.8;max-width:560px;margin:0 auto;">Meridian's forward track record begins June 2026 — every live deal is scored at detection, timestamped, and logged publicly as outcomes resolve. Retrospective backtest results return with our EDGAR-verified historical dataset.</div>
+    </div>
+
+    <!-- hero card: static preview (wire live later) -->
+    <div style="position:relative; background:linear-gradient(180deg, #1f1b14, #17140e); border:1px solid rgba(95,224,201,0.22); padding:24px 24px 20px; box-shadow:0 26px 54px -18px rgba(0,0,0,0.8); overflow:hidden;">
+      <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #5fe0c9, rgba(95,224,201,0.14));"></div>
+      <div style="display:flex; align-items:baseline; justify-content:space-between;">
+        <span style="font-size:10px; letter-spacing:0.2em; color:#6fe6d0; text-transform:uppercase;">Top of the board</span>
+      </div>
+      <div style="margin-top:18px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div>
+          <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:42px; line-height:0.9; color:#f4eee0;">PAYO</div>
+          <div style="margin-top:8px; font-size:12px; font-weight:500; color:#d8cdb4;">Nuvei <span style="color:#5fe0c9;">→</span> Payoneer</div>
+        </div>
+        <span style="padding:3px 9px; font-size:10px; letter-spacing:0.12em; font-weight:600; color:#4fe6cb; background:rgba(79,230,203,0.15); border:1px solid rgba(79,230,203,0.42);">LOW</span>
+      </div>
+      <div style="margin-top:20px; display:flex; align-items:flex-end; gap:13px;">
+        <div style="font-family:'DM Mono', monospace; font-weight:500; font-size:40px; line-height:0.9; color:#5fe0c9;">+3.79%</div>
+        <div style="font-size:10px; letter-spacing:0.2em; color:#7d745f; text-transform:uppercase; padding-bottom:6px;">spread<br>to deal</div>
+      </div>
+      <div style="margin-top:20px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:15px; border-top:1px solid rgba(238,228,208,0.1);">
+        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Last</div><div style="margin-top:5px; font-size:15px; color:#efe7d6;">$7.13</div></div>
+        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Deal</div><div style="margin-top:5px; font-size:15px; color:#f7f1e4; font-weight:500;">$7.40</div></div>
+        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Break</div><div style="margin-top:5px; font-size:15px; color:#f0735e;">$6.10</div></div>
+      </div>
+      <div style="margin-top:16px; font-family:'Cormorant Garamond', serif; font-style:italic; font-size:14px; line-height:1.5; color:#d8cdb6;">Strategic cash buyout, financing committed and a clean regulatory path.</div>
+    </div>
+  </section>
+
+  <!-- POSITIONING -->
+  <section id="positioning" style="margin:0 auto; padding:40px 20px 20px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:26px;">
+      <span style="font-size:11px; letter-spacing:0.28em; color:#6fe6d0; text-transform:uppercase;">Why Meridian</span>
+      <span style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:16px; color:#9a9079;">the same intelligence, a fraction of the price</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+    </div>
+    <p style="margin:0 0 30px; max-width:760px; font-family:'Cormorant Garamond', serif; font-size:23px; line-height:1.5; color:#e2d8c0;">Institutional terminals treat merger arbitrage as a footnote, a screen you have to know how to build. <span style="color:#5fe0c9;">Meridian makes it the whole product</span>, legible in three seconds and priced for one person.</p>
+    <div style="border:1px solid rgba(238,228,208,0.12); background:#141109; overflow:hidden;">
+      <div style="display:grid; grid-template-columns:0.9fr 1.15fr 1fr 1fr;">
+        <div style="padding:18px 22px; background:#0f0d08;"></div>
+        <div style="padding:18px 22px; background:linear-gradient(180deg, rgba(95,224,201,0.12), rgba(95,224,201,0.04)); border-left:1px solid rgba(95,224,201,0.3); border-right:1px solid rgba(95,224,201,0.3); position:relative;">
+          <div style="position:absolute; top:0; left:0; right:0; height:3px; background:#5fe0c9;"></div>
+          <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:22px; color:#f6f0e3;">Meri<span style="color:#5fe0c9;">dian</span></div>
+          <div style="margin-top:4px; font-size:9.5px; letter-spacing:0.16em; color:#6fe6d0; text-transform:uppercase;">Merger–arb, only</div>
+        </div>
+        <div style="padding:18px 22px; background:#0f0d08;">
+          <div style="font-size:17px; font-weight:500; color:#cdbf9f;">Bloomberg</div>
+          <div style="margin-top:4px; font-size:9.5px; letter-spacing:0.16em; color:#7d745f; text-transform:uppercase;">Terminal</div>
+        </div>
+        <div style="padding:18px 22px; background:#0f0d08;">
+          <div style="font-size:17px; font-weight:500; color:#cdbf9f;">FactSet</div>
+          <div style="margin-top:4px; font-size:9.5px; letter-spacing:0.16em; color:#7d745f; text-transform:uppercase;">Workstation</div>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:0.9fr 1.15fr 1fr 1fr; border-top:1px solid rgba(238,228,208,0.09);">
+        <div style="padding:17px 22px; font-size:10.5px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase; align-self:center;">Annual cost</div>
+        <div style="padding:17px 22px; background:rgba(95,224,201,0.05); border-left:1px solid rgba(95,224,201,0.3); border-right:1px solid rgba(95,224,201,0.3); display:flex; align-items:center; gap:9px;"><span style="width:6px; height:6px; transform:rotate(45deg); background:#5fe0c9; flex-shrink:0;"></span><span style="font-size:14px; font-weight:500; color:#f4eee0;">$29.99/mo · ~$360/yr</span></div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">~$24,000 / yr</div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">~$12,000 / yr</div>
+      </div>
+      <div style="display:grid; grid-template-columns:0.9fr 1.15fr 1fr 1fr; border-top:1px solid rgba(238,228,208,0.09);">
+        <div style="padding:17px 22px; font-size:10.5px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase; align-self:center;">Learning curve</div>
+        <div style="padding:17px 22px; background:rgba(95,224,201,0.05); border-left:1px solid rgba(95,224,201,0.3); border-right:1px solid rgba(95,224,201,0.3); display:flex; align-items:center; gap:9px;"><span style="width:6px; height:6px; transform:rotate(45deg); background:#5fe0c9; flex-shrink:0;"></span><span style="font-size:14px; font-weight:500; color:#f4eee0;">Legible in 3 seconds</span></div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">Weeks of training</div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">Steep, command-driven</div>
+      </div>
+      <div style="display:grid; grid-template-columns:0.9fr 1.15fr 1fr 1fr; border-top:1px solid rgba(238,228,208,0.09);">
+        <div style="padding:17px 22px; font-size:10.5px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase; align-self:center;">Focus</div>
+        <div style="padding:17px 22px; background:rgba(95,224,201,0.05); border-left:1px solid rgba(95,224,201,0.3); border-right:1px solid rgba(95,224,201,0.3); display:flex; align-items:center; gap:9px;"><span style="width:6px; height:6px; transform:rotate(45deg); background:#5fe0c9; flex-shrink:0;"></span><span style="font-size:14px; font-weight:500; color:#f4eee0;">Merger arbitrage, only</span></div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">Everything — arb buried</div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">Institutional generalist</div>
+      </div>
+      <div style="display:grid; grid-template-columns:0.9fr 1.15fr 1fr 1fr; border-top:1px solid rgba(238,228,208,0.09);">
+        <div style="padding:17px 22px; font-size:10.5px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase; align-self:center;">Data source</div>
+        <div style="padding:17px 22px; background:rgba(95,224,201,0.05); border-left:1px solid rgba(95,224,201,0.3); border-right:1px solid rgba(95,224,201,0.3); display:flex; align-items:center; gap:9px;"><span style="width:6px; height:6px; transform:rotate(45deg); background:#5fe0c9; flex-shrink:0;"></span><span style="font-size:14px; font-weight:500; color:#f4eee0;">SEC EDGAR, shown to you</span></div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">Aggregated, opaque</div>
+        <div style="padding:17px 22px; font-size:13.5px; color:#9a9079; align-self:center;">Aggregated, opaque</div>
       </div>
     </div>
-  </div>
+    <div style="margin-top:12px; font-size:10px; letter-spacing:0.1em; color:#6f6753; text-transform:uppercase;">Competitor pricing reflects widely reported list rates · single–user, annualized</div>
+  </section>
 
-  <footer>
-    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
-    <div class="footer-links">
-      <button class="footer-link" onclick="showMethodology()">Methodology</button>
-      <button class="footer-link" onclick="showCompare()">Historical Deals</button>
+  <!-- WHAT YOU GET -->
+  <section id="value" style="margin:0 auto; padding:52px 20px 20px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:28px;">
+      <span style="font-size:11px; letter-spacing:0.28em; color:#6fe6d0; text-transform:uppercase;">What You Get</span>
+      <span style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:16px; color:#9a9079;">every deal, decomposed into a decision</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
     </div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>V3 Model · Six-factor analytical framework</div>
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); border:1px solid rgba(238,228,208,0.12); background:#141109;">
+      <div style="padding:24px 20px 22px; border-right:1px solid rgba(238,228,208,0.09);">
+        <div style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:15px; color:#5fe0c9;">01</div>
+        <div style="margin-top:16px; font-family:'Playfair Display', serif; font-weight:400; font-size:19px; line-height:1.2; color:#f4eee0; min-height:46px;">Live deal tracking</div>
+        <div style="margin-top:12px; font-size:12.5px; line-height:1.55; color:#9a9079; font-family:'DM Sans',sans-serif;">Every active US merger, pulled straight from EDGAR filings and priced against the tape in real time.</div>
+      </div>
+      <div style="padding:24px 20px 22px; border-right:1px solid rgba(238,228,208,0.09);">
+        <div style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:15px; color:#5fe0c9;">02</div>
+        <div style="margin-top:16px; font-family:'Playfair Display', serif; font-weight:400; font-size:19px; line-height:1.2; color:#f4eee0; min-height:46px;">Risk–adjusted V3 scoring</div>
+        <div style="margin-top:12px; font-size:12.5px; line-height:1.55; color:#9a9079; font-family:'DM Sans',sans-serif;">Six risk vectors composited into one 0–100 score, so the best opportunity sorts to the top.</div>
+      </div>
+      <div style="padding:24px 20px 22px; border-right:1px solid rgba(238,228,208,0.09);">
+        <div style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:15px; color:#5fe0c9;">03</div>
+        <div style="margin-top:16px; font-family:'Playfair Display', serif; font-weight:400; font-size:19px; line-height:1.2; color:#f4eee0; min-height:46px;">Break–price intelligence</div>
+        <div style="margin-top:12px; font-size:12.5px; line-height:1.55; color:#9a9079; font-family:'DM Sans',sans-serif;">A modeled downside floor for every deal — what the stock trades to if it collapses.</div>
+      </div>
+      <div style="padding:24px 20px 22px; border-right:1px solid rgba(238,228,208,0.09);">
+        <div style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:15px; color:#5fe0c9;">04</div>
+        <div style="margin-top:16px; font-family:'Playfair Display', serif; font-weight:400; font-size:19px; line-height:1.2; color:#f4eee0; min-height:46px;">Regulatory analysis</div>
+        <div style="margin-top:12px; font-size:12.5px; line-height:1.55; color:#9a9079; font-family:'DM Sans',sans-serif;">DOJ, FCC, EC and shareholder gates mapped, with the primary risk vector called out.</div>
+      </div>
+      <div style="padding:24px 20px 22px;">
+        <div style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:15px; color:#5fe0c9;">05</div>
+        <div style="margin-top:16px; font-family:'Playfair Display', serif; font-weight:400; font-size:19px; line-height:1.2; color:#f4eee0; min-height:46px;">Catalyst timelines</div>
+        <div style="margin-top:12px; font-size:12.5px; line-height:1.55; color:#9a9079; font-family:'DM Sans',sans-serif;">The full path to close — filings, reviews and the single dates that move completion odds.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CREDIBILITY -->
+  <section style="margin:0 auto; padding:52px 20px 20px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:28px;">
+      <span style="font-size:11px; letter-spacing:0.28em; color:#6fe6d0; text-transform:uppercase;">Why Trust It</span>
+      <span style="font-family:'Cormorant Garamond', serif; font-style:italic; font-size:16px; color:#9a9079;">honesty is the differentiator</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1.15fr 1fr 1fr 1fr; gap:14px; align-items:stretch;">
+      <div style="background:linear-gradient(180deg, #1c1a13, #16140e); border:1px solid rgba(95,224,201,0.22); padding:26px 24px; display:flex; flex-direction:column; justify-content:center;">
+        <p style="margin:0; font-family:'Cormorant Garamond', serif; font-size:22px; line-height:1.45; color:#e2d8c0;">We don't ask you to take our word for it. <span style="color:#5fe0c9;">Every number traces back to a filing you can open yourself.</span></p>
+      </div>
+      <div style="background:#141109; border:1px solid rgba(238,228,208,0.12); padding:24px 22px;">
+        <span style="width:9px; height:9px; transform:rotate(45deg); background:#5fe0c9; display:inline-block; box-shadow:0 0 14px rgba(95,224,201,0.6);"></span>
+        <div style="margin-top:18px; font-family:'Playfair Display', serif; font-weight:400; font-size:18px; color:#f4eee0;">Sourced from EDGAR</div>
+        <div style="margin-top:11px; font-size:12.5px; line-height:1.6; color:#9a9079; font-family:'DM Sans',sans-serif;">Prices, terms and dates come from the actual SEC filings — not a data vendor's summary. The source is one click away.</div>
+      </div>
+      <div style="background:#141109; border:1px solid rgba(238,228,208,0.12); padding:24px 22px;">
+        <span style="width:9px; height:9px; transform:rotate(45deg); background:#5fe0c9; display:inline-block; box-shadow:0 0 14px rgba(95,224,201,0.6);"></span>
+        <div style="margin-top:18px; font-family:'Playfair Display', serif; font-weight:400; font-size:18px; color:#f4eee0;">Every deal verified</div>
+        <div style="margin-top:11px; font-size:12.5px; line-height:1.6; color:#9a9079; font-family:'DM Sans',sans-serif;">Each merger is checked against its definitive agreement before it reaches the board. No phantom spreads.</div>
+      </div>
+      <div style="background:#141109; border:1px solid rgba(238,228,208,0.12); padding:24px 22px;">
+        <span style="width:9px; height:9px; transform:rotate(45deg); background:#5fe0c9; display:inline-block; box-shadow:0 0 14px rgba(95,224,201,0.6);"></span>
+        <div style="margin-top:18px; font-family:'Playfair Display', serif; font-weight:400; font-size:18px; color:#f4eee0;">A forward track record</div>
+        <div style="margin-top:11px; font-size:12.5px; line-height:1.6; color:#9a9079; font-family:'DM Sans',sans-serif;">Scoring begins June 2026. As deals resolve, outcomes are logged publicly — hits and misses alike.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="margin-top:60px; border-top:1px solid rgba(238,228,208,0.12); background:#0c0a07;">
+    <div style="margin:0 auto; padding:52px 20px 40px;">
+      <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:48px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:13px;">
+            <div style="width:11px; height:11px; transform:rotate(45deg); background:#5fe0c9; box-shadow:0 0 18px rgba(95,224,201,0.7);"></div>
+            <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:26px; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span></div>
+          </div>
+          <p style="margin:18px 0 0; max-width:340px; font-size:12.5px; line-height:1.65; color:#8f8772; font-family:'DM Sans',sans-serif;">Merger–arbitrage intelligence, sourced from SEC EDGAR. The clarity of a terminal, without the terminal.</p>
+          <button onclick="showDashboard()" style="margin-top:22px; display:inline-flex; align-items:center; gap:10px; padding:13px 24px; background:#5fe0c9; color:#0f1512; font-size:12px; letter-spacing:0.14em; font-weight:600; text-transform:uppercase; border:none; cursor:pointer;">Enter Meridian →</button>
+        </div>
+        <div>
+          <div style="font-size:10px; letter-spacing:0.22em; color:#6fe6d0; text-transform:uppercase;">Learn</div>
+          <div style="margin-top:18px; display:flex; flex-direction:column; gap:14px;">
+            <a href="#" onclick="showArbPrimer();return false;" style="font-family:'Playfair Display', serif; font-size:19px; color:#e2d8c0;">What is Merger Arbitrage?</a>
+            <a href="#" onclick="showScoring();return false;" style="font-family:'Playfair Display', serif; font-size:19px; color:#e2d8c0;">V3 Methodology</a>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px; letter-spacing:0.22em; color:#6fe6d0; text-transform:uppercase;">Meridian</div>
+          <div style="margin-top:18px; font-size:12.5px; line-height:1.7; color:#8f8772; font-family:'DM Sans',sans-serif;">Built by Kaushal Koduru</div>
+        </div>
+      </div>
+      <div style="margin-top:44px; padding-top:20px; border-top:1px solid rgba(238,228,208,0.1); display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; font-size:9.5px; letter-spacing:0.1em; color:#6f6753; text-transform:uppercase;">
+        <span>Meridian V3 · Data sourced from SEC EDGAR · Not investment advice</span>
+        <span>Scoring begins June 2026 · outcomes logged publicly as deals resolve</span>
+      </div>
+      <div style="margin-top:16px; font-size:9px; letter-spacing:0.05em; color:#5a5344; line-height:1.6; font-family:'DM Sans',sans-serif;">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
+    </div>
   </footer>
-  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
+
 </div>
 
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
