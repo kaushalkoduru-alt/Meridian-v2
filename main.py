@@ -1785,6 +1785,13 @@ async def get_deals():
             return [sanitize(i) for i in obj]
         return obj
     deals = sanitize(deals or [])
+    # Serve-time overlay: VERIFIED_ACQUIRERS always wins over whatever is in cache.
+    # This means hardcodes take effect immediately on deploy without requiring
+    # a scan, re-extraction, or cache flush.
+    for d in deals:
+        t = d.get('ticker')
+        if t and t in VERIFIED_ACQUIRERS:
+            d['acquirer'] = VERIFIED_ACQUIRERS[t]
     return JSONResponse(content={"deals": deals})
 
 @app.get("/api/scan-status")
