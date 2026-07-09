@@ -372,6 +372,7 @@ VERIFIED_ACQUIRERS = {
     'CZR':  'Fertitta Entertainment',        # confirmed 5/28/26 8-K + press release
     'NATH': 'Smithfield Foods',              # confirmed 1/21/26 8-K
     'AES':  'GIP / EQT Consortium',          # confirmed 3/2/26 8-K — lead acquirers GIP (BlackRock) + EQT
+    'AVNS': 'American Industrial Partners',  # confirmed 4/14/26 8-K — $25/share all-cash PE take-private
 }
 
 VERIFIED_TX_VALUES = {
@@ -876,7 +877,10 @@ def extract_acquirer(clean_text, target_name=''):
         rf'{_flex("will be acquired by")}\s+{_CAPRUN}',
         rf'{_flex("acquired by")}\s+{_CAPRUN}',
         rf'{_CAPRUN}\s+{_flex("today announced")}',
-        rf'{_flex("by")}\s+{_CAPRUN}\s+{_flex("for")} \$',
+        # Extended: catches "for $X" AND "for Approximately $X" (e.g. AVNS headline)
+        rf'{_flex("by")}\s+{_CAPRUN}\s+{_flex("for")}\s+(?:\$|[Aa]pproximately)',
+        # New: catches "advised by [Acquirer]" when acquirer manages funds/affiliates
+        rf'[Aa]dvised\s+by\s+{_CAPRUN}',
     ]
 
     BAD_PHRASES = [
@@ -1781,6 +1785,13 @@ async def get_deals():
             return [sanitize(i) for i in obj]
         return obj
     deals = sanitize(deals or [])
+    # Serve-time overlay: VERIFIED_ACQUIRERS always wins over whatever is in cache.
+    # This means hardcodes take effect immediately on deploy without requiring
+    # a scan, re-extraction, or cache flush.
+    for d in deals:
+        t = d.get('ticker')
+        if t and t in VERIFIED_ACQUIRERS:
+            d['acquirer'] = VERIFIED_ACQUIRERS[t]
     return JSONResponse(content={"deals": deals})
 
 @app.get("/api/scan-status")
