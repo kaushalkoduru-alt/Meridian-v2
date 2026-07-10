@@ -403,6 +403,7 @@ EXCLUDED_TICKERS = {
     'KROS',  # Keros Therapeutics issuer self-tender (buyback, $194M capital return, expired 11/18/2025) — never an acquisition
     'CLST',  # Catalyst Bancorp is the ACQUIRER of Lakeside Bancshares (OTC: LKSB), not a target — wrongly ingested from Catalyst's own merger 8-K
     'TBPH',  # temporary — CVR deal (Zymeworks, $17/share cash + contingent value right), model doesn't handle CVR spread/close-date correctly yet
+    'JHG',   # Closed June 30 2026, cashed out at $52/share, delisted from NYSE
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
@@ -1771,10 +1772,15 @@ async def methodology(): return read_html()
 @app.get("/compare")
 async def compare(): return read_html()
 
-@app.get("/api/deals")
-async def get_deals():
-    deals = load_cache()
-    # Sanitize NaN values before JSON serialization
+def get_clean_deals():
+    """
+    Single source of truth for what the frontend sees.
+    1. Filter out EXCLUDED_TICKERS — deals gone from feed immediately on deploy,
+       no cache purge needed.
+    2. Apply VERIFIED_ACQUIRERS overlay — hardcodes always win over cache.
+    Admin endpoints bypass this and read load_cache() directly so they can
+    still see the full raw cache state.
+    """
     import math
     def sanitize(obj):
         if isinstance(obj, float) and math.isnan(obj):
@@ -1784,15 +1790,19 @@ async def get_deals():
         if isinstance(obj, list):
             return [sanitize(i) for i in obj]
         return obj
-    deals = sanitize(deals or [])
-    # Serve-time overlay: VERIFIED_ACQUIRERS always wins over whatever is in cache.
-    # This means hardcodes take effect immediately on deploy without requiring
-    # a scan, re-extraction, or cache flush.
+    deals = sanitize(load_cache() or [])
+    # Step 1: filter excluded tickers
+    deals = [d for d in deals if d.get('ticker') not in EXCLUDED_TICKERS]
+    # Step 2: apply verified acquirer overrides
     for d in deals:
         t = d.get('ticker')
         if t and t in VERIFIED_ACQUIRERS:
             d['acquirer'] = VERIFIED_ACQUIRERS[t]
-    return JSONResponse(content={"deals": deals})
+    return deals
+
+@app.get("/api/deals")
+async def get_deals():
+    return JSONResponse(content={"deals": get_clean_deals()})
 
 @app.get("/api/scan-status")
 async def scan_status():
@@ -2579,8 +2589,8 @@ async def check_subscription(email: str = ''):
 async def refresh_deals():
     global _scan_running
     if _scan_running:
-        return JSONResponse(content={"deals": load_cache() or []})
+        return JSONResponse(content={"deals": get_clean_deals()})
     _scan_running = True
     asyncio.create_task(run_background_scan())
     await asyncio.sleep(2)
-    return JSONResponse(content={"deals": load_cache() or []})
+    return JSONResponse(content={"deals": get_clean_deals()})
