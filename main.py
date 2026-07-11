@@ -403,6 +403,7 @@ EXCLUDED_TICKERS = {
     'KROS',  # Keros Therapeutics issuer self-tender (buyback, $194M capital return, expired 11/18/2025) — never an acquisition
     'CLST',  # Catalyst Bancorp is the ACQUIRER of Lakeside Bancshares (OTC: LKSB), not a target — wrongly ingested from Catalyst's own merger 8-K
     'TBPH',  # temporary — CVR deal (Zymeworks, $17/share cash + contingent value right), model doesn't handle CVR spread/close-date correctly yet
+    'JHG',   # Closed June 30 2026, cashed out at $52/share, delisted from NYSE
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
@@ -1433,7 +1434,7 @@ def fetch_deals_from_edgar():
                 'close_date':close_date,'tx_value':tx_value,'tx_value_source':tx_value_source,'break_price':break_price,
                 'break_downside':break_downside,'break_price_method':break_price_method,
                 'financing_signal':financing_signal,
-                'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
+                'accession':accession,'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 '_filing_text':full_ct[:10000],  # Temp field for enrichment, stripped before Redis save
             })
             # At-detection: cheap checks only (no extra EDGAR calls).
@@ -1635,19 +1636,98 @@ async def daily_validation_loop():
             if not ticker or not filed or not cik:
                 continue
             try:
+                # ── COMPLETION DETECTION (shadow mode) ───────────────────────
+                # Heuristic pre-filter: skip EDGAR completion check for deals
+                # that are clearly still early/open (saves EDGAR calls).
+                # Only run Check 3 if at least one heuristic suggests possible completion.
+                sp       = deal.get('sp_pct', 999)
+                days_old = deal.get('days_old', 0)
+                close_dt = deal.get('close_date', '')
+                close_passed = False
+                if close_dt and close_dt not in ('TBD', 'Not yet disclosed', ''):
+                    try:
+                        # Parse approximate close date to check if passed
+                        import calendar
+                        yr_match = re.search(r'(20\d{2})', close_dt)
+                        if yr_match:
+                            yr = int(yr_match.group(1))
+                            if 'first half' in close_dt.lower() or 'h1' in close_dt.lower() or 'q1' in close_dt.lower() or 'q2' in close_dt.lower():
+                                close_passed = datetime.utcnow() > datetime(yr, 7, 1)
+                            elif 'second half' in close_dt.lower() or 'h2' in close_dt.lower() or 'q3' in close_dt.lower() or 'q4' in close_dt.lower():
+                                close_passed = datetime.utcnow() > datetime(yr, 12, 31)
+                            elif 'early' in close_dt.lower():
+                                close_passed = datetime.utcnow() > datetime(yr, 4, 1)
+                            elif 'mid' in close_dt.lower():
+                                close_passed = datetime.utcnow() > datetime(yr, 8, 1)
+                            elif 'late' in close_dt.lower():
+                                close_passed = datetime.utcnow() > datetime(yr, 12, 1)
+                            else:
+                                close_passed = datetime.utcnow().year > yr
+                    except Exception:
+                        pass
+
+                run_completion_check = (
+                    abs(sp) < 1.0       # near-zero spread (deal nearly closed or already closed)
+                    or close_passed      # close date has passed
+                    or days_old > 400    # very old deal
+                )
+
+                if run_completion_check:
+                    # Re-run validate_deal Check 3 explicitly for this deal
+                    # validate_deal already has Check 3 built in — run it and
+                    # look for COMPLETION flags specifically
+                    v_flags_completion = validate_deal(ticker, acquirer, cik, company, filed)
+                    completion_flags = [f for f in v_flags_completion
+                                       if f.get('check') in ('COMPLETION_DEREGISTRATION', 'COMPLETION_8K')]
+
+                    if completion_flags:
+                        # Filing-confirmed completion — highest confidence
+                        deal_key = f"{ticker}:{deal.get('accession') or filed}"
+                        evidence = completion_flags[0].get('reason', '')
+                        already_pending = any(p['deal_key'] == deal_key for p in PENDING_EXCLUSIONS)
+                        if not already_pending:
+                            PENDING_EXCLUSIONS.append({
+                                'deal_key': deal_key,
+                                'ticker': ticker,
+                                'acquirer': acquirer,
+                                'evidence': evidence,
+                                'identified_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                                'heuristics': {
+                                    'sp_pct': sp,
+                                    'days_old': days_old,
+                                    'close_passed': close_passed,
+                                },
+                                'auto_exclude_enabled': COMPLETION_AUTO_EXCLUDE,
+                            })
+                            print(f'  [Shadow] Would auto-exclude {ticker} ({deal_key}): {evidence[:80]}')
+                    elif any(f.get('check') == 'AGE_OUT' for f in v_flags_completion) or close_passed:
+                        # Heuristics only — flag for review, never auto-exclude
+                        already = any(f['ticker'] == ticker for f in VALIDATION_FLAGS)
+                        if not already:
+                            VALIDATION_FLAGS.append({
+                                'ticker': ticker,
+                                'detected_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                                'source': 'daily_check_heuristic',
+                                'flags': [{'check': 'POSSIBLE_COMPLETION_NO_FILING',
+                                           'reason': f'sp_pct={sp:.2f}%, days_old={days_old}, close_passed={close_passed} — no completion filing found'}],
+                            })
+                            print(f'  [Validate-daily] {ticker}: possible completion (heuristics only, no filing) — flagged for review')
+
+                # ── STANDARD VALIDATION (other checks) ──────────────────────
                 v_flags = validate_deal(ticker, acquirer, cik, company, filed)
-                if v_flags:
+                # Filter out completion flags — handled above; avoid double-flagging
+                other_flags = [f for f in v_flags
+                               if f.get('check') not in ('COMPLETION_DEREGISTRATION', 'COMPLETION_8K')]
+                if other_flags:
                     already = any(f['ticker'] == ticker for f in VALIDATION_FLAGS)
                     if not already:
                         VALIDATION_FLAGS.append({
                             'ticker': ticker,
                             'detected_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
                             'source': 'daily_check',
-                            'flags': v_flags,
+                            'flags': other_flags,
                         })
-                        print(f'  [Validate-daily] {ticker}: {len(v_flags)} flag(s)')
-                    else:
-                        print(f'  [Validate-daily] {ticker}: already flagged, skipping')
+                        print(f'  [Validate-daily] {ticker}: {len(other_flags)} flag(s)')
                 else:
                     print(f'  [Validate-daily] {ticker}: clean')
                 await asyncio.sleep(2)
@@ -1771,10 +1851,15 @@ async def methodology(): return read_html()
 @app.get("/compare")
 async def compare(): return read_html()
 
-@app.get("/api/deals")
-async def get_deals():
-    deals = load_cache()
-    # Sanitize NaN values before JSON serialization
+def get_clean_deals():
+    """
+    Single source of truth for what the frontend sees.
+    1. Filter out EXCLUDED_TICKERS — deals gone from feed immediately on deploy,
+       no cache purge needed.
+    2. Apply VERIFIED_ACQUIRERS overlay — hardcodes always win over cache.
+    Admin endpoints bypass this and read load_cache() directly so they can
+    still see the full raw cache state.
+    """
     import math
     def sanitize(obj):
         if isinstance(obj, float) and math.isnan(obj):
@@ -1784,15 +1869,19 @@ async def get_deals():
         if isinstance(obj, list):
             return [sanitize(i) for i in obj]
         return obj
-    deals = sanitize(deals or [])
-    # Serve-time overlay: VERIFIED_ACQUIRERS always wins over whatever is in cache.
-    # This means hardcodes take effect immediately on deploy without requiring
-    # a scan, re-extraction, or cache flush.
+    deals = sanitize(load_cache() or [])
+    # Step 1: filter excluded tickers
+    deals = [d for d in deals if d.get('ticker') not in EXCLUDED_TICKERS]
+    # Step 2: apply verified acquirer overrides
     for d in deals:
         t = d.get('ticker')
         if t and t in VERIFIED_ACQUIRERS:
             d['acquirer'] = VERIFIED_ACQUIRERS[t]
-    return JSONResponse(content={"deals": deals})
+    return deals
+
+@app.get("/api/deals")
+async def get_deals():
+    return JSONResponse(content={"deals": get_clean_deals()})
 
 @app.get("/api/scan-status")
 async def scan_status():
@@ -1800,9 +1889,13 @@ async def scan_status():
 
 # ─── ADMIN + VALIDATION ───────────────────────────────────────────────────────
 
-ADMIN_TOKEN     = os.environ.get('ADMIN_TOKEN', '')
-REVIEW_QUEUE    = []   # close-date abstentions from Groq enrichment
-VALIDATION_FLAGS = []  # deals flagged by validate_deal() — reviewed before any removal
+ADMIN_TOKEN      = os.environ.get('ADMIN_TOKEN', '')
+REVIEW_QUEUE     = []   # close-date abstentions from Groq enrichment
+VALIDATION_FLAGS = []   # deals flagged by validate_deal() — reviewed before any removal
+PENDING_EXCLUSIONS = []  # deals shadow-mode would auto-exclude — inspect at /api/admin/pending-exclusions
+# When true, completion-confirmed deals are written to completed_deals in Redis and filtered from feed.
+# Default false (shadow mode) — flip to true only after verifying PENDING_EXCLUSIONS for 1+ week.
+COMPLETION_AUTO_EXCLUDE = os.environ.get('COMPLETION_AUTO_EXCLUDE', 'false').lower() == 'true'
 
 import re as _re
 
@@ -2170,6 +2263,23 @@ async def field_completeness(token: str = ""):
         "incomplete": len(incomplete),
         "deals": rows,
         "needs_attention": incomplete,
+    })
+
+@app.get("/api/admin/pending-exclusions")
+async def get_pending_exclusions(token: str = ""):
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+    return JSONResponse(content={
+        "pending": PENDING_EXCLUSIONS,
+        "count": len(PENDING_EXCLUSIONS),
+        "auto_exclude_enabled": COMPLETION_AUTO_EXCLUDE,
+        "note": (
+            "Shadow mode — these deals WOULD be auto-excluded when COMPLETION_AUTO_EXCLUDE=true. "
+            "Verify every entry is a real completed deal before flipping that env var. "
+            "Each entry shows the EDGAR filing evidence that confirmed completion."
+        ) if not COMPLETION_AUTO_EXCLUDE else (
+            "Auto-exclude is LIVE. These deals have been excluded from the feed via completed_deals in Redis."
+        ),
     })
 
 @app.get("/api/admin/validation-flags")
@@ -2579,8 +2689,8 @@ async def check_subscription(email: str = ''):
 async def refresh_deals():
     global _scan_running
     if _scan_running:
-        return JSONResponse(content={"deals": load_cache() or []})
+        return JSONResponse(content={"deals": get_clean_deals()})
     _scan_running = True
     asyncio.create_task(run_background_scan())
     await asyncio.sleep(2)
-    return JSONResponse(content={"deals": load_cache() or []})
+    return JSONResponse(content={"deals": get_clean_deals()})
