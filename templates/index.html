@@ -1472,7 +1472,7 @@ async function updateLandingStats(){
     try{
         const d  = await fetch('/api/deals').then(r=>r.json());
         const el = document.getElementById('landing-deal-count');
-        if(el) el.textContent = (d.deals?.length||'--')+'+';
+        if(el) el.textContent = (d.deals?.length||'--');
     }catch(e){}
 }
 
