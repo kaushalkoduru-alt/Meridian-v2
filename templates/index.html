@@ -47,10 +47,10 @@ body::before{content:'';position:fixed;inset:0;background-image:repeating-linear
 }
 
 /* ── TICKER ── */
-.ticker-wrap{background:var(--bg3);border-bottom:1px solid var(--bdr);overflow:hidden;padding:0.4rem 0;position:relative;z-index:10;}
+.ticker-wrap{background:var(--bg3);border-bottom:1px solid var(--bdr);overflow:hidden;padding:0.65rem 0;position:relative;z-index:10;}
 .ticker-track{display:inline-flex;animation:scroll 40s linear infinite;white-space:nowrap;}
-@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.ti{display:inline-flex;align-items:center;gap:0.4rem;padding:0 1.25rem;border-right:1px solid var(--bdr2);font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-25%)}}
+.ti{display:inline-flex;align-items:center;gap:0.5rem;padding:0 1.75rem;border-right:1px solid var(--bdr2);font-family:'DM Mono',monospace;font-size:0.8rem;letter-spacing:0.08em;}
 .ti-sym{color:var(--cream);font-weight:500;}
 .ti-pos{color:var(--green);}
 .ti-neg{color:var(--red);}
@@ -1073,43 +1073,54 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 
 </div>
 <!-- ═══════════════════════════════ DASHBOARD ═══════════════════════════════ -->
-<div id="page-dashboard" class="page">
-  <nav class="dnav">
-    <button class="dnav-logo" onclick="showLanding()">MERI<em>DIAN</em></button>
-    <div class="dnav-links">
-      <button class="dnav-link active" onclick="showDashboard()">Deals</button>
-      <button class="dnav-link" onclick="showCompare()">Historical</button>
-      <button class="dnav-link" onclick="showMethodology()">Methodology</button>
+<div id="page-dashboard" class="page" style="background:#100e0a; background-image:radial-gradient(120% 90% at 80% -10%, rgba(74,158,138,0.07), transparent 60%); color:#efe7d6; font-family:'DM Mono', ui-monospace, monospace; padding:34px 20px 64px;">
+
+  <!-- HEADER -->
+  <header style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:22px; border-bottom:1px solid rgba(238,228,208,0.12);">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div style="width:11px; height:11px; transform:rotate(45deg); background:#4fc9b3; box-shadow:0 0 18px rgba(79,201,179,0.6);"></div>
+      <div>
+        <div style="font-family:'Playfair Display', serif; font-weight:500; font-size:32px; letter-spacing:0.01em; line-height:1; color:#f4eee0;">Meridian</div>
+        <div style="margin-top:7px; font-size:10px; letter-spacing:0.32em; color:#8f8772; text-transform:uppercase;">Merger&#8211;Arbitrage Intelligence</div>
+      </div>
     </div>
-    <div class="dnav-r">
-      <div class="dlive"><span class="ddot"></span>Updated Hourly</div>
-      <div class="dts" id="timestamp"></div>
+    <div style="display:flex; align-items:center; gap:26px;">
       <div id="user-avatar-dashboard"></div>
+      <div style="text-align:right;">
+        <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+          <span style="width:7px; height:7px; transform:rotate(45deg); background:#4fc9b3;"></span>
+          <span style="font-size:10.5px; letter-spacing:0.18em; color:#6bbaa8; text-transform:uppercase;">Refreshed Hourly</span>
+        </div>
+        <div style="margin-top:5px; font-size:10.5px; letter-spacing:0.14em; color:#7d745f; text-transform:uppercase;"><span id="m-deals">--</span> active deals tracked</div>
+      </div>
+      <a href="#" onclick="showPage('page-landing');return false;" style="display:inline-flex; align-items:center; gap:7px; padding:9px 18px; background:#4fc9b3; color:#0f1512; font-size:12px; letter-spacing:0.12em; font-weight:600; text-transform:uppercase; text-decoration:none;">&#8592; Home</a>
     </div>
-  </nav>
-  <div class="toolbar">
-    <button class="btn" onclick="showLanding()">← Home</button>
-  </div>
-  
-  <div class="mstrip">
-    <div class="mc"><div class="mc-l">Active Deals</div><div class="mc-v" id="m-deals">--</div><div class="mc-h">tracked from SEC EDGAR</div></div>
-    <div class="mc"><div class="mc-l">Avg Spread</div><div class="mc-v te" id="m-spread">--</div><div class="mc-h">across all positions</div></div>
-    <div class="mc"><div class="mc-l">Avg V3 Score</div><div class="mc-v sk" id="m-score">--</div><div class="mc-h">6-factor model</div></div>
-    <div class="mc"><div class="mc-l">Last Updated</div><div class="mc-v" id="m-updated" style="font-size:0.9rem;color:var(--muted)">--</div><div class="mc-h">auto-refreshes hourly</div></div>
-  </div>
-  <div class="data-note">◈ Prices refresh hourly alongside deal data · For informational purposes only · Not financial advice</div>
-  <div id="deal-list">
-    <div class="loading-wrap"><div class="spinner"></div><div class="loading-title">Loading deal feed</div><div class="loading-sub">Fetching from SEC EDGAR</div></div>
-  </div>
-  <footer>
-    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
-    <div class="footer-links">
-      <button class="footer-link" onclick="showCompare()">Historical Deals</button>
-      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+  </header>
+
+  <!-- BEST OPPORTUNITIES -->
+  <section style="margin-top:38px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:20px;">
+      <span style="font-size:11px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Best Opportunities</span>
+      <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:16px; color:#9a9079;">the highest risk&#8211;adjusted spreads on the board</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
     </div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance<br>V3 Model · Six-factor analytical framework</div>
-  </footer>
-  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results.</div>
+    <div id="hero-opps" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:20px;"></div>
+  </section>
+
+  <!-- ALL DEALS -->
+  <section style="margin-top:48px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:14px;">
+      <span style="font-size:11px; letter-spacing:0.28em; color:#cdbf9f; text-transform:uppercase;">All Deals</span>
+      <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:16px; color:#9a9079;">sorted best&#8211;first by risk&#8211;adjusted return</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+    </div>
+    <div id="deal-list" style="background:#161310; overflow:hidden;"></div>
+    <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; font-size:10px; letter-spacing:0.12em; color:#6f6753; text-transform:uppercase; flex-wrap:wrap; gap:8px;">
+      <span>Spread = (deal &#8722; last) / last &#183; Annualized est. on expected close horizon</span>
+      <span>Break price shown is an estimate of unaffected downside</span>
+    </div>
+  </section>
+
 </div>
 
 <!-- ═══════════════════════════════ DEAL ANALYSIS ═══════════════════════════════ -->
@@ -1464,7 +1475,7 @@ async function buildTicker(){
             return `<span class="ti"><span class="ti-sym">${d.ticker}</span><span class="${cls}">${s}${(d.sp_pct||0).toFixed(2)}%</span></span>`;
         }).join('');
         const track = document.getElementById('ticker-track');
-        track.innerHTML = items + items;
+        track.innerHTML = items + items + items + items;
     }catch(e){}
 }
 
@@ -1804,128 +1815,155 @@ function toggleSection(id){
     }
 }
 
+// ============================================================
+// NEW renderDeals — hero cards + risk-grouped table + stats
+// Real fields: ticker, acquirer, company, cp, dp, sp_pct, ann,
+// risk, break_price, deal_type, score, fetched
+// Preserves showAnalysis(ticker). Self-contained stat writes
+// with null guards (only m-deals is visible in new shell).
+// ============================================================
 function renderDeals(deals){
-    const list=document.getElementById('deal-list');
-    if(!deals||deals.length===0){
-        list.innerHTML='<div class="loading-wrap"><div class="loading-title">No deals available</div><div class="loading-sub">Data refreshes automatically every hour</div></div>';
-        return;
+  var listEl = document.getElementById('deal-list');
+  if(!listEl) return;
+
+  // ---- stats (guarded; only m-deals visible in new shell, rest safely no-op) ----
+  (function(){
+    var el_deals   = document.getElementById('m-deals');
+    var el_spread  = document.getElementById('m-spread');
+    var el_score   = document.getElementById('m-score');
+    var el_updated = document.getElementById('m-updated');
+    var n = (deals||[]).length;
+    if(el_deals) el_deals.textContent = n;
+    if(n){
+      var sumSp=0, sumSc=0, cSp=0, cSc=0;
+      deals.forEach(function(d){
+        if(d.sp_pct!=null && !isNaN(d.sp_pct)){ sumSp+=Number(d.sp_pct); cSp++; }
+        if(d.score!=null && !isNaN(d.score)){ sumSc+=Number(d.score); cSc++; }
+      });
+      var avgSp = cSp? sumSp/cSp : 0;
+      var avgSc = cSc? sumSc/cSc : 0;
+      if(el_spread) el_spread.textContent = (avgSp>=0?'+':'\u2212')+Math.abs(avgSp).toFixed(2)+'%';
+      if(el_score)  el_score.textContent  = Math.round(avgSc)+'/100';
+      if(el_updated && typeof updateLocalTime==='function' && deals[0] && deals[0].fetched){
+        el_updated.textContent = updateLocalTime(deals[0].fetched);
+      }
     }
-    const avgSp=deals.reduce((s,d)=>s+d.sp_pct,0)/deals.length;
-    const avgSc=deals.reduce((s,d)=>s+d.score,0)/deals.length;
-    document.getElementById('m-deals').textContent   =deals.length;
-    document.getElementById('m-spread').textContent  =sign(avgSp)+avgSp.toFixed(2)+'%';
-    document.getElementById('m-score').textContent   =Math.round(avgSc)+'/100';
-    document.getElementById('m-updated').textContent =updateLocalTime(deals[0].fetched);
+  })();
 
-    const sections=[
-        {id:'all-cash',  label:'All Cash Deals',    type:'All Cash'},
-        {id:'cash-stock',label:'Cash + Stock Deals', type:'Cash + Stock'},
-        {id:'tender',    label:'Tender Offer Deals', type:'Tender Offer'},
-        {id:'pe',        label:'Private Equity Deals',type:'Private Equity'},
-    ];
+  if(!deals || !deals.length){
+    listEl.innerHTML = '<div style="padding:40px 22px; color:#7d745f; font-size:13px;">No active deals right now. Check back after the next hourly scan.</div>';
+    var hw0 = document.getElementById('hero-opps'); if(hw0) hw0.innerHTML='';
+    return;
+  }
 
-    let html='', gi=0;
-    sections.forEach(sec=>{
-        const sd=deals.filter(d=>d.deal_type===sec.type);
-        if(!sd.length) return;
-        const asp=sd.reduce((s,d)=>s+d.sp_pct,0)/sd.length;
-        const ic =collapsedSections.has(sec.id);
-        html+=`
-        <div class="section-sep" onclick="toggleSection('${sec.id}')">
-          <div class="section-sep-line"></div>
-          <div class="section-sep-label">
-            ${sec.label}
-            <span class="section-sep-meta">${sd.length} deals · avg ${sign(asp)}${asp.toFixed(2)}%</span>
-            <span class="section-sep-toggle ${ic?'collapsed':''}" id="toggle-${sec.id}">▾</span>
-          </div>
-          <div class="section-sep-line"></div>
-        </div>
-        <div class="section-body ${ic?'collapsed':''}" id="body-${sec.id}" style="max-height:${ic?'0':'9999px'}">
-          <div class="tbl-wrap">
-            <div class="tbl-header">
-              <div class="th">Ticker</div><div class="th">Type</div><div class="th">Acquirer</div>
-              <div class="th">Company</div><div class="th r">Current</div><div class="th r">Deal Price</div>
-              <div class="th r">Spread</div><div class="th r">Ann. Return</div><div class="th r">V3 Risk</div>
-            </div>`;
-        sd.forEach(d=>{
-            const i=gi++;
-            const bc=getBadgeClass(d.risk);
-            const tc=getTypeClass(d.deal_type);
-            const tl=getTypeLabel(d.deal_type);
-            const isExp=expandedIndex===i;
-            const co=d.company||d.ticker+' Corp.';
-            const cd=d.close_date&&d.close_date!=='TBD'&&d.close_date!=='nan'&&!d.close_date.toLowerCase().includes('of 202')?d.close_date:'Not yet disclosed';
-            const txR=d.tx_value&&!isNaN(d.tx_value)?parseFloat(d.tx_value):null;
-            const tv=txR===null?'N/A':txR>=1?'$'+txR.toFixed(1)+'B':'$'+Math.round(txR*1000)+'M';
-            const bp=d.break_price,bd=d.break_downside;
-            const fin=d.financing_signal||'unknown';
-            html+=`
-            <div class="deal-row ${isExp?'expanded':''}" onclick="toggleDeal(${i})">
-              <div class="r-ticker">${d.ticker}</div>
-              <div><span class="r-type ${tc}">${tl}</span></div>
-              <div class="r-acq">${d.acquirer&&d.acquirer!=='Undisclosed'?d.acquirer:'Not yet disclosed'}</div>
-              <div class="r-co">${co}</div>
-              <div class="r-num">${d.cp ? '$'+d.cp.toFixed(2) : 'N/A'}</div>
-              <div class="r-num">$${d.dp.toFixed(2)}</div>
-              <div class="r-spread" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div>
-              <div class="r-num" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div>
-              <div class="r-badge-wrap"><span class="badge ${bc}">${d.risk}</span></div>
-            </div>
-            <div class="detail-panel ${isExp?'open':''}">
-              <div class="dp-top">
-                <div>
-                  <div class="dp-ticker">${d.ticker}</div>
-                  <div class="dp-acq-lbl">Target Company</div>
-                  <div class="dp-acq-name">${co}</div>
-                  <div class="dp-acq-lbl" style="margin-top:0.6rem">Being acquired by</div>
-                  <div class="dp-acq-name">${d.acquirer&&d.acquirer!=='Undisclosed'?d.acquirer:'Not yet disclosed'}</div>
-                </div>
-                <div style="text-align:right">
-                  <span class="badge ${bc}" style="font-size:0.48rem;padding:4px 10px">${d.risk} Risk</span>
-                  <div style="margin-top:0.5rem"><span class="fin-badge ${fin}" style="font-size:0.38rem">${finLabel(fin)}</span></div>
-                </div>
-              </div>
-              <div class="dp-metrics">
-                <div class="dp-metric hi"><div class="dp-ml">Spread</div><div class="dp-mv" style="color:${spColor(d.sp_pct)}">${sign(d.sp_pct)}${d.sp_pct.toFixed(2)}%</div></div>
-                <div class="dp-metric hi"><div class="dp-ml">Ann. Return</div><div class="dp-mv" style="color:${spColor(d.ann)}">${sign(d.ann)}${d.ann.toFixed(2)}%</div></div>
-                <div class="dp-metric hi"><div class="dp-ml">Profit per $10k</div><div class="dp-mv" style="color:${spColor(d.sp_pct)}">$${Math.abs(d.sp_pct/100*10000).toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Current Price</div><div class="dp-mv sm">$${d.cp.toFixed(2)}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Deal Price</div><div class="dp-mv sm">$${d.dp.toFixed(2)}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Expected Close</div><div class="dp-mv sm">${cd}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Filed</div><div class="dp-mv sm">${d.filed}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Days Elapsed</div><div class="dp-mv sm">${d.days_old}d</div></div>
-                <div class="dp-metric"><div class="dp-ml">Transaction Value</div><div class="dp-mv sm">${tv}</div></div>
-                <div class="dp-metric"><div class="dp-ml">Deal Type</div><div class="dp-mv sm">${d.deal_type}</div></div>
-                <div class="dp-metric"><div class="dp-ml">V3 Score</div><div class="dp-mv sm" style="color:${getScoreColor(d.score)}">${d.score}/100</div></div>
-                <div class="dp-metric"><div class="dp-ml">Acquirer Type</div><div class="dp-mv sm">${d.acquirer_type||'Strategic'}</div></div>
-              </div>
-              ${bp||bd?`
-              <div class="break-banner">
-                <div class="break-banner-cell">
-                  <div class="break-banner-label">Break Price</div>
-                  <div class="break-banner-value">${bp?'$'+bp.toFixed(2):'N/A'}</div>
-                  <div class="break-banner-sub">Pre-announcement price</div>
-                </div>
-                <div class="break-banner-cell">
-                  <div class="break-banner-label">Downside if Breaks</div>
-                  <div class="break-banner-value">${bd!==null?bd.toFixed(2)+'%':'N/A'}</div>
-                  <div class="break-banner-sub">From current price</div>
-                </div>
-                <div class="break-banner-cell">
-                  <div class="break-banner-label">Loss per $10k</div>
-                  <div class="break-banner-value">${bd!==null?'-$'+Math.abs(bd/100*10000).toLocaleString('en-US',{maximumFractionDigits:0}):'N/A'}</div>
-                  <div class="break-banner-sub">Estimated maximum loss</div>
-                </div>
-              </div>`:''}
-              <button class="analysis-btn" onclick="event.stopPropagation();showAnalysis(allDeals.find(x=>x.ticker==='${d.ticker}'))">
-                View Full Analysis →
-              </button>
-              <div class="analysis-btn-label">Risk/Reward · Acquirer Intelligence · Comps · Regulatory · V3 Score</div>
-            </div>`;
-        });
-        html+='</div></div>';
+  // deals already sorted best-first by the caller
+
+  function riskMeta(r){
+    switch((r||'').toUpperCase()){
+      case 'VERY LOW': return { fg:'#5fffe0', bg:'rgba(95,255,224,0.16)', bd:'rgba(95,255,224,0.45)' };
+      case 'LOW':      return { fg:'#4fe6cb', bg:'rgba(79,230,203,0.15)', bd:'rgba(79,230,203,0.42)' };
+      case 'MEDIUM':   return { fg:'#ffd84a', bg:'rgba(255,216,74,0.16)', bd:'rgba(255,216,74,0.45)' };
+      default:         return { fg:'#ff9466', bg:'rgba(255,148,102,0.16)', bd:'rgba(255,148,102,0.46)' };
+    }
+  }
+  function typeBadge(t){
+    var map = {'All Cash':'CASH','Private Equity':'PE','Tender Offer':'TENDER','Cash + Stock':'CASH+STOCK'};
+    return map[t] || (t||'').toUpperCase();
+  }
+  var usd  = function(n){ return (n==null||isNaN(n)) ? '\u2014' : '$'+Number(n).toFixed(2); };
+  var sgn  = function(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+Math.abs(Number(n)).toFixed(2)+'%'; };
+  var sgn1 = function(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+Math.abs(Number(n)).toFixed(1)+'%'; };
+  function tagHTML(r){
+    var m = riskMeta(r);
+    return '<span style="display:inline-block; padding:3px 9px; font-size:10px; letter-spacing:0.12em; font-weight:600; color:'+m.fg+'; background:'+m.bg+'; border:1px solid '+m.bd+'; white-space:nowrap;">'+(r||'').toUpperCase()+'</span>';
+  }
+  function typeHTML(t){
+    var map = {'All Cash':'#5a9e6a','Private Equity':'#7fc0b3','Tender Offer':'#e0b86a','Cash + Stock':'#5a9e6a'};
+    var c = map[t] || '#cdbf9f';
+    return '<span style="display:inline-block; padding:2px 7px; font-size:9.5px; letter-spacing:0.12em; text-transform:uppercase; color:'+c+'; border:1px solid rgba(238,228,208,0.16); white-space:nowrap;">'+typeBadge(t)+'</span>';
+  }
+
+  // ================= HERO CARDS (top 3) =================
+  var heroWrap = document.getElementById('hero-opps');
+  if(heroWrap){
+    var heroDeals = deals.slice().sort(function(a,b){ return (b.score||0)-(a.score||0); }).slice(0,3);
+    heroWrap.innerHTML = heroDeals.map(function(d){
+      var m = riskMeta(d.risk);
+      return ''
+      + '<div onclick="showAnalysis(\''+d.ticker+'\')" style="cursor:pointer; position:relative; background:linear-gradient(180deg,#1f1b14,#18150f); border:1px solid rgba(95,224,201,0.22); padding:24px 24px 22px; overflow:hidden; box-shadow:0 18px 38px -12px rgba(0,0,0,0.75);">'
+      +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#5fe0c9,rgba(95,224,201,0.15));"></div>'
+      +   '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">'
+      +     '<div>'
+      +       '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:40px; line-height:0.95; color:#f4eee0;">'+d.ticker+'</div>'
+      +       '<div style="margin-top:9px; font-size:12px; font-weight:500; color:#d8cdb4;">'+(d.acquirer||'\u2014')+' <span style="color:#5fe0c9;">\u2192</span> '+(d.company||'')+'</div>'
+      +     '</div>'
+      +     '<div style="text-align:right;">'
+      +       tagHTML(d.risk)
+      +       '<div style="margin-top:8px; font-size:10px; letter-spacing:0.14em; color:#8f8772; text-transform:uppercase;">V3 Score</div>'
+      +       '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:24px; color:#6bbaa8; line-height:1;">'+(d.score!=null?d.score:'\u2014')+'</div>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="margin-top:22px; display:flex; align-items:flex-end; gap:14px;">'
+      +     '<div style="font-family:\'DM Mono\',monospace; font-weight:600; font-size:42px; line-height:0.9; color:'+m.fg+';">'+sgn(d.sp_pct)+'</div>'
+      +     '<div style="font-size:10px; letter-spacing:0.2em; color:#7d745f; text-transform:uppercase; padding-bottom:7px;">spread<br>to deal</div>'
+      +   '</div>'
+      +   '<div style="margin-top:20px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:16px; border-top:1px solid rgba(238,228,208,0.10);">'
+      +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Last Price</div><div style="margin-top:6px; font-size:16px; color:#efe7d6;">'+usd(d.cp)+'</div></div>'
+      +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Deal Price</div><div style="margin-top:6px; font-size:16px; color:#f7f1e4; font-weight:500;">'+usd(d.dp)+'</div></div>'
+      +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Break Price</div><div style="margin-top:6px; font-size:16px; color:#f0735e;">'+usd(d.break_price)+'</div></div>'
+      +   '</div>'
+      + '</div>';
+    }).join('');
+  }
+
+  // ================= TABLE (risk-grouped) =================
+  var cols = '92px 74px minmax(120px,1.1fr) minmax(150px,1.5fr) 82px 82px 100px 92px 104px';
+  var groupDefs = [
+    { risk:'Very Low', label:'Very Low Risk' },
+    { risk:'Low',      label:'Low Risk' },
+    { risk:'Medium',   label:'Medium Risk' },
+    { risk:'High',     label:'High Risk' }
+  ];
+
+  var html = ''
+    + '<div style="display:grid; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; background:#1b1712; border-bottom:1px solid rgba(238,228,208,0.12); font-size:9.5px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase;">'
+    +   '<div>Ticker</div><div>Type</div><div>Acquirer</div><div>Company</div>'
+    +   '<div style="text-align:right;">Last</div><div style="text-align:right;">Deal</div>'
+    +   '<div style="text-align:right;">Spread</div><div style="text-align:right;">Ann.</div>'
+    +   '<div style="text-align:right;">Risk</div>'
+    + '</div>';
+
+  var lastBorderColor = null;
+  groupDefs.forEach(function(g){
+    var rows = deals.filter(function(d){ return (d.risk||'').toUpperCase() === g.risk.toUpperCase(); });
+    if(!rows.length) return;
+    var m = riskMeta(g.risk);
+    lastBorderColor = m.bd;
+    html += '<div style="display:flex; align-items:center; gap:11px; padding:11px 22px 10px; border-top:1px solid '+m.bd+'; background:#100e0a;">'
+          +   '<span style="font-size:9.5px; letter-spacing:0.2em; color:'+m.fg+'; text-transform:uppercase;">'+g.label+'</span>'
+          +   '<span style="font-size:9.5px; letter-spacing:0.12em; color:#7d745f;">'+rows.length+(rows.length===1?' deal':' deals')+'</span>'
+          + '</div>';
+    rows.forEach(function(d){
+      var m2 = riskMeta(d.risk);
+      html += '<div onclick="showAnalysis(\''+d.ticker+'\')" onmouseover="this.style.background=\'rgba(92,192,173,0.05)\'" onmouseout="this.style.background=\'transparent\'" style="cursor:pointer; display:grid; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; border-bottom:1px solid rgba(238,228,208,0.07); transition:background 0.12s ease; background:transparent;">'
+            +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">'+d.ticker+'</div>'
+            +   '<div>'+typeHTML(d.deal_type)+'</div>'
+            +   '<div style="font-size:13px; font-weight:500; color:#f3ead7;">'+(d.acquirer||'\u2014')+'</div>'
+            +   '<div style="font-size:13px; font-weight:500; color:#cdc2a8;">'+(d.company||'')+'</div>'
+            +   '<div style="text-align:right; font-size:13px; color:#cdbf9f;">'+usd(d.cp)+'</div>'
+            +   '<div style="text-align:right; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div>'
+            +   '<div style="text-align:right; font-size:14px; font-weight:600; color:'+m2.fg+';">'+sgn(d.sp_pct)+'</div>'
+            +   '<div style="text-align:right; font-size:12.5px; color:#9a9079;">'+sgn1(d.ann)+'</div>'
+            +   '<div style="text-align:right;">'+tagHTML(d.risk)+'</div>'
+            + '</div>';
     });
-    list.innerHTML=html;
+  });
+
+  if(lastBorderColor){
+    html += '<div style="border-top:1px solid '+lastBorderColor+';"></div>';
+  }
+
+  listEl.innerHTML = html;
 }
 
 function toggleDeal(i){
