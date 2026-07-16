@@ -800,29 +800,29 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       </div>
     </div>
 
-    <!-- hero card: static preview (wire live later) -->
-    <div style="position:relative; background:linear-gradient(180deg, #1f1b14, #17140e); border:1px solid rgba(95,224,201,0.22); padding:24px 24px 20px; box-shadow:0 26px 54px -18px rgba(0,0,0,0.8); overflow:hidden;">
+    <!-- hero card: top deal by V3 score, filled by updateLandingStats() -->
+    <div id="hero-card" style="position:relative; cursor:pointer; background:linear-gradient(180deg, #1f1b14, #17140e); border:1px solid rgba(95,224,201,0.22); padding:24px 24px 20px; box-shadow:0 26px 54px -18px rgba(0,0,0,0.8); overflow:hidden; transition:border-color 0.18s ease, transform 0.18s ease;" onmouseover="this.style.borderColor='rgba(95,224,201,0.5)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.borderColor='rgba(95,224,201,0.22)'; this.style.transform='translateY(0)';">
       <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #5fe0c9, rgba(95,224,201,0.14));"></div>
       <div style="display:flex; align-items:baseline; justify-content:space-between;">
         <span style="font-size:10px; letter-spacing:0.2em; color:#6fe6d0; text-transform:uppercase;">Top of the board</span>
+        <span style="font-size:10px; letter-spacing:0.14em; color:#8f8772; text-transform:uppercase;">V3 Score <span id="hero-score" style="color:#6bbaa8; font-weight:600;">--</span></span>
       </div>
       <div style="margin-top:18px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
         <div>
-          <div style="font-family:'Playfair Display', serif; font-weight:400; font-size:42px; line-height:0.9; color:#f4eee0;">PAYO</div>
-          <div style="margin-top:8px; font-size:12px; font-weight:500; color:#e8e0d0;">Nuvei <span style="color:#5fe0c9;">→</span> Payoneer</div>
+          <div id="hero-ticker" style="font-family:'Playfair Display', serif; font-weight:400; font-size:42px; line-height:0.9; color:#f4eee0;">--</div>
+          <div id="hero-parties" style="margin-top:8px; font-size:12px; font-weight:500; color:#e8e0d0;">--</div>
         </div>
-        <span style="padding:3px 9px; font-size:10px; letter-spacing:0.12em; font-weight:600; color:#4fe6cb; background:rgba(79,230,203,0.15); border:1px solid rgba(79,230,203,0.42);">LOW</span>
+        <span id="hero-risk" style="padding:3px 9px; font-size:10px; letter-spacing:0.12em; font-weight:600; color:#4fe6cb; background:rgba(79,230,203,0.15); border:1px solid rgba(79,230,203,0.42);">--</span>
       </div>
       <div style="margin-top:20px; display:flex; align-items:flex-end; gap:13px;">
-        <div style="font-family:'DM Mono', monospace; font-weight:500; font-size:40px; line-height:0.9; color:#5a9e6a;">+3.79%</div>
+        <div id="hero-spread" style="font-family:'DM Mono', monospace; font-weight:500; font-size:40px; line-height:0.9; color:#5a9e6a;">--</div>
         <div style="font-size:10px; letter-spacing:0.2em; color:#7d745f; text-transform:uppercase; padding-bottom:6px;">spread<br>to deal</div>
       </div>
       <div style="margin-top:20px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:15px; border-top:1px solid rgba(238,228,208,0.1);">
-        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Last</div><div style="margin-top:5px; font-size:15px; color:#efe7d6;">$7.13</div></div>
-        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Deal</div><div style="margin-top:5px; font-size:15px; color:#f7f1e4; font-weight:500;">$7.40</div></div>
-        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Break</div><div style="margin-top:5px; font-size:15px; color:#f0735e;">$6.10</div></div>
+        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Last</div><div id="hero-last" style="margin-top:5px; font-size:15px; color:#efe7d6;">--</div></div>
+        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Deal</div><div id="hero-deal" style="margin-top:5px; font-size:15px; color:#f7f1e4; font-weight:500;">--</div></div>
+        <div><div style="font-size:10px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Break</div><div id="hero-break" style="margin-top:5px; font-size:15px; color:#f0735e;">--</div></div>
       </div>
-      <div style="margin-top:16px; font-family:'DM Mono',monospace; font-style:italic; font-size:14px; line-height:1.5; color:#d8cdb6;">Strategic cash buyout, financing committed and a clean regulatory path.</div>
     </div>
   </section>
 
@@ -1079,10 +1079,10 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <header style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:22px; border-bottom:1px solid rgba(238,228,208,0.12);">
     <div style="display:flex; align-items:center; gap:16px;">
       <div style="width:11px; height:11px; transform:rotate(45deg); background:#4fc9b3; box-shadow:0 0 18px rgba(79,201,179,0.6);"></div>
-      <div>
-        <div style="font-family:'Playfair Display', serif; font-weight:500; font-size:32px; letter-spacing:0.01em; line-height:1; color:#f4eee0;">Meridian</div>
+      <a href="#" onclick="showPage('page-landing');return false;" style="text-decoration:none;">
+        <div style="font-family:'Playfair Display', serif; font-weight:500; font-size:32px; letter-spacing:0.01em; line-height:1; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span></div>
         <div style="margin-top:7px; font-size:10px; letter-spacing:0.32em; color:#8f8772; text-transform:uppercase;">Merger&#8211;Arbitrage Intelligence</div>
-      </div>
+      </a>
     </div>
     <div style="display:flex; align-items:center; gap:26px;">
       <div id="user-avatar-dashboard"></div>
@@ -1121,55 +1121,159 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </section>
 
+  <!-- FOOTER -->
+  <footer style="margin-top:56px; padding-top:28px; border-top:1px solid rgba(238,228,208,0.12);">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap;">
+      <div style="font-family:'Playfair Display', serif; font-size:18px; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span> <span style="font-size:11px; color:#8f8772; font-family:'DM Mono',monospace; letter-spacing:0.1em;">· Built by Kaushal Koduru</span></div>
+      <div style="font-size:10px; letter-spacing:0.12em; color:#6f6753; text-transform:uppercase;">Data · SEC EDGAR / Yahoo Finance</div>
+    </div>
+    <div style="margin-top:16px; font-size:9.5px; letter-spacing:0.04em; color:#5a5344; line-height:1.6; font-family:'DM Mono',monospace;">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
+  </footer>
+
 </div>
 
 <!-- ═══════════════════════════════ DEAL ANALYSIS ═══════════════════════════════ -->
-<div id="page-analysis" class="page">
-  <nav class="dnav">
-    <button class="dnav-logo" onclick="showLanding()">MERI<em>DIAN</em></button>
-    <div class="dnav-links">
-      <button class="dnav-link" onclick="showDashboard()">Deals</button>
-      <button class="dnav-link" onclick="showCompare()">Historical</button>
-      <button class="dnav-link" onclick="showMethodology()">Methodology</button>
-    </div>
-    <div class="dnav-r">
-      <button class="da-back" onclick="showDashboard()">← Back to Deals</button>
-      <div id="user-avatar-analysis"></div>
-    </div>
-  </nav>
-  <div class="da-hero">
-    <div class="da-hero-top">
+<div id="page-analysis" class="page" style="background:#100e0a; background-image:radial-gradient(120% 90% at 82% -8%, rgba(74,158,138,0.05), transparent 58%); color:#efe7d6; font-family:'DM Mono', ui-monospace, monospace; padding:20px 20px 40px;">
+
+  <!-- HEADER -->
+  <header style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:14px; border-bottom:1px solid rgba(238,228,208,0.12);">
+    <a href="#" onclick="showPage('page-landing');return false;" style="display:flex; align-items:center; gap:13px; text-decoration:none;">
+      <div style="width:10px; height:10px; transform:rotate(45deg); background:#4fc9b3;"></div>
       <div>
-        <div class="da-ticker" id="da-ticker">--</div>
-        <div class="da-company" id="da-company">--</div>
-        <div class="da-acquirer-lbl">Being acquired by</div>
-        <div class="da-acquirer" id="da-acquirer">--</div>
-        <div class="da-badges" id="da-badges"></div>
+        <div style="font-family:'Playfair Display', serif; font-weight:500; font-size:25px; letter-spacing:0.02em; line-height:1; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span></div>
+        <div style="margin-top:5px; font-size:9.5px; letter-spacing:0.32em; color:#8f8772; text-transform:uppercase;">Merger&#8211;Arbitrage Intelligence</div>
       </div>
-      <div class="da-spread-block">
-        <div class="da-spread-num" id="da-spread">--</div>
-        <div class="da-spread-lbl">Spread</div>
-        <div class="da-ann" id="da-ann">--</div>
+    </a>
+    <div style="display:flex; align-items:center; gap:22px;">
+      <div id="user-avatar-analysis"></div>
+      <div style="text-align:right;">
+        <div style="display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+          <span style="width:7px; height:7px; transform:rotate(45deg); background:#4fc9b3;"></span>
+          <span style="font-size:10.5px; letter-spacing:0.18em; color:#6bbaa8; text-transform:uppercase;">Refreshed Hourly</span>
+        </div>
+        <div style="margin-top:3px; font-size:9.5px; letter-spacing:0.16em; color:#7d745f; text-transform:uppercase;">Deal detail</div>
+      </div>
+      <a href="#" onclick="showDashboard();return false;" style="display:inline-flex; align-items:center; gap:7px; padding:8px 16px; background:#4fc9b3; color:#0f1512; font-size:11px; letter-spacing:0.12em; font-weight:600; text-transform:uppercase; text-decoration:none;">&#8592; All Deals</a>
+    </div>
+  </header>
+
+  <!-- BREADCRUMB -->
+  <div id="da-breadcrumb" style="margin-top:11px; font-size:10px; letter-spacing:0.16em; color:#7d745f; text-transform:uppercase;"></div>
+
+  <!-- ============ 1 · DECISION SUMMARY (HERO) ============ -->
+  <section style="position:relative; margin-top:12px; background:linear-gradient(180deg, #1f1b14, #17140e); border:1px solid rgba(95,224,201,0.22); box-shadow:0 18px 40px -16px rgba(0,0,0,0.7); overflow:hidden;">
+    <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #5fe0c9, rgba(95,224,201,0.12));"></div>
+
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:26px; padding:24px 26px 18px;">
+      <div>
+        <div style="display:flex; align-items:baseline; gap:12px;">
+          <div id="da-ticker" style="font-family:'Playfair Display', serif; font-weight:600; font-size:52px; line-height:0.9; color:#f6f0e3; letter-spacing:0.01em;">--</div>
+        </div>
+        <div id="da-company" style="margin-top:9px; font-family:'Playfair Display', serif; font-style:italic; font-size:18px; color:#e2d8c0;">--</div>
+        <div style="margin-top:9px; font-size:13px; font-weight:500; color:#d8cdb4; letter-spacing:0.02em;"><span id="da-acquirer">--</span> <span style="color:#5fe0c9;">&#8594;</span> <span id="da-target">--</span></div>
+        <div id="da-badges" style="margin-top:11px; display:flex; flex-wrap:wrap; gap:7px;"></div>
+      </div>
+
+      <div style="text-align:right; flex-shrink:0;">
+        <div id="da-risk-badge"></div>
+        <div style="margin-top:12px; display:flex; align-items:baseline; gap:7px; justify-content:flex-end;">
+          <span style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">V3 Score</span>
+          <span id="da-score-num" style="font-family:'Playfair Display', serif; font-weight:600; font-size:32px; line-height:0.9; color:#6bbaa8;">--</span>
+          <span style="font-size:13px; color:#7d745f;">/100</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- critical numbers strip -->
+    <div id="da-metrics" style="display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
+
+    <!-- implied probability + break price -->
+    <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid rgba(238,228,208,0.10);">
+      <div class="da-section" style="position:relative; padding:20px 24px; border-right:1px solid rgba(238,228,208,0.08);">
+        <div style="font-size:10px; letter-spacing:0.2em; color:#6bbaa8; text-transform:uppercase;">Market&#8211;Implied Close Probability</div>
+        <div id="da-implied-prob" style="margin-top:8px;"></div>
+      </div>
+      <div id="da-break-box" style="position:relative; padding:20px 24px; background:linear-gradient(180deg, rgba(240,115,94,0.10), rgba(240,115,94,0.05));"></div>
+    </div>
+  </section>
+
+  <!-- ============ 2 · RISK / REWARD ============ -->
+  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
+    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Risk &amp; Reward</span>
+    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">if it closes vs if it breaks</span>
+    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+  </div>
+  <div class="da-section" style="position:relative;">
+    <div id="da-rr-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px;"></div>
+    <div id="da-position-table" style="margin-top:14px; background:#161310; border:1px solid rgba(238,228,208,0.1); overflow:hidden;"></div>
+    <div style="margin-top:9px; font-size:9.5px; letter-spacing:0.1em; color:#6f6753; text-transform:uppercase;">Returns shown are on the current spread. Break-price downside is a modeled estimate.</div>
+  </div>
+
+  <!-- ============ 3 · ACQUIRER & REGULATORY ============ -->
+  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
+    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Acquirer &amp; Regulatory Intelligence</span>
+    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">who&#8217;s buying, and what stands between here and close</span>
+    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+  </div>
+  <div class="da-section" style="position:relative;">
+    <div style="display:grid; grid-template-columns:0.85fr 1.15fr; gap:14px; align-items:stretch;">
+      <div id="da-acq-grid" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:20px 22px; display:flex; flex-direction:column;"></div>
+      <div style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:20px 22px;">
+        <div style="display:flex; align-items:baseline; gap:9px; margin-bottom:4px;">
+          <div style="font-family:'Playfair Display', serif; font-weight:600; font-size:19px; color:#f4eee0;">Regulatory Path</div>
+          <span id="da-reg-count" style="font-family:'Playfair Display', serif; font-style:italic; font-size:13px; color:#8f8772;"></span>
+        </div>
+        <div id="da-reg-risk"></div>
       </div>
     </div>
   </div>
-  <div class="da-metrics" id="da-metrics"></div>
-  <div class="da-section"><div class="da-section-title">Market-Implied Close Probability</div><div id="da-implied-prob"></div></div>
-  
-  <div class="da-section"><div class="da-section-title">Risk / Reward Analysis</div><div class="rr-grid" id="da-rr-grid"></div></div>
-  <div class="da-section"><div class="da-section-title">Acquirer Intelligence & Regulatory Risk</div><div class="acq-grid" id="da-acq-grid"></div><div class="reg-risk-list" id="da-reg-risk" style="margin-top:1rem"></div></div>
-  <div class="da-section"><div class="da-section-title">Comparable Deals & Peer Spread</div><div id="da-comps"></div></div>
-  <div class="da-section"><div class="da-section-title">V3 Score & Risk Factors</div><div class="score-bars" id="da-score-bars"></div><div class="risk-factors" id="da-risk-factors" style="margin-top:1rem"></div></div>
-  <div class="da-section"><div class="da-section-title">Deal Catalyst Calendar</div><div id="da-catalyst"></div></div>
-  <footer style="margin-top:2rem;">
-    <div class="footer-logo">Meridian · Built by Kaushal Koduru</div>
-    <div class="footer-links">
-      <button class="footer-link" onclick="showCompare()">Historical Deals</button>
-      <button class="footer-link" onclick="showMethodology()">Methodology</button>
+
+  <!-- ============ 4 · V3 SCORE BREAKDOWN ============ -->
+  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
+    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">V3 Score Breakdown</span>
+    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">the factors, composited</span>
+    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+  </div>
+  <div class="da-section" style="position:relative;">
+    <div style="display:grid; grid-template-columns:0.7fr 1.3fr; gap:14px; align-items:stretch;">
+      <div id="da-score-overall" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:22px; display:flex; flex-direction:column; justify-content:center;"></div>
+      <div id="da-score-bars" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:18px 22px;"></div>
     </div>
-    <div class="footer-info">Data · SEC EDGAR / Yahoo Finance</div>
+    <div id="da-risk-factors" style="margin-top:14px;"></div>
+  </div>
+
+  <!-- ============ 5 · CATALYST CALENDAR ============ -->
+  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
+    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Deal Catalyst Calendar</span>
+    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">the path to close</span>
+    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+  </div>
+  <div class="da-section" style="position:relative;">
+    <div style="display:grid; grid-template-columns:1.28fr 1fr; gap:16px; align-items:stretch;">
+      <div id="da-catalyst" style="background:linear-gradient(180deg, #1a1812, #16140e); border:1px solid rgba(238,228,208,0.1); padding:22px 26px;"></div>
+      <div id="da-stands" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:22px 24px; display:flex; flex-direction:column;"></div>
+    </div>
+  </div>
+
+  <!-- ============ 6 · COMPS (placeholder) ============ -->
+  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
+    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Comparable Deals</span>
+    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">peer spreads</span>
+    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+  </div>
+  <div class="da-section" style="position:relative;">
+    <div id="da-comps"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer style="margin-top:44px; padding-top:24px; border-top:1px solid rgba(238,228,208,0.12);">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap;">
+      <div style="font-family:'Playfair Display', serif; font-size:18px; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span> <span style="font-size:11px; color:#8f8772; font-family:'DM Mono',monospace; letter-spacing:0.1em;">&#183; Built by Kaushal Koduru</span></div>
+      <div style="font-size:10px; letter-spacing:0.12em; color:#6f6753; text-transform:uppercase;">Data &#183; SEC EDGAR / Yahoo Finance</div>
+    </div>
+    <div style="margin-top:14px; font-size:9.5px; letter-spacing:0.04em; color:#5a5344; line-height:1.6;">Spread = (deal &#8722; last) / last. Break price is a modeled estimate of unaffected downside. For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
   </footer>
-  <div class="footer-disclaimer">For informational purposes only. Not financial advice. Prices refresh hourly alongside deal data. Past model performance does not guarantee future results. Always conduct your own due diligence before making investment decisions.</div>
+
 </div>
 
 <!-- ═══════════════════════════════ COMPARE ═══════════════════════════════ -->
@@ -1482,9 +1586,48 @@ async function buildTicker(){
 async function updateLandingStats(){
     try{
         const d  = await fetch('/api/deals').then(r=>r.json());
+        const deals = d.deals || [];
         const el = document.getElementById('landing-deal-count');
-        if(el) el.textContent = (d.deals?.length||'--');
+        if(el) el.textContent = (deals.length||'--');
+        // top deal by V3 score → hero card
+        const top = deals.filter(x=>x.score!=null).sort((a,b)=>b.score-a.score)[0];
+        if(top) fillHeroCard(top);
     }catch(e){}
+}
+
+function fillHeroCard(d){
+    const usd = n => (n==null||isNaN(n)) ? '--' : '$'+Number(n).toFixed(2);
+    const sgn = n => (n==null||isNaN(n)) ? '--' : (n>=0?'+':'−')+Math.abs(Number(n)).toFixed(2)+'%';
+    const set = (id,val) => { const e=document.getElementById(id); if(e) e.textContent=val; };
+    const riskColor = (r) => {
+        switch((r||'').toUpperCase()){
+            case 'VERY LOW': return {fg:'#5fffe0', bg:'rgba(95,255,224,0.16)', bd:'rgba(95,255,224,0.45)'};
+            case 'LOW':      return {fg:'#4fe6cb', bg:'rgba(79,230,203,0.15)', bd:'rgba(79,230,203,0.42)'};
+            case 'MEDIUM':   return {fg:'#ffd84a', bg:'rgba(255,216,74,0.16)', bd:'rgba(255,216,74,0.45)'};
+            default:         return {fg:'#ff9466', bg:'rgba(255,148,102,0.16)', bd:'rgba(255,148,102,0.46)'};
+        }
+    };
+    set('hero-ticker', d.ticker||'--');
+    set('hero-parties', (d.acquirer||'--')+' → '+(d.company||''));
+    set('hero-spread', sgn(d.sp_pct));
+    set('hero-last', usd(d.cp));
+    set('hero-deal', usd(d.dp));
+    set('hero-break', usd(d.break_price));
+    set('hero-score', d.score!=null?d.score:'--');
+    const riskEl = document.getElementById('hero-risk');
+    if(riskEl){
+        const rc = riskColor(d.risk);
+        riskEl.textContent = (d.risk||'--').toUpperCase();
+        riskEl.style.color = rc.fg;
+        riskEl.style.background = rc.bg;
+        riskEl.style.borderColor = rc.bd;
+    }
+    // spread color by risk
+    const spEl = document.getElementById('hero-spread');
+    if(spEl) spEl.style.color = riskColor(d.risk).fg;
+    // make the whole card open this deal's pro page
+    const card = document.getElementById('hero-card');
+    if(card) card.onclick = function(){ showAnalysis(d.ticker); };
 }
 
 // ── FINANCING HELPERS ─────────────────────────────────────────────────────────
@@ -1505,7 +1648,7 @@ function finDesc(sig){
 function getRiskFactors(d){
     const f=[];
     if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. Wide spreads above 12% reflect elevated break probability. The market is pricing in significant deal risk.`});
-    if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the Uncertain Zone. Historically 36% of deals in the 8-12% spread range broke. The V3 score helps tiebreak but monitor closely.`});
+    if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the Uncertain Zone. Spreads in this range reflect real market uncertainty about closure. The V3 score helps tiebreak but monitor closely.`});
     if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread: stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
     if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
     if(d.days_old>270)            f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
@@ -1545,241 +1688,352 @@ function getScoreBreakdown(d){
     ];
 }
 
-// ── RENDER ANALYSIS ───────────────────────────────────────────────────────────
+// ============================================================
+// NEW renderAnalysis — ports the redesigned deal-detail page.
+// Real fields only. Honest slots for: V3 close-probability
+// estimate (EV card / expected P&L) and "Where This Stands".
+// Preserves: six premium IDs, .da-section wrappers, the two
+// async fetches, applyPaywallToSections() at the end.
+// ============================================================
 
+function _daRiskMeta(r){
+  switch((r||'').toUpperCase()){
+    case 'VERY LOW': return { fg:'#5fffe0', bg:'rgba(95,255,224,0.16)', bd:'rgba(95,255,224,0.45)' };
+    case 'LOW':      return { fg:'#4fe6cb', bg:'rgba(79,230,203,0.15)', bd:'rgba(79,230,203,0.42)' };
+    case 'MEDIUM':   return { fg:'#ffd84a', bg:'rgba(255,216,74,0.16)', bd:'rgba(255,216,74,0.45)' };
+    default:         return { fg:'#ff9466', bg:'rgba(255,148,102,0.16)', bd:'rgba(255,148,102,0.46)' };
+  }
+}
+function _daUsd(n){ return (n==null||isNaN(n)) ? '\u2014' : '$'+Number(n).toFixed(2); }
+function _daSgn(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+Math.abs(Number(n)).toFixed(2)+'%'; }
+function _daParseCloseDate(cd){
+  if(!cd) return null;
+  var s = String(cd).toLowerCase().trim();
+  if(!s || s==='tbd' || s==='nan' || s==='not yet disclosed') return null;
+  var ym = s.match(/(20\d{2})/);
+  if(!ym) return null;
+  var yr = parseInt(ym[1],10), month=6, day=30;
+  if(/q1|first quarter/.test(s))       { month=3;  day=31; }
+  else if(/q2|second quarter/.test(s)) { month=6;  day=30; }
+  else if(/q3|third quarter/.test(s))  { month=9;  day=30; }
+  else if(/q4|fourth quarter/.test(s)) { month=12; day=31; }
+  else if(/first half|h1/.test(s))     { month=6;  day=30; }
+  else if(/second half|h2/.test(s))    { month=12; day=31; }
+  else if(/early/.test(s))             { month=3;  day=31; }
+  else if(/mid/.test(s))               { month=6;  day=30; }
+  else if(/late/.test(s))              { month=11; day=30; }
+  return new Date(Date.UTC(yr, month-1, day));
+}
+function _daDaysToClose(cd){
+  var d = _daParseCloseDate(cd);
+  if(!d) return null;
+  return Math.round((d - new Date()) / 86400000);
+}
+function _daFmtCloseDate(cd){
+  var d = _daParseCloseDate(cd);
+  if(!d) return null;
+  return d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'});
+}
+function _daSet(id, html){ var e=document.getElementById(id); if(e) e.innerHTML = html; }
+function _daTxt(id, txt){ var e=document.getElementById(id); if(e) e.textContent = txt; }
 
 async function renderAnalysis(deal){
-    const bc=getBadgeClass(deal.risk);
-    const tc=getTypeClass(deal.deal_type);
-    const tl=getTypeLabel(deal.deal_type);
-    const company  =deal.company||deal.ticker+' Corp.';
-    const closeDate=deal.close_date&&deal.close_date!=='TBD'&&deal.close_date!=='nan'&&deal.close_date!=='not yet disclosed'&&!deal.close_date.toLowerCase().includes('of 202')?deal.close_date:null;
-    const closeDateDisplay=closeDate||'Not yet disclosed';
-    const txRaw=deal.tx_value&&!isNaN(deal.tx_value)?parseFloat(deal.tx_value):null;
-    const txVal=txRaw===null?'N/A':txRaw>=1?'$'+txRaw.toFixed(1)+'B':'$'+Math.round(txRaw*1000)+'M';
-    const bp=deal.break_price, bd=deal.break_downside;
-    const fin=deal.financing_signal||'unknown';
-    const bpMethod=deal.break_price_method||'historical';
+  if(!deal) return;
+  var m       = _daRiskMeta(deal.risk);
+  var company = deal.company || (deal.ticker + ' Corp.');
+  var acquirer= (deal.acquirer && deal.acquirer !== 'Undisclosed') ? deal.acquirer : 'Not yet disclosed';
+  var bp      = deal.break_price;
+  var bd      = deal.break_downside;
+  var fin     = deal.financing_signal || 'unknown';
+  var txRaw   = (deal.tx_value && !isNaN(deal.tx_value)) ? parseFloat(deal.tx_value) : null;
+  var txVal   = txRaw===null ? 'N/A' : (txRaw>=1 ? '$'+txRaw.toFixed(1)+'B' : '$'+Math.round(txRaw*1000)+'M');
+  var dtc     = _daDaysToClose(deal.close_date);
+  var closeEst= _daFmtCloseDate(deal.close_date);
 
-    document.getElementById('da-ticker').textContent  =deal.ticker;
-    document.getElementById('da-company').textContent =company;
-    document.getElementById('da-acquirer').textContent=deal.acquirer&&deal.acquirer!=='Undisclosed'?deal.acquirer:'Not yet disclosed';
-    const spreadEl=document.getElementById('da-spread');
-    spreadEl.textContent=sign(deal.sp_pct)+deal.sp_pct.toFixed(2)+'%';
-    spreadEl.style.color=spColor(deal.sp_pct);
-    const annEl=document.getElementById('da-ann');
-    annEl.textContent='Ann. Return: '+sign(deal.ann)+deal.ann.toFixed(2)+'%';
-    annEl.style.color=spColor(deal.ann);
-    document.getElementById('da-badges').innerHTML=`
-        <span class="badge ${tc}" style="font-size:0.48rem;padding:3px 8px">${tl}</span>
-        <span class="badge ${bc}" style="font-size:0.48rem;padding:3px 8px">${deal.risk} Risk</span>
-        <span class="badge" style="font-size:0.48rem;padding:3px 8px;color:var(--dim);border-color:var(--bdr2)">V3 Score ${deal.score}/100</span>
-        <span class="fin-badge ${fin}" style="font-size:0.44rem;padding:2px 7px">${finLabel(fin)}</span>
-    `;
+  // ---- breadcrumb ----
+  _daSet('da-breadcrumb',
+    'Board <span style="color:#5a5344;">/</span> <span style="color:'+m.fg+';">'+(deal.risk||'')+' Risk</span> <span style="color:#5a5344;">/</span> <span style="color:#cdbf9f;">'+deal.ticker+'</span>');
 
-    // Metrics — hide Expected Close if TBD
-    const metricsHtml=`
-        <div class="da-metric hi"><div class="da-ml">Current Price</div><div class="da-mv sm">${deal.cp ? '$'+deal.cp.toFixed(2) : 'N/A'}</div></div>
-        <div class="da-metric hi"><div class="da-ml">Deal Price</div><div class="da-mv sm">$${deal.dp.toFixed(2)}</div></div>
-        <div class="da-metric hi"><div class="da-ml">Spread</div><div class="da-mv" style="color:${spColor(deal.sp_pct)}">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div></div>
-        <div class="da-metric"><div class="da-ml">Ann. Return</div><div class="da-mv sm" style="color:${spColor(deal.ann)}">${sign(deal.ann)}${deal.ann.toFixed(2)}%</div></div>
-        <div class="da-metric"><div class="da-ml">Expected Close</div><div class="da-mv sm">${closeDateDisplay}</div></div>
-        <div class="da-metric"><div class="da-ml">Transaction Value</div><div class="da-mv sm">${txVal}</div></div>
-    `;
-    document.getElementById('da-metrics').innerHTML=metricsHtml;
+  // ---- identity ----
+  _daTxt('da-ticker', deal.ticker);
+  _daTxt('da-company', company);
+  _daTxt('da-acquirer', acquirer);
+  _daTxt('da-target', company);
+  _daTxt('da-score-num', deal.score!=null ? deal.score : '--');
+  var scoreEl = document.getElementById('da-score-num');
+  if(scoreEl) scoreEl.style.color = m.fg;
 
-    // Implied Probability
-    document.getElementById('da-implied-prob').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Calculating...</div>';
-    try{
-        const probData=await fetch(`/api/implied-probability/${deal.ticker}`).then(r=>r.json());
-        if(probData.probability!==null){
-            const colorMap={green:'var(--green)',teal:'var(--teal)',amber:'var(--amber)',red:'var(--red)'};
-            const c=colorMap[probData.color]||'var(--teal)';
-            const isDistressed=probData.signal==='Distressed';
-            const descText=isDistressed
-                ?`Stock trading at $${probData.current_price?.toFixed(2)}, below the pre-announcement price of $${probData.break_price?.toFixed(2)}. The market has priced this stock below where it traded before the deal was announced — signaling near-certain deal failure or serious company deterioration. Extreme caution warranted.`
-                :`Based on current price $${probData.current_price?.toFixed(2)}, deal price $${probData.deal_price?.toFixed(2)}, and break price $${probData.break_price?.toFixed(2)}. The market is pricing in a ${probData.probability}% probability this deal closes successfully.`;
-            const signalText=isDistressed?'Distressed — Deal Likely Broken':`${probData.signal} Conviction`;
-            document.getElementById('da-implied-prob').innerHTML=`
-                <div class="implied-prob-wrap">
-                    <div>
-                        <div class="implied-prob-number" style="color:${c}">${isDistressed?'—':probData.probability+'%'}</div>
-                    </div>
-                    <div>
-                        <div class="implied-prob-label">Market-Implied Probability of Deal Close</div>
-                        <div class="implied-prob-signal" style="color:${c}">${signalText}</div>
-                        <div class="implied-prob-desc">${descText}</div>
-                        <div class="implied-prob-formula">Formula: (Current Price − Break Price) ÷ (Deal Price − Break Price) · ${bpMethod==='historical'?'Break price from pre-announcement trading':'Break price estimated from deal premium'}</div>
-                    </div>
-                </div>
-            `;
-        } else {
-            document.getElementById('da-implied-prob').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Break price unavailable — implied probability cannot be calculated for this deal.</div>';
-        }
-    }catch(e){
-        document.getElementById('da-implied-prob').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to calculate implied probability.</div>';
+  // ---- badges ----
+  var badges = [];
+  if(deal.deal_type) badges.push(deal.deal_type);
+  if(deal.dp!=null)  badges.push('$'+Number(deal.dp).toFixed(2)+' / share');
+  if(deal.filed)     badges.push('Announced '+deal.filed);
+  if(deal.close_date && closeEst) badges.push('Target close '+deal.close_date);
+  _daSet('da-badges', badges.map(function(b){
+    return '<span style="padding:3px 9px; font-size:9.5px; letter-spacing:0.14em; color:#cdbf9f; text-transform:uppercase; border:1px solid rgba(238,228,208,0.16);">'+b+'</span>';
+  }).join(''));
+
+  // ---- risk badge ----
+  _daSet('da-risk-badge',
+    '<div style="display:inline-flex; align-items:center; gap:7px; padding:6px 13px; font-size:11px; letter-spacing:0.16em; font-weight:600; color:'+m.fg+'; background:'+m.bg+'; border:1px solid '+m.bd+';">'
+    + '<span style="width:6px; height:6px; transform:rotate(45deg); background:'+m.fg+';"></span>'+(deal.risk||'').toUpperCase()+' RISK</div>');
+
+  // ---- metrics strip ----
+  var cells = [
+    { l:'Current Price', v:_daUsd(deal.cp),  c:'#f4eee0' },
+    { l:'Deal Value',    v:_daUsd(deal.dp),  c:'#f7f1e4' },
+    { l:'Gross Spread',  v:_daSgn(deal.sp_pct), c:m.fg },
+    { l:'Annualized',    v:_daSgn(deal.ann),    c:m.fg },
+    { l:'Days to Close', v:(dtc!=null ? '~'+dtc : '\u2014'), c:'#efe7d6', sub:(closeEst ? 'est. '+closeEst : 'not yet disclosed') }
+  ];
+  _daSet('da-metrics', cells.map(function(c,i){
+    return '<div style="padding:14px 20px;'+(i<4?' border-right:1px solid rgba(238,228,208,0.08);':'')+'">'
+      + '<div style="font-size:9.5px; letter-spacing:0.14em; color:#ada284; text-transform:uppercase;">'+c.l+'</div>'
+      + '<div style="margin-top:6px; font-size:23px; font-weight:600; color:'+c.c+'; letter-spacing:-0.01em;">'+c.v+'</div>'
+      + (c.sub ? '<div style="margin-top:2px; font-size:10.5px; color:#7d745f; letter-spacing:0.06em;">'+c.sub+'</div>' : '')
+      + '</div>';
+  }).join(''));
+
+  // ---- break price box ----
+  if(bp!=null){
+    var bdTxt = (bd!=null) ? _daSgn(bd)+' from current' : '';
+    var perSh = (deal.cp!=null && bp!=null) ? ' \u00b7 \u2212$'+Math.abs(deal.cp-bp).toFixed(2)+' / share' : '';
+    _daSet('da-break-box',
+      '<div style="position:absolute; top:0; right:0; bottom:0; width:3px; background:linear-gradient(180deg, #f0735e, rgba(240,115,94,0.15));"></div>'
+      + '<div style="display:flex; align-items:center; gap:8px;">'
+      +   '<span style="width:6px; height:6px; transform:rotate(45deg); background:#f0735e;"></span>'
+      +   '<div style="font-size:10px; letter-spacing:0.2em; color:#f0735e; text-transform:uppercase;">Break Price \u00b7 Downside Floor</div>'
+      + '</div>'
+      + '<div style="margin-top:10px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:44px; line-height:0.85; color:#f0735e;">'+_daUsd(bp)+'</div>'
+      + '<div style="margin-top:9px; font-size:13px; color:#f3b9ad; letter-spacing:0.02em;">'+bdTxt+perSh+'</div>'
+      + '<div style="margin-top:12px; font-size:11.5px; line-height:1.5; color:#cbb8ac;">Modeled estimate of where the stock trades if the deal collapses, based on the pre-announcement price.</div>');
+  } else {
+    _daSet('da-break-box',
+      '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">Break Price</div>'
+      + '<div style="margin-top:12px; font-size:12px; line-height:1.6; color:#9a9079;">Break price unavailable for this deal. Downside cannot be modeled without a pre-announcement reference price.</div>');
+  }
+
+  // ---- implied probability (existing API) ----
+  _daSet('da-implied-prob', '<div style="font-size:12px; color:#7d745f;">Calculating\u2026</div>');
+  try{
+    var probData = await fetch('/api/implied-probability/'+deal.ticker).then(function(r){ return r.json(); });
+    if(probData && probData.probability !== null && probData.probability !== undefined){
+      var colorMap = { green:'#5a9e6a', teal:'#4fe6cb', amber:'#ffd84a', red:'#ff9466' };
+      var pc = colorMap[probData.color] || '#4fe6cb';
+      var distressed = probData.signal === 'Distressed';
+      _daSet('da-implied-prob',
+        '<div style="display:flex; align-items:baseline; gap:14px;">'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:44px; line-height:0.85; color:'+pc+';">'+(distressed?'\u2014':probData.probability+'%')+'</div>'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-style:italic; font-size:14px; color:#9a9079; max-width:240px; line-height:1.35;">'+(distressed?'the tape is pricing this below its unaffected price':'the odds the tape is pricing in right now')+'</div>'
+        + '</div>'
+        + '<div style="margin-top:14px; padding:12px 15px; background:rgba(0,0,0,0.28); border:1px solid rgba(238,228,208,0.08); font-size:12.5px; line-height:1.85; color:#cdc2a8;">'
+        +   '<div style="color:#8f8772; font-size:9.5px; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:5px;">Formula</div>'
+        +   '<div>P<span style="color:#7d745f;">(close)</span> = (Price \u2212 Break) \u00f7 (Deal \u2212 Break)</div>'
+        +   '<div style="color:#efe7d6;">= ('+_daUsd(probData.current_price)+' \u2212 '+_daUsd(probData.break_price)+') \u00f7 ('+_daUsd(probData.deal_price)+' \u2212 '+_daUsd(probData.break_price)+')</div>'
+        + '</div>'
+        + '<div style="margin-top:12px; padding-top:11px; border-top:1px dashed rgba(95,224,201,0.28); font-size:11.5px; line-height:1.5; color:#8f8772;">This is the <span style="color:#cdc2a8;">market\u2019s</span> implied probability, derived from price. Meridian\u2019s own close-probability estimate is in development.</div>');
+    } else {
+      _daSet('da-implied-prob', '<div style="font-size:12px; line-height:1.6; color:#9a9079;">Break price unavailable \u2014 implied probability cannot be calculated for this deal.</div>');
     }
+  }catch(e){
+    _daSet('da-implied-prob', '<div style="font-size:12px; color:#9a9079;">Unable to calculate implied probability.</div>');
+  }
 
-    
+  // ---- risk / reward cards ----
+  var closesCard = ''
+    + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(95,224,201,0.22); padding:18px 20px; overflow:hidden;">'
+    +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#5fe0c9;"></div>'
+    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#6bbaa8; text-transform:uppercase;">If Deal Closes</div>'
+    +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(deal.dp)+'</div>'
+    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+_daSgn(deal.sp_pct)+'</div>'
+    +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?'+$'+(deal.dp-deal.cp).toFixed(2)+' / share':'')+'</div>'
+    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daSgn(deal.ann)+'</div>'
+    + '</div>';
+  var breaksCard = bp!=null ? ''
+    + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(240,115,94,0.4); padding:18px 20px; overflow:hidden;">'
+    +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#f0735e;"></div>'
+    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#f0735e; text-transform:uppercase;">If Deal Breaks</div>'
+    +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(bp)+'</div>'
+    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#f0735e;">'+(bd!=null?_daSgn(bd):'\u2014')+'</div>'
+    +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.cp!=null)?'\u2212$'+Math.abs(deal.cp-bp).toFixed(2)+' / share':'')+'</div>'
+    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Modeled downside case</div>'
+    + '</div>' : '';
+  _daSet('da-rr-grid', closesCard + breaksCard);
+  var rrEl = document.getElementById('da-rr-grid');
+  if(rrEl) rrEl.style.gridTemplateColumns = bp!=null ? '1fr 1fr' : '1fr';
 
-    // Risk/Reward — only show downside if break price is available
-    const invs=[1000,5000,10000,50000,100000];
-    let upRows='',dnRows='';
-    invs.forEach(inv=>{
-        const up=(deal.sp_pct/100)*inv;
-        const dn=bd?((bd/100)*inv):null;
-        upRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r pos">+$${Math.abs(up).toLocaleString('en-US',{maximumFractionDigits:0})}</td></tr>`;
-        dnRows+=`<tr><td>$${inv.toLocaleString()}</td><td class="r neg">${dn!==null?'-$'+Math.abs(dn).toLocaleString('en-US',{maximumFractionDigits:0}):'N/A'}</td></tr>`;
-    });
-    const downsideHtml=bp?`
-        <div class="rr-col downside">
-            <div class="rr-title">If Deal Breaks</div>
-            <div class="rr-big">${bd!==null?bd.toFixed(2)+'%':'N/A'}</div>
-            <div class="rr-sub">Est. downside · Break price: $${bp.toFixed(2)}</div>
-            <table class="rr-table">
-                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">LOSS</td></tr>
-                ${dnRows}
-            </table>
-            <div class="rr-note">${bpMethod==='historical'?`Break price from pre-announcement trading on ${deal.filed}.`:`Break price estimated from deal premium — actual may vary.`} Always conduct independent research.</div>
-        </div>`:'';
-    document.getElementById('da-rr-grid').innerHTML=`
-        <div class="rr-col upside">
-            <div class="rr-title">If Deal Closes</div>
-            <div class="rr-big">${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}%</div>
-            <div class="rr-sub">Spread return · Ann. ${sign(deal.ann)}${deal.ann.toFixed(2)}%</div>
-            <table class="rr-table">
-                <tr style="border-bottom:1px solid var(--bdr2);"><td style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">INVESTMENT</td><td class="r" style="color:var(--dim);font-size:0.36rem;letter-spacing:0.14em;">PROFIT</td></tr>
-                ${upRows}
-            </table>
-            <div class="rr-note">Based on current spread of ${sign(deal.sp_pct)}${deal.sp_pct.toFixed(2)}% at deal price $${deal.dp.toFixed(2)}. Prices refresh hourly.</div>
-        </div>
-        ${downsideHtml}
-    `;
-    // Make grid single column if no downside
-    if(!bp) document.getElementById('da-rr-grid').style.gridTemplateColumns='1fr';
-    else document.getElementById('da-rr-grid').style.gridTemplateColumns='1fr 1fr';
+  // ---- position size table ----
+  var sizes = [25000, 50000, 100000, 250000, 500000];
+  var rowsHtml = sizes.map(function(inv){
+    var shares = (deal.cp!=null && deal.cp>0) ? Math.floor(inv/deal.cp) : null;
+    var up = (deal.sp_pct!=null) ? (deal.sp_pct/100)*inv : null;
+    var dn = (bd!=null) ? (bd/100)*inv : null;
+    return '<div style="display:grid; grid-template-columns:1.1fr 1fr 1fr 1fr; column-gap:14px; align-items:center; padding:11px 22px; border-bottom:1px solid rgba(238,228,208,0.06);">'
+      + '<div style="font-size:13px; color:#f1eadb; font-weight:500;">$'+inv.toLocaleString()+'</div>'
+      + '<div style="text-align:right; font-size:12px; color:#9a9079;">'+(shares!=null?shares.toLocaleString():'\u2014')+'</div>'
+      + '<div style="text-align:right; font-size:13px; color:#5fe0c9; font-weight:500;">'+(up!=null?'+$'+Math.round(up).toLocaleString():'\u2014')+'</div>'
+      + '<div style="text-align:right; font-size:13px; color:#f0735e;">'+(dn!=null?'\u2212$'+Math.round(Math.abs(dn)).toLocaleString():'\u2014')+'</div>'
+      + '</div>';
+  }).join('');
+  _daSet('da-position-table',
+    '<div style="display:grid; grid-template-columns:1.1fr 1fr 1fr 1fr; column-gap:14px; padding:10px 22px; background:#1b1712; border-bottom:1px solid rgba(238,228,208,0.12); font-size:9px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase;">'
+    + '<div>Position Size</div><div style="text-align:right;">Shares @ '+_daUsd(deal.cp)+'</div>'
+    + '<div style="text-align:right;">If Closes '+_daSgn(deal.sp_pct)+'</div>'
+    + '<div style="text-align:right;">If Breaks '+(bd!=null?_daSgn(bd):'\u2014')+'</div>'
+    + '</div>' + rowsHtml);
 
-    // Acquirer Intelligence
-    const acqType=deal.acquirer_type||'Strategic';
-    const premium=bp&&deal.dp?Math.round(((deal.dp-bp)/bp)*100):null;
-    document.getElementById('da-acq-grid').innerHTML=`
-        <div class="acq-cell highlight">
-            <div class="acq-label">Acquirer</div>
-            <div class="acq-value" style="font-size:1rem">${deal.acquirer&&deal.acquirer!=='Undisclosed'?deal.acquirer:'Not yet disclosed'}</div>
-            <div class="acq-sub" style="margin-top:0.4rem">${acqType} buyer · ${deal.deal_type}</div>
-        </div>
-        <div class="acq-cell highlight">
-            <div class="acq-label">Deal Premium</div>
-            <div class="acq-value" style="color:${premium&&premium>=25?'var(--green)':premium&&premium>=10?'var(--teal)':'var(--muted)'}">${premium!==null?'+'+premium+'%':'N/A'}</div>
-            <div class="acq-sub">Premium paid over pre-announcement price of ${bp?'$'+bp.toFixed(2):'N/A'}. ${premium&&premium>=35?'Very high premium signals strong acquirer conviction.':premium&&premium>=20?'Healthy premium, acquirer committed.':premium!==null?'Modest premium, acquirer can walk more easily.':'Break price unavailable for premium calculation.'}</div>
-        </div>
-        <div class="acq-cell highlight">
-            <div class="acq-label">Financing Commitment</div>
-            <div class="fin-signal-row">
-                <div class="fin-dot ${fin}"></div>
-                <div class="fin-label ${fin}">${finLabel(fin)}</div>
-            </div>
-            <div class="acq-sub" style="margin-top:0.5rem">${finDesc(fin)}</div>
-        </div>
-    `;
+  // ---- acquirer profile ----
+  var premium = (bp && deal.dp) ? Math.round(((deal.dp-bp)/bp)*100) : null;
+  var finBadgeColor = fin==='committed' ? '#4fe6cb' : fin==='contingent' ? '#ff9466' : '#cdbf9f';
+  var rowsAcq = [
+    { l:'Acquirer Type',    v:(deal.acquirer_type||'Strategic') },
+    { l:'Deal Premium',     v:(premium!==null ? '+'+premium+'% <span style="color:#8f8772; font-weight:400; font-size:10.5px;">to '+_daUsd(bp)+' unaffected</span>' : 'N/A'), c:(premium!==null&&premium>=25?'#5fe0c9':'#e2d8c0') },
+    { l:'Consideration',    v:(deal.deal_type||'\u2014')+' \u00b7 '+_daUsd(deal.dp)+' / share' },
+    { l:'Transaction Value',v:txVal }
+  ];
+  _daSet('da-acq-grid',
+    '<div style="display:flex; align-items:baseline; gap:9px;">'
+    +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:22px; color:#f4eee0;">'+acquirer+'</div>'
+    +   '<span style="font-family:\'Playfair Display\',serif; font-style:italic; font-size:13px; color:#8f8772;">the acquirer</span>'
+    + '</div>'
+    + '<div style="margin-top:14px; display:flex; flex-direction:column; flex:1;">'
+    + rowsAcq.map(function(r){
+        return '<div style="display:flex; justify-content:space-between; align-items:center; gap:14px; padding:10px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+          + '<span style="font-size:10.5px; letter-spacing:0.1em; color:#8f8772; text-transform:uppercase;">'+r.l+'</span>'
+          + '<span style="font-size:12.5px; color:'+(r.c||'#e2d8c0')+'; text-align:right; font-weight:'+(r.c?'600':'400')+';">'+r.v+'</span>'
+          + '</div>';
+      }).join('')
+    + '<div style="display:flex; justify-content:space-between; align-items:center; gap:14px; padding:10px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+    +   '<span style="font-size:10.5px; letter-spacing:0.1em; color:#8f8772; text-transform:uppercase;">Financing Signal</span>'
+    +   '<span style="display:inline-flex; align-items:center; padding:3px 9px; font-size:9.5px; letter-spacing:0.12em; font-weight:600; color:'+finBadgeColor+'; border:1px solid '+finBadgeColor+'44;">'+(typeof finLabel==='function'?finLabel(fin):fin.toUpperCase())+'</span>'
+    + '</div>'
+    + '</div>');
 
-    // Comps — disabled pending EDGAR-verified dataset
-    document.getElementById('da-comps').innerHTML='<div style="padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);font-style:italic;">Comparable deal analysis returns with our EDGAR-verified historical dataset.</div>';
-    const comps=[];
-    const summary={};
-    if(false){
-        const cc=summary.close_rate>=70?'var(--green)':summary.close_rate>=50?'var(--amber)':'var(--red)';
-        const avgPeerSpread=comps.length?Math.round(comps.reduce((s,c)=>s+c.spread_at_announce,0)/comps.length*10)/10:null;
-        const spreadDiff=avgPeerSpread!==null?Math.round((deal.sp_pct-avgPeerSpread)*10)/10:null;
-        const spreadSignal=spreadDiff===null?null:spreadDiff>3?'Wide — market pricing elevated risk':spreadDiff<-3?'Tight — market confident in close':'In line with comparable deals';
-        const spreadColor=spreadDiff===null?'var(--dim)':spreadDiff>3?'var(--red)':spreadDiff<-3?'var(--green)':'var(--teal)';
-        document.getElementById('da-comps').innerHTML=`
-            <div class="comps-summary">
-                <div class="comp-stat"><div class="comp-stat-val">${summary.total}</div><div class="comp-stat-lbl">Comparable Deals</div></div>
-                <div class="comp-stat"><div class="comp-stat-val green">${summary.closed}</div><div class="comp-stat-lbl">Closed</div></div>
-                <div class="comp-stat"><div class="comp-stat-val red">${summary.broken}</div><div class="comp-stat-lbl">Broken</div></div>
-                <div class="comp-stat"><div class="comp-stat-val" style="color:${cc}">${summary.close_rate}%</div><div class="comp-stat-lbl">Close Rate</div></div>
-            </div>
-            ${avgPeerSpread!==null?`<div style="padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--bdr2);border-left:3px solid ${spreadColor};margin-bottom:1rem;">
-                <div style="font-family:'DM Mono',monospace;font-size:0.38rem;color:var(--dim);letter-spacing:0.16em;margin-bottom:0.75rem;">PEER SPREAD INTELLIGENCE</div>
-                <div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;margin-bottom:0.75rem;">
-                    <div>
-                        <div style="font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--cream);line-height:1">${deal.sp_pct.toFixed(2)}%</div>
-                        <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.12em;margin-top:0.2rem">THIS DEAL</div>
-                    </div>
-                    <div style="font-size:0.6rem;color:var(--dim);padding-bottom:0.3rem">vs</div>
-                    <div>
-                        <div style="font-family:'DM Mono',monospace;font-size:1.4rem;color:var(--dim);line-height:1">${avgPeerSpread}%</div>
-                        <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.12em;margin-top:0.2rem">PEER AVERAGE</div>
-                    </div>
-                    <div style="text-align:left;width:100%;">
-                        <div style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:${spreadColor};line-height:1.2">${spreadSignal}</div>
-                        <div style="font-size:0.36rem;color:var(--dim);letter-spacing:0.1em;margin-top:0.3rem">${spreadDiff>0?'+':''}${spreadDiff}% vs peers</div>
-                    </div>
-                </div>
-                <div style="font-size:0.42rem;color:var(--dim);font-family:'Cormorant Garamond',serif;font-style:italic">
-                    ${spreadDiff>3?`This deal's spread is ${spreadDiff}% wider than comparable ${deal.deal_type} deals — the market is pricing in above-average risk. Investigate before entering.`:spreadDiff<-3?`This deal's spread is ${Math.abs(spreadDiff)}% tighter than peers — the market has high conviction this closes. Lower risk entry.`:`This deal is trading in line with comparable ${deal.deal_type} transactions. Standard risk profile.`}
-                </div>
-            </div>`:''}
-            <table class="comps-table">
-                <thead><tr><th>Ticker</th><th>Acquirer</th><th>Type</th><th class="r">Spread at Ann.</th><th class="r">Outcome</th><th class="r">Days to Close</th></tr></thead>
-                <tbody>${comps.map(c=>`<tr><td>${c.ticker}</td><td>${c.acquirer}</td><td>${c.deal_type}</td><td class="r">${c.spread_at_announce.toFixed(1)}%</td><td class="r ${c.outcome==='Closed'?'comp-outcome-closed':'comp-outcome-broken'}">${c.outcome}</td><td class="r">${c.days_to_close} days</td></tr>`).join('')}</tbody>
-            </table>
-            <div class="comps-note">Comparable deal analysis returns with our EDGAR-verified historical dataset.</div>
-        `;
+  // ---- regulatory path ----
+  var rt = [];
+  try{ rt = deal.reg_tags ? JSON.parse(deal.reg_tags) : []; }catch(e){ rt = []; }
+  _daTxt('da-reg-count', rt.length ? (rt.length+(rt.length===1?' gating review':' gating reviews')) : 'standard review');
+  var levelMeta = { hi:{fg:'#ff9466',bd:'rgba(255,148,102,0.44)',bg:'rgba(255,148,102,0.14)',t:'HIGH'},
+                    md:{fg:'#ffd84a',bd:'rgba(255,216,74,0.42)',bg:'rgba(255,216,74,0.14)',t:'MEDIUM'},
+                    lo:{fg:'#4fe6cb',bd:'rgba(79,230,203,0.4)',bg:'rgba(79,230,203,0.13)',t:'LOW'} };
+  if(rt.length){
+    _daSet('da-reg-risk', rt.map(function(t){
+      var lm = levelMeta[t.level] || levelMeta.lo;
+      return '<div style="padding:11px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+        + '<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">'
+        +   '<span style="font-size:12.5px; color:#f3ead7; font-weight:500;">'+(t.agency||'')+'</span>'
+        +   '<span style="display:inline-flex; align-items:center; padding:3px 9px; font-size:9.5px; letter-spacing:0.12em; font-weight:600; color:'+lm.fg+'; background:'+lm.bg+'; border:1px solid '+lm.bd+';">'+lm.t+'</span>'
+        + '</div>'
+        + (t.reason ? '<div style="margin-top:5px; font-size:11.5px; line-height:1.45; color:#9a9079;">'+t.reason+'</div>' : '')
+        + '</div>';
+    }).join(''));
+  } else {
+    _daSet('da-reg-risk',
+      '<div style="padding:11px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">'
+      +   '<span style="font-size:12.5px; color:#f3ead7; font-weight:500;">Standard Review</span>'
+      +   '<span style="display:inline-flex; align-items:center; padding:3px 9px; font-size:9.5px; letter-spacing:0.12em; font-weight:600; color:#4fe6cb; background:rgba(79,230,203,0.13); border:1px solid rgba(79,230,203,0.4);">LOW</span>'
+      + '</div>'
+      + '<div style="margin-top:5px; font-size:11.5px; line-height:1.45; color:#9a9079;">No elevated regulatory concerns identified based on deal size and sector.</div>'
+      + '</div>');
+  }
+
+  // ---- V3 score: overall + real factor bars ----
+  _daSet('da-score-overall',
+    '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">V3 Composite</div>'
+    + '<div style="margin-top:9px; display:flex; align-items:baseline; gap:9px;">'
+    +   '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:56px; line-height:0.82; color:'+m.fg+';">'+(deal.score!=null?deal.score:'--')+'</span>'
+    +   '<span style="font-size:16px; color:#7d745f;">/100</span>'
+    + '</div>'
+    + '<div style="margin-top:13px;">'
+    +   '<span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px; font-size:10.5px; letter-spacing:0.14em; font-weight:600; color:'+m.fg+'; background:'+m.bg+'; border:1px solid '+m.bd+';"><span style="width:6px; height:6px; transform:rotate(45deg); background:'+m.fg+';"></span>'+(deal.risk||'').toUpperCase()+' RISK TIER</span>'
+    + '</div>'
+    + '<div style="margin-top:13px; font-size:11.5px; line-height:1.5; color:#8f8772;">Spread range sets the risk tier; the score refines within it.</div>');
+
+  var bars = (typeof getScoreBreakdown==='function') ? getScoreBreakdown(deal) : [];
+  _daSet('da-score-bars', bars.map(function(b){
+    return '<div style="padding:10px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+      + '<div style="display:flex; justify-content:space-between; align-items:baseline;">'
+      +   '<span style="font-size:12px; letter-spacing:0.04em; color:#e2d8c0;">'+b.label+'</span>'
+      +   '<span style="font-size:14px; font-weight:600; color:'+b.color+';">'+b.score+'</span>'
+      + '</div>'
+      + '<div style="margin-top:6px; height:5px; background:rgba(238,228,208,0.08);"><div style="width:'+b.score+'%; height:100%; background:'+b.color+';"></div></div>'
+      + (b.desc ? '<div style="margin-top:6px; font-size:11.5px; line-height:1.45; color:#9a9079;">'+b.desc+'</div>' : '')
+      + '</div>';
+  }).join(''));
+
+  // ---- risk factors ----
+  var rf = (typeof getRiskFactors==='function') ? getRiskFactors(deal) : [];
+  _daSet('da-risk-factors', rf.length ? (
+    '<div style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:18px 22px;">'
+    + '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase; margin-bottom:10px;">Risk Factors</div>'
+    + rf.map(function(f){
+        var lm = levelMeta[f.l] || levelMeta.lo;
+        return '<div style="display:flex; gap:11px; align-items:flex-start; padding:9px 0; border-top:1px solid rgba(238,228,208,0.06);">'
+          + '<span style="margin-top:5px; width:7px; height:7px; transform:rotate(45deg); background:'+lm.fg+'; flex-shrink:0;"></span>'
+          + '<div style="font-size:12px; line-height:1.55; color:#cdc2a8;">'+f.t+'</div>'
+          + '</div>';
+      }).join('')
+    + '</div>') : '');
+
+  // ---- catalyst calendar (existing API) ----
+  _daSet('da-catalyst', '<div style="font-size:12px; color:#7d745f;">Loading catalyst calendar\u2026</div>');
+  try{
+    var txv = deal.tx_value || 0;
+    var catalystData = await fetch('/api/catalyst/'+deal.ticker+'?filed='+encodeURIComponent(deal.filed||'')+'&deal_type='+encodeURIComponent(deal.deal_type||'')+'&tx_value='+txv).then(function(r){ return r.json(); });
+    var cats = (catalystData && catalystData.catalysts) || [];
+    if(cats.length){
+      var doneCount = cats.filter(function(c){ return c.status==='completed'; }).length;
+      var stepsHtml = cats.map(function(c, i){
+        var isCurrent = catalystData.current_stage === c.label;
+        var done = c.status === 'completed';
+        var dotColor = done ? '#3f7d72' : isCurrent ? '#ffd84a' : '#16140e';
+        var dotBorder = (!done && !isCurrent) ? 'border:2px solid #6b6350;' : '';
+        var dotGlow = isCurrent ? 'box-shadow:0 0 0 3px #16140e, 0 0 14px rgba(255,216,74,0.6);' : 'box-shadow:0 0 0 3px #16140e;';
+        var dateStr = c.date ? String(c.date).slice(0,7) : '';
+        var labelColor = done ? '#cdc2a8' : isCurrent ? '#f6f0e3' : '#f3ead7';
+        var statusTxt = done ? '\u2713 DONE' : isCurrent ? '\u25b6 CURRENT' : (c.estimated ? 'ESTIMATED' : 'UPCOMING');
+        var statusColor = done ? '#4fbfab' : isCurrent ? '#ffd84a' : '#8f8772';
+        var isLast = (i === cats.length-1);
+        return '<div style="display:grid; grid-template-columns:80px 1fr; align-items:start;">'
+          + '<div style="text-align:right; padding:1px 15px 0 0; font-size:11px; color:'+(isCurrent?'#ffd84a':'#8f8772')+';">'+dateStr+'</div>'
+          + '<div style="position:relative; '+(isLast?'':'border-left:2px solid rgba(238,228,208,0.16);')+' padding:0 0 14px 22px;">'
+          +   '<span style="position:absolute; left:-8px; top:1px; width:13px; height:13px; border-radius:50%; background:'+dotColor+'; '+dotBorder+dotGlow+'"></span>'
+          +   '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
+          +     '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:14px; color:'+labelColor+';">'+c.label+'</span>'
+          +     '<span style="font-size:8.5px; letter-spacing:0.14em; color:'+statusColor+';">'+statusTxt+'</span>'
+          +   '</div>'
+          +   (c.description ? '<div style="margin-top:3px; font-size:11.5px; line-height:1.45; color:#9a9079;">'+c.description+'</div>' : '')
+          + '</div>'
+          + '</div>';
+      }).join('');
+      _daSet('da-catalyst',
+        '<div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px;">'
+        +   '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">Milestone Path</span>'
+        +   '<span style="font-size:10px; letter-spacing:0.16em; color:#8f8772; text-transform:uppercase;">'+doneCount+' of '+cats.length+' cleared</span>'
+        + '</div>' + stepsHtml
+        + '<div style="margin-top:6px; padding-top:12px; border-top:1px solid rgba(238,228,208,0.08); font-size:10.5px; letter-spacing:0.1em; color:#7d745f; text-transform:uppercase;">Current stage: '+(catalystData.current_stage||'\u2014')+' \u00b7 '+(catalystData.days_elapsed!=null?catalystData.days_elapsed+' days elapsed':'')+'</div>');
+    } else {
+      _daSet('da-catalyst', '<div style="font-size:12px; color:#9a9079;">No catalyst milestones available for this deal.</div>');
     }
+  }catch(e){
+    _daSet('da-catalyst', '<div style="font-size:12px; color:#9a9079;">Unable to load catalyst calendar.</div>');
+  }
 
-    // Regulatory
-    let rt=[];
-    try{ rt=deal.reg_tags?JSON.parse(deal.reg_tags):[]; }catch(e){}
-    document.getElementById('da-reg-risk').innerHTML=rt.length>0
-        ?rt.map(t=>`<div class="reg-risk-item"><div class="reg-dot ${t.level}"></div><div class="reg-agency">${t.agency}</div><div class="reg-reason">${t.reason}</div></div>`).join('')
-        :'<div class="reg-risk-item"><div class="reg-dot low"></div><div class="reg-agency">Standard Review</div><div class="reg-reason">No elevated regulatory concerns identified based on deal size and sector.</div></div>';
+  // ---- "Where This Stands" — honest slot, pattern library in development ----
+  _daSet('da-stands',
+    '<div style="display:flex; align-items:baseline; gap:9px; margin-bottom:4px;">'
+    +   '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">Where This Stands</span>'
+    + '</div>'
+    + '<div style="font-size:10.5px; letter-spacing:0.04em; color:#8f8772; line-height:1.5;">Meridian\u2019s read on the path, not the raw calendar.</div>'
+    + '<div style="margin-top:18px; padding-top:16px; border-top:1px solid rgba(238,228,208,0.1); flex:1;">'
+    +   '<div style="font-size:12.5px; line-height:1.7; color:#9a9079;">Deal-pattern analysis is in development. Rather than generate commentary automatically, each read is being authored against verified deal characteristics so the interpretation holds up. It ships when it is right.</div>'
+    + '</div>');
 
-    // Score bars
-    document.getElementById('da-score-bars').innerHTML=getScoreBreakdown(deal).map(b=>`
-        <div>
-            <div class="score-bar-header"><span class="score-bar-label">${b.label}</span><span class="score-bar-val">${b.score}/100</span></div>
-            <div class="score-bar-desc">${b.desc}</div>
-            <div class="score-bar-track"><div class="score-bar-fill" style="width:${b.score}%;background:${b.color}"></div></div>
-        </div>
-    `).join('');
+  // ---- comps — honest placeholder ----
+  _daSet('da-comps',
+    '<div style="padding:20px 22px; background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); font-size:12.5px; line-height:1.7; color:#9a9079;">Comparable deal analysis returns with Meridian\u2019s EDGAR-verified historical dataset.</div>');
 
-    // Risk factors
-    document.getElementById('da-risk-factors').innerHTML=getRiskFactors(deal).map(f=>`
-        <div class="risk-factor"><div class="risk-dot ${f.l}"></div><div class="risk-text">${f.t}</div></div>
-    `).join('');
-
-    // Catalyst Calendar
-    document.getElementById('da-catalyst').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading catalyst calendar...</div>';
-    try{
-        const txv=deal.tx_value||0;
-        const catalystData=await fetch(`/api/catalyst/${deal.ticker}?filed=${deal.filed}&deal_type=${encodeURIComponent(deal.deal_type)}&tx_value=${txv}`).then(r=>r.json());
-        const cats=catalystData.catalysts||[];
-        if(cats.length>0){
-            const stepsHtml=cats.map((c,i)=>{
-                const isLast=i===cats.length-1;
-                const isCurrent=catalystData.current_stage===c.label;
-                const statusClass=isCurrent?'current':c.status==='completed'?'completed':'pending';
-                const dateStr=c.date?c.date.slice(0,7):'';
-                return `<div class="catalyst-step ${statusClass}">
-                    <div class="catalyst-step-dot"></div>
-                    <div class="catalyst-step-label">${c.label}</div>
-                    <div class="catalyst-step-date">${dateStr}</div>
-                    ${c.estimated?'<div class="catalyst-step-est">est.</div>':'<div class="catalyst-step-est">confirmed</div>'}
-                    <div class="catalyst-step-desc">${c.description}</div>
-                </div>`;
-            }).join('');
-            document.getElementById('da-catalyst').innerHTML=`
-                <div class="catalyst-chain">
-                    <div class="catalyst-steps">${stepsHtml}</div>
-                    <div class="catalyst-current-stage">◈ Current Stage: ${catalystData.current_stage} · ${catalystData.days_elapsed} days elapsed</div>
-                </div>
-            `;
-        }
-    }catch(e){
-        document.getElementById('da-catalyst').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to load catalyst calendar.</div>';
-    }
   applyPaywallToSections();
 }
 
@@ -2291,6 +2545,8 @@ function updateModalState(){
   else if(!currentUser){ctaBtn.textContent='Sign Up & Subscribe →';signinBtn.style.display='block';hint.style.display='block';}
 }
 function showAnalysis(d){
+  if(typeof d === 'string'){ d = (allDeals||[]).find(x => x.ticker === d); }
+  if(!d) return;
   showPage('page-analysis');
   renderAnalysis(d);
 }
