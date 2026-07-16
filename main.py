@@ -2470,115 +2470,18 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
 
 
 @app.get("/api/catalyst/{ticker}")
-async def get_catalyst(ticker: str, filed: str = "2024-01-01", deal_type: str = "All Cash", tx_value: float = 0):
-    try:
-        filed_dt = datetime.strptime(filed, '%Y-%m-%d')
-        today = datetime.utcnow()
-        days_elapsed = (today - filed_dt).days
-        catalysts = []
+async def api_catalyst(ticker: str, filed: str = "", deal_type: str = "", tx_value: float = 0):
+    """
+    Milestone timeline — disabled.
 
-        # Announcement — always known
-        catalysts.append({
-            "label": "Announced",
-            "date": filed,
-            "status": "completed",
-            "description": "Definitive merger agreement filed with SEC"
-        })
+    The prior implementation derived every milestone from arithmetic on the
+    announcement date (filed + 15/45/105/135/180/365 days) and marked them
+    'completed' once the invented date passed. None of it was sourced from a
+    filing. It was presenting projections as confirmed events.
 
-        # HSR filing — typically 30 days after announcement
-        hsr_date = filed_dt + timedelta(days=30)
-        catalysts.append({
-            "label": "HSR Filing",
-            "date": hsr_date.strftime('%Y-%m-%d'),
-            "status": "completed" if today > hsr_date else "pending",
-            "description": "Hart-Scott-Rodino antitrust filing — mandatory for deals over $119.5M",
-            "estimated": True
-        })
-
-        # HSR waiting period expiration — 30 days after HSR filing
-        hsr_expire = hsr_date + timedelta(days=30)
-        catalysts.append({
-            "label": "HSR Waiting Period",
-            "date": hsr_expire.strftime('%Y-%m-%d'),
-            "status": "completed" if today > hsr_expire else "pending",
-            "description": "DOJ/FTC 30-day review window expires — deal can proceed unless challenged",
-            "estimated": True
-        })
-
-        # Shareholder vote — typically 90-120 days for mergers, faster for tender offers
-        if deal_type == 'Tender Offer':
-            sv_days = 45
-            sv_label = "Tender Offer Expiration"
-            sv_desc = "Mandatory minimum 20-business-day tender period expires"
-        elif deal_type == 'Private Equity':
-            sv_days = 100
-            sv_label = "Shareholder Vote"
-            sv_desc = "Target company shareholders vote to approve the merger agreement"
-        else:
-            sv_days = 110
-            sv_label = "Shareholder Vote"
-            sv_desc = "Target company shareholders vote to approve the merger agreement"
-
-        sv_date = filed_dt + timedelta(days=sv_days)
-        catalysts.append({
-            "label": sv_label,
-            "date": sv_date.strftime('%Y-%m-%d'),
-            "status": "completed" if today > sv_date else "pending",
-            "description": sv_desc,
-            "estimated": deal_type != 'Tender Offer'
-        })
-
-        # Regulatory clearance — depends on deal size and type
-        if tx_value and tx_value > 5:
-            reg_days = 180
-            reg_label = "Regulatory Clearance"
-            reg_desc = f"Expected FTC/DOJ antitrust clearance for ${tx_value:.1f}B deal"
-        else:
-            reg_days = 120
-            reg_label = "Regulatory Clearance"
-            reg_desc = "Expected regulatory clearance — standard review timeline"
-
-        reg_date = filed_dt + timedelta(days=reg_days)
-        catalysts.append({
-            "label": reg_label,
-            "date": reg_date.strftime('%Y-%m-%d'),
-            "status": "completed" if today > reg_date else "pending",
-            "description": reg_desc,
-            "estimated": True
-        })
-
-        # Outside date — typically 12-18 months, deal terminates if not closed
-        outside_days = 365 if deal_type == 'Tender Offer' else 540
-        outside_date = filed_dt + timedelta(days=outside_days)
-        catalysts.append({
-            "label": "Outside Date",
-            "date": outside_date.strftime('%Y-%m-%d'),
-            "status": "active",
-            "description": "Deal automatically terminates if not closed by this date unless extended by mutual agreement",
-            "estimated": True
-        })
-
-        # Expected close
-        avg_days = {'Tender Offer': 90, 'Private Equity': 150, 'All Cash': 180, 'Cash + Stock': 220}
-        close_days = avg_days.get(deal_type, 180)
-        close_date = filed_dt + timedelta(days=close_days)
-        days_to_close = (close_date - today).days
-        catalysts.append({
-            "label": "Expected Close",
-            "date": close_date.strftime('%Y-%m-%d'),
-            "status": "completed" if today > close_date else "pending",
-            "description": f"Estimated close based on {deal_type} deal average of {close_days} days · {max(0, days_to_close)} days remaining",
-            "estimated": True
-        })
-
-        return JSONResponse(content={
-            "catalysts": catalysts,
-            "days_elapsed": days_elapsed,
-            "current_stage": next((c["label"] for c in reversed(catalysts) if c["status"] == "completed"), "Announced")
-        })
-    except Exception as e:
-        print(f"Catalyst error {ticker}: {e}")
-        return JSONResponse(content={"catalysts": [], "days_elapsed": 0, "current_stage": "Unknown"})
+    Returns empty until milestones can be detected from actual EDGAR filings.
+    """
+    return {"catalysts": [], "current_stage": None, "days_elapsed": None, "disabled": True}
 
 @app.get("/api/implied-probability/{ticker}")
 async def implied_probability(ticker: str):
