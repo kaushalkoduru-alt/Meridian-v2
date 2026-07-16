@@ -738,7 +738,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 .modal-signin-link span{color:var(--teal);cursor:pointer;}
 .modal-signin-link span:hover{text-decoration:underline;}
 .paywall-section{position:relative;}
-.paywall-blur{filter:blur(4px);pointer-events:none;user-select:none;opacity:0.4;}
+.paywall-blur{filter:blur(9px);pointer-events:none;user-select:none;opacity:0.3;}
 .paywall-gate{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;cursor:pointer;background:linear-gradient(180deg,transparent 0%,rgba(5,13,8,0.85) 40%);}
 .paywall-gate-label{font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--teal);margin-bottom:0.5rem;}
 .paywall-gate-title{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:300;color:var(--cream);margin-bottom:0.75rem;text-align:center;}
@@ -1976,49 +1976,13 @@ async function renderAnalysis(deal){
       }).join('')
     + '</div>') : '');
 
-  // ---- catalyst calendar (existing API) ----
-  _daSet('da-catalyst', '<div style="font-size:12px; color:#7d745f;">Loading catalyst calendar\u2026</div>');
-  try{
-    var txv = deal.tx_value || 0;
-    var catalystData = await fetch('/api/catalyst/'+deal.ticker+'?filed='+encodeURIComponent(deal.filed||'')+'&deal_type='+encodeURIComponent(deal.deal_type||'')+'&tx_value='+txv).then(function(r){ return r.json(); });
-    var cats = (catalystData && catalystData.catalysts) || [];
-    if(cats.length){
-      var doneCount = cats.filter(function(c){ return c.status==='completed'; }).length;
-      var stepsHtml = cats.map(function(c, i){
-        var isCurrent = catalystData.current_stage === c.label;
-        var done = c.status === 'completed';
-        var dotColor = done ? '#3f7d72' : isCurrent ? '#ffd84a' : '#16140e';
-        var dotBorder = (!done && !isCurrent) ? 'border:2px solid #6b6350;' : '';
-        var dotGlow = isCurrent ? 'box-shadow:0 0 0 3px #16140e, 0 0 14px rgba(255,216,74,0.6);' : 'box-shadow:0 0 0 3px #16140e;';
-        var dateStr = c.date ? String(c.date).slice(0,7) : '';
-        var labelColor = done ? '#cdc2a8' : isCurrent ? '#f6f0e3' : '#f3ead7';
-        var statusTxt = done ? '\u2713 DONE' : isCurrent ? '\u25b6 CURRENT' : (c.estimated ? 'ESTIMATED' : 'UPCOMING');
-        var statusColor = done ? '#4fbfab' : isCurrent ? '#ffd84a' : '#8f8772';
-        var isLast = (i === cats.length-1);
-        return '<div style="display:grid; grid-template-columns:80px 1fr; align-items:start;">'
-          + '<div style="text-align:right; padding:1px 15px 0 0; font-size:11px; color:'+(isCurrent?'#ffd84a':'#8f8772')+';">'+dateStr+'</div>'
-          + '<div style="position:relative; '+(isLast?'':'border-left:2px solid rgba(238,228,208,0.16);')+' padding:0 0 14px 22px;">'
-          +   '<span style="position:absolute; left:-8px; top:1px; width:13px; height:13px; border-radius:50%; background:'+dotColor+'; '+dotBorder+dotGlow+'"></span>'
-          +   '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
-          +     '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:14px; color:'+labelColor+';">'+c.label+'</span>'
-          +     '<span style="font-size:8.5px; letter-spacing:0.14em; color:'+statusColor+';">'+statusTxt+'</span>'
-          +   '</div>'
-          +   (c.description ? '<div style="margin-top:3px; font-size:11.5px; line-height:1.45; color:#9a9079;">'+c.description+'</div>' : '')
-          + '</div>'
-          + '</div>';
-      }).join('');
-      _daSet('da-catalyst',
-        '<div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px;">'
-        +   '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">Milestone Path</span>'
-        +   '<span style="font-size:10px; letter-spacing:0.16em; color:#8f8772; text-transform:uppercase;">'+doneCount+' of '+cats.length+' cleared</span>'
-        + '</div>' + stepsHtml
-        + '<div style="margin-top:6px; padding-top:12px; border-top:1px solid rgba(238,228,208,0.08); font-size:10.5px; letter-spacing:0.1em; color:#7d745f; text-transform:uppercase;">Current stage: '+(catalystData.current_stage||'\u2014')+' \u00b7 '+(catalystData.days_elapsed!=null?catalystData.days_elapsed+' days elapsed':'')+'</div>');
-    } else {
-      _daSet('da-catalyst', '<div style="font-size:12px; color:#9a9079;">No catalyst milestones available for this deal.</div>');
-    }
-  }catch(e){
-    _daSet('da-catalyst', '<div style="font-size:12px; color:#9a9079;">Unable to load catalyst calendar.</div>');
-  }
+  // ---- catalyst timeline — disabled pending filing-sourced milestone detection ----
+  _daSet('da-catalyst',
+    '<div style="display:flex; align-items:baseline; gap:9px; margin-bottom:14px;">'
+    +   '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">Milestone Path</span>'
+    + '</div>'
+    + '<div style="font-size:12.5px; line-height:1.75; color:#9a9079;">Meridian shows a milestone only when an SEC filing proves it happened. Detection of proxy filings, shareholder votes, and regulatory clearances is being built against EDGAR directly. Until every step on this timeline traces to a filing you can open, there is no timeline here.</div>'
+    + '<div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(238,228,208,0.08); font-size:11.5px; line-height:1.6; color:#7d745f;">What is confirmed for this deal: announced <span style="color:#cdc2a8;">' + (deal.filed || '\u2014') + '</span>' + (deal.close_date ? ', with the company guiding to a close in <span style="color:#cdc2a8;">' + deal.close_date + '</span>.' : '.') + '</div>');
 
   // ---- "Where This Stands" — honest slot, pattern library in development ----
   _daSet('da-stands',
@@ -2509,8 +2473,8 @@ let currentUser = null;
 function applyPaywallToSections(){
   if(isSubscribed) return;
   const premiumSections=[
-    'da-implied-prob','da-rr-grid',
-    'da-acq-grid','da-comps','da-score-bars','da-catalyst'
+    'da-implied-prob','da-rr-grid','da-position-table',
+    'da-acq-grid','da-score-bars'
   ];
   premiumSections.forEach(id=>{
     const el=document.getElementById(id);
