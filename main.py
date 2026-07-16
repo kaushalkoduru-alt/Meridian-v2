@@ -270,14 +270,19 @@ def save_cache(records):
         print(f"save_cache error: {e}")
 
 
+# How long a deal can be absent from EDGAR scan results before rolling_merge drops it.
+# 36 hours = survives transient upstream flakiness (EDGAR timeouts, Yahoo rate limits)
+# without losing real open deals. Completion detection handles actual closed deals.
+ROLLING_CARRY_MAX_AGE_HOURS = 36
+
 def rolling_merge(new_deals):
     """
     Merges new scan results with existing cache.
     - New deals always included with fresh prices
     - Deals missing from this scan but in cache are kept IF:
-      1. They were seen within the last 2 hours (one missed scan)
+      1. They were seen within the last ROLLING_CARRY_MAX_AGE_HOURS hours
       2. Their spread hasn't moved more than 15% in either direction
-    - Deals missing from two consecutive scans are dropped
+    - Deals missing for more than ROLLING_CARRY_MAX_AGE_HOURS are dropped
     - Deals whose stock has crashed more than 15% below deal price are dropped immediately
     """
     existing = redis_get()
@@ -298,9 +303,9 @@ def rolling_merge(new_deals):
             fetched_time = datetime.strptime(fetched_str, '%Y-%m-%dT%H:%M')
             age_hours = (now - fetched_time).total_seconds() / 3600
 
-            # Drop if missing for more than 2 hours (2 consecutive scans)
-            if age_hours > 2:
-                print(f"  Rolling drop: {deal['ticker']} — missing for {age_hours:.1f}h")
+            # Drop if missing for more than ROLLING_CARRY_MAX_AGE_HOURS
+            if age_hours > ROLLING_CARRY_MAX_AGE_HOURS:
+                print(f"  Rolling drop: {deal['ticker']} — missing for {age_hours:.1f}h (>{ROLLING_CARRY_MAX_AGE_HOURS}h threshold)")
                 continue
 
             # Drop deals with null current price — can't calculate spread
@@ -1296,6 +1301,7 @@ def fetch_deals_from_edgar():
                 continue
             cp=float(h['Close'].iloc[-1])
             if cp<1:
+                print(f"  [PriceSkip] {ticker}: price ${cp:.2f} below $1 threshold — skipping")
                 seen_tickers.add(ticker)
                 continue
         except Exception as e:
@@ -1472,7 +1478,9 @@ def fetch_deals_from_edgar():
 
             if len(results) % 10 == 0:
                 save_cache(results)
-        except: continue
+        except Exception as _deal_ex:
+            print(f"  [ScanError] {ticker}: inner processing failed — {_deal_ex}")
+            continue
 
     
 
