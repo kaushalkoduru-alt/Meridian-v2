@@ -1483,38 +1483,17 @@ async function renderAnalysis(deal){
         <div class="risk-factor"><div class="risk-dot ${f.l}"></div><div class="risk-text">${f.t}</div></div>
     `).join('');
 
-    // Catalyst Calendar
-    document.getElementById('da-catalyst').innerHTML='<div style="padding:1.5rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.44rem;color:var(--dim);">Loading catalyst calendar...</div>';
-    try{
-        const txv=deal.tx_value||0;
-        const catalystData=await fetch(`/api/catalyst/${deal.ticker}?filed=${deal.filed}&deal_type=${encodeURIComponent(deal.deal_type)}&tx_value=${txv}`).then(r=>r.json());
-        const cats=catalystData.catalysts||[];
-        if(cats.length>0){
-            const stepsHtml=cats.map((c,i)=>{
-                const isLast=i===cats.length-1;
-                const isCurrent=catalystData.current_stage===c.label;
-                const statusClass=isCurrent?'current':c.status==='completed'?'completed':'pending';
-                const dateStr=c.date?c.date.slice(0,7):'';
-                return `<div class="catalyst-step ${statusClass}">
-                    <div class="catalyst-step-dot"></div>
-                    <div class="catalyst-step-label">${c.label}</div>
-                    <div class="catalyst-step-date">${dateStr}</div>
-                    ${c.estimated?'<div class="catalyst-step-est">est.</div>':'<div class="catalyst-step-est">confirmed</div>'}
-                    <div class="catalyst-step-desc">${c.description}</div>
-                </div>`;
-            }).join('');
-            document.getElementById('da-catalyst').innerHTML=`
-                <div class="catalyst-chain">
-                    <div class="catalyst-steps">${stepsHtml}</div>
-                    <div class="catalyst-current-stage">◈ Current Stage: ${catalystData.current_stage} · ${catalystData.days_elapsed} days elapsed</div>
-                </div>
-            `;
-        }
-    }catch(e){
-        document.getElementById('da-catalyst').innerHTML='<div style="padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--bdr);font-family:\'Cormorant Garamond\',serif;font-size:0.9rem;color:var(--muted);">Unable to load catalyst calendar.</div>';
-    }
-  applyPaywallToSections();
-}
+    // Catalyst Calendar — disabled pending filing-sourced milestone detection.
+    // Prior version derived every milestone from arithmetic on the announcement
+    // date and marked them "completed" once the invented date passed.
+    document.getElementById('da-catalyst').innerHTML=
+        '<div style="padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--bdr);">'
+        + '<div style="font-family:\'DM Mono\',monospace;font-size:0.8rem;line-height:1.75;color:var(--bone);">Meridian shows a milestone only when an SEC filing proves it happened. Detection of proxy filings, shareholder votes, and regulatory clearances is being built against EDGAR directly. Until every step on this timeline traces to a filing you can open, there is no timeline here.</div>'
+        + '<div style="margin-top:1rem;padding-top:0.85rem;border-top:1px solid var(--bdr);font-family:\'DM Mono\',monospace;font-size:0.72rem;line-height:1.6;color:var(--muted);">What is confirmed for this deal: announced <span style="color:var(--cream);">'
+        + (deal.filed||'—') + '</span>'
+        + (deal.close_date ? ', with the company guiding to a close in <span style="color:var(--cream);">'+deal.close_date+'</span>.' : '.')
+        + '</div>'
+        + '</div>';}
 
 // ── COMPARE PAGE ──────────────────────────────────────────────────────────────
 async function loadCompare(){
