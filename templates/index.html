@@ -1648,11 +1648,27 @@ let compareSortDir = -1;
 let compareFilter = 'all';
 
 // ── PAGE NAVIGATION ──────────────────────────────────────────────────────────
-function showPage(id){
+// ── ROUTING ───────────────────────────────────────────────────────────────────
+const PAGE_PATHS = {
+    'page-landing':    '/',
+    'page-dashboard':  '/dashboard',
+    'page-methodology':'/methodology',
+    'page-arb-primer': '/primer',
+    'page-compare':    '/compare'
+};
+
+function showPage(id, opts){
+    opts = opts || {};
     ['page-landing','page-dashboard','page-analysis','page-compare','page-methodology','page-arb-primer']
         .forEach(p => document.getElementById(p).classList.remove('active'));
     document.getElementById(id).classList.add('active');
     window.scrollTo(0,0);
+    if(!opts.skipHistory){
+        const path = opts.path || PAGE_PATHS[id] || '/';
+        if(window.location.pathname !== path){
+            history.pushState({ page:id, path:path, ticker:opts.ticker||null }, '', path);
+        }
+    }
 }
 function showLanding()    { showPage('page-landing'); }
 function showMethodology(){ showPage('page-methodology'); }
@@ -1660,6 +1676,38 @@ function showScoring(){ showPage('page-methodology'); }
 function showDashboard()  { showPage('page-dashboard'); if(!dealsLoaded) loadDeals(); }
 function showCompare()    { showPage('page-compare'); loadCompare(); }
 function showArbPrimer() { showPage('page-arb-primer'); }
+
+// ── back / forward ────────────────────────────────────────────────────────────
+window.addEventListener('popstate', function(e){
+    routeTo(window.location.pathname, true);
+});
+
+// ── resolve a URL path to a page ──────────────────────────────────────────────
+async function routeTo(path, fromHistory){
+    const dealMatch = path.match(/^\/deal\/([A-Za-z.\-]+)\/?$/);
+    if(dealMatch){
+        const tk = dealMatch[1].toUpperCase();
+        if(!dealsLoaded) { await loadDeals(); }
+        const d = (allDeals||[]).find(x => x.ticker === tk);
+        if(d){
+            showPage('page-analysis', { skipHistory: !!fromHistory, path: '/deal/'+tk, ticker: tk });
+            renderAnalysis(d);
+            return;
+        }
+        // unknown ticker → dashboard
+        showPage('page-dashboard', { skipHistory: !!fromHistory });
+        if(!dealsLoaded) loadDeals();
+        return;
+    }
+    const map = {
+        '/':            () => showPage('page-landing',     { skipHistory: !!fromHistory }),
+        '/dashboard':   () => { showPage('page-dashboard', { skipHistory: !!fromHistory }); if(!dealsLoaded) loadDeals(); },
+        '/methodology': () => showPage('page-methodology', { skipHistory: !!fromHistory }),
+        '/primer':      () => showPage('page-arb-primer',  { skipHistory: !!fromHistory }),
+        '/compare':     () => { showPage('page-compare',   { skipHistory: !!fromHistory }); loadCompare(); }
+    };
+    (map[path] || map['/'])();
+}
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function sign(v){ return v>=0?'+':''; }
 function spColor(v){ return v>=0?'var(--green)':'var(--red)'; }
@@ -2669,10 +2717,10 @@ function updateModalState(){
   if(currentUser&&!isSubscribed){ctaBtn.textContent='Subscribe Now →';signinBtn.style.display='none';hint.style.display='none';}
   else if(!currentUser){ctaBtn.textContent='Sign Up & Subscribe →';signinBtn.style.display='block';hint.style.display='block';}
 }
-function showAnalysis(d){
+function showAnalysis(d, _fromHistory){
   if(typeof d === 'string'){ d = (allDeals||[]).find(x => x.ticker === d); }
   if(!d) return;
-  showPage('page-analysis');
+  showPage('page-analysis', { skipHistory: !!_fromHistory, path: '/deal/'+d.ticker, ticker: d.ticker });
   renderAnalysis(d);
 }
 
@@ -2779,6 +2827,9 @@ window.addEventListener('load', () => {
   } else {
     setTimeout(initClerk, 2000);
   }
+  // resolve the URL we actually landed on (deep links, refresh, back/forward)
+  history.replaceState({ path: window.location.pathname }, '', window.location.pathname);
+  routeTo(window.location.pathname, true);
 });
 </script>
 <script>
