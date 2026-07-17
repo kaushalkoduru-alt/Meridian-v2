@@ -1859,6 +1859,12 @@ async def methodology(): return read_html()
 @app.get("/compare")
 async def compare(): return read_html()
 
+@app.get("/primer")
+async def primer(): return read_html()
+
+@app.get("/deal/{ticker}")
+async def deal_page(ticker: str): return read_html()
+
 def get_clean_deals():
     """
     Single source of truth for what the frontend sees.
