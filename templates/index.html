@@ -811,15 +811,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   #hero-opps { grid-template-columns: 1fr !important; }
   #hero-opps > div { padding: 18px !important; }
 
-  /* ── dashboard: the 9-col table becomes stacked cards ── */
-  #deal-list > div:first-child { display: none !important; }   /* header row */
-  #deal-list [style*="grid-template-columns:92px"] {
-    display: grid !important;
-    grid-template-columns: 1fr auto !important;
-    grid-auto-rows: min-content !important;
-    row-gap: 4px !important;
-    padding: 14px 14px !important;
-  }
+  /* ── dashboard: hide the desktop column headers (cards are self-labeling) ── */
+  #deal-list > div:first-child { display: none !important; }
 
   /* ── analysis: metrics strip 5→2 ── */
   #da-metrics { grid-template-columns: 1fr 1fr !important; }
