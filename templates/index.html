@@ -760,6 +760,10 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   }
   .deal-row-desktop { display: none !important; }
   .deal-row-mobile  { display: block !important; }
+}
+@media (min-width: 861px) {
+  .deal-row-desktop { display: grid !important; }
+  .deal-row-mobile  { display: none !important; }
   footer > div[style*="display:flex"] {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -2309,7 +2313,7 @@ function renderDeals(deals){
             +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Annualized</div><div style="margin-top:2px; font-size:13px; color:#9a9079;">'+sgn1(d.ann)+'</div></div>'
             +   '</div>'
             + '</div>';
-      html += '<div class="deal-row-desktop" onclick="showAnalysis(\''+d.ticker+'\')" onmouseover="this.style.background=\'rgba(92,192,173,0.05)\'" onmouseout="this.style.background=\'transparent\'" style="cursor:pointer; display:grid; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; border-bottom:1px solid rgba(238,228,208,0.07); transition:background 0.12s ease; background:transparent;">'
+      html += '<div class="deal-row-desktop" onclick="showAnalysis(\''+d.ticker+'\')" onmouseover="this.style.background=\'rgba(92,192,173,0.05)\'" onmouseout="this.style.background=\'transparent\'" style="cursor:pointer; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; border-bottom:1px solid rgba(238,228,208,0.07); transition:background 0.12s ease; background:transparent;">'
             +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">'+d.ticker+'</div>'
             +   '<div>'+typeHTML(d.deal_type)+'</div>'
             +   '<div style="font-size:13px; font-weight:500; color:#f3ead7;">'+(d.acquirer||'\u2014')+'</div>'
