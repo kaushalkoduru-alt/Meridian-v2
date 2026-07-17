@@ -760,10 +760,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   }
   .deal-row-desktop { display: none !important; }
   .deal-row-mobile  { display: block !important; }
-}
-@media (min-width: 861px) {
-  .deal-row-desktop { display: grid !important; }
-  .deal-row-mobile  { display: none !important; }
   footer > div[style*="display:flex"] {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -875,6 +871,10 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 @media (max-width: 400px) {
   #da-metrics { grid-template-columns: 1fr !important; }
   #page-landing h1, #page-methodology h1, #page-arb-primer h1 { font-size: 29px !important; }
+}
+@media (min-width: 861px) {
+  .deal-row-desktop { display: grid !important; }
+  .deal-row-mobile  { display: none !important; }
 }
 </style>
 </head>
