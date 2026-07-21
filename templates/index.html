@@ -1853,32 +1853,87 @@ function getRiskFactors(d){
     return f.slice(0,4);
 }
 
-// ── SCORE BREAKDOWN ───────────────────────────────────────────────────────────
 function getScoreBreakdown(d){
-    let sq=50;
-    if(d.sp_pct>0&&d.sp_pct<3)        sq=95;
-    else if(d.sp_pct>=3&&d.sp_pct<5)  sq=88;
-    else if(d.sp_pct>=5&&d.sp_pct<8)  sq=80;
-    else if(d.sp_pct>=8&&d.sp_pct<12) sq=60;
-    else if(d.sp_pct>=12&&d.sp_pct<18)sq=38;
-    else if(d.sp_pct>=18&&d.sp_pct<25)sq=25;
-    else if(d.sp_pct>=25)              sq=12;
-    else if(d.sp_pct<0)               sq=20;
-    const ds=d.deal_type==='All Cash'?88:d.deal_type==='Tender Offer'?84:d.deal_type==='Private Equity'?74:62;
-    let ts=75;
-    if(d.days_old<90)       ts=92;
-    else if(d.days_old<270) ts=75;
-    else if(d.days_old<500) ts=60;
-    else                    ts=40;
-    const finScore=d.financing_signal==='committed'?95:d.financing_signal==='confident'?65:d.financing_signal==='contingent'?20:50;
-    const spreadLabel=d.sp_pct<8?'under 8% — high market confidence in closure':d.sp_pct<12?'8-12% Uncertain Zone — elevated monitoring required':'above 12% — elevated break risk';
-    return [
-        {label:'Spread Quality',   score:sq,      color:getScoreColor(sq),      desc:`${d.sp_pct.toFixed(2)}% spread — ${spreadLabel}`},
-        {label:'Deal Structure',   score:ds,      color:getScoreColor(ds),      desc:`${d.deal_type} — ${d.deal_type==='All Cash'?'highest reliability, no stock price risk':d.deal_type==='Tender Offer'?'fast timeline, high completion rate':d.deal_type==='Private Equity'?'financing dependent, moderate risk':'stock component adds market complexity'}`},
-        {label:'Days Elapsed',     score:ts,      color:getScoreColor(ts),      desc:`${d.days_old} days — ${d.days_old<90?'fresh deal, low accumulated risk':d.days_old<270?'normal deal progression':d.days_old<500?'extended timeline, monitor spread':'very extended, serious concern'}`},
-        {label:'Financing Signal', score:finScore,color:getScoreColor(finScore),desc:`${finLabel(d.financing_signal)} — ${finScore>=80?'strong positive signal, financing secured':finScore>=60?'mild positive signal':finScore>=40?'no clear signal detected':'negative signal, deal contingent on financing'}`},
-        {label:'V3 Overall Score', score:d.score, color:getScoreColor(d.score), desc:`Final normalized score — ${d.risk} Risk · Spread rules applied first, score used as tiebreaker in 8-12% Uncertain Zone`},
+    const sp = d.sp_pct;
+
+    // spread adjustment (main.py lines 633-640)
+    let spreadAdj, spreadNote;
+    if(sp > 0 && sp < 3)        { spreadAdj = 25;  spreadNote = 'market fully confident'; }
+    else if(sp >= 3 && sp < 5)  { spreadAdj = 18;  spreadNote = 'healthy spread'; }
+    else if(sp >= 5 && sp < 8)  { spreadAdj = 10;  spreadNote = 'moderate spread'; }
+    else if(sp >= 8 && sp < 12) { spreadAdj = 0;   spreadNote = 'wide — skepticism'; }
+    else if(sp >= 12 && sp < 18){ spreadAdj = -15; spreadNote = 'very wide — serious concern'; }
+    else if(sp >= 18 && sp < 25){ spreadAdj = -25; spreadNote = 'extreme — high break risk'; }
+    else if(sp >= 25)           { spreadAdj = -35; spreadNote = 'near-certain break'; }
+    else                        { spreadAdj = -25; spreadNote = 'negative — trading above deal'; }
+
+    // deal type (641-643)
+    let typeAdj;
+    if(d.deal_type === 'All Cash')            typeAdj = 10;
+    else if(d.deal_type === 'Tender Offer')   typeAdj = 8;
+    else if(d.deal_type === 'Private Equity') typeAdj = 5;
+    else                                      typeAdj = 0;
+
+    // days since filed (644-647)
+    let daysAdj, daysNote;
+    const dd = d.days_old;
+    if(dd < 90)       { daysAdj = 10;  daysNote = 'fresh deal'; }
+    else if(dd < 270) { daysAdj = 0;   daysNote = 'normal progression'; }
+    else if(dd < 500) { daysAdj = -5;  daysNote = 'extended timeline'; }
+    else              { daysAdj = -15; daysNote = 'very extended'; }
+
+    // regulatory (score_regulatory_complexity, 607-619)
+    let regAdj = 5, regNote = 'standard review';
+    let rt = [];
+    try { rt = d.reg_tags ? JSON.parse(d.reg_tags) : []; } catch(e){ rt = []; }
+    if(rt.length && !(rt.length === 1 && rt[0].agency === 'Standard Review')){
+        let s = 0;
+        for(const tag of rt){
+            const a = tag.agency || '', lvl = tag.level || 'low';
+            if(a === 'HSR Filing')              s -= 3;
+            else if(a === 'FTC Antitrust')      s -= (lvl === 'medium' ? 8 : 15);
+            else if(a === 'DOJ Antitrust')      s -= (lvl === 'medium' ? 8 : 15);
+            else if(a === 'CFIUS Review')       s -= 18;
+            else if(a === 'Market Concentration') s -= 10;
+        }
+        regAdj = Math.max(-20, Math.min(5, s));
+        regNote = rt.length + (rt.length === 1 ? ' review' : ' reviews');
+    }
+
+    // deal premium (score_deal_premium, 621-629)
+    let premAdj = 0, premNote = 'n/a';
+    if(d.break_price && d.dp && d.break_price > 0){
+        const premPct = ((d.dp - d.break_price) / d.break_price) * 100;
+        if(premPct >= 50)      { premAdj = 8;  premNote = '50%+ over unaffected'; }
+        else if(premPct >= 35) { premAdj = 6;  premNote = '35-50% premium'; }
+        else if(premPct >= 25) { premAdj = 4;  premNote = '25-35% premium'; }
+        else if(premPct >= 15) { premAdj = 2;  premNote = '15-25% premium'; }
+        else if(premPct >= 5)  { premAdj = 0;  premNote = 'thin premium'; }
+        else                   { premAdj = -5; premNote = 'under 5% — acquirer can walk'; }
+    }
+
+    // financing (score_financing_signal, 600-605)
+    let finAdj, finNote;
+    switch(d.financing_signal){
+        case 'committed':  finAdj = 10;  finNote = 'committed / cash on hand'; break;
+        case 'confident':  finAdj = 2;   finNote = 'highly confident'; break;
+        case 'contingent': finAdj = -10; finNote = 'contingent on financing'; break;
+        default:           finAdj = 0;   finNote = 'no signal'; break;
+    }
+
+    const factors = [
+        { label:'Spread',          adj:spreadAdj, note:`${sp.toFixed(2)}% — ${spreadNote}` },
+        { label:'Deal Type',       adj:typeAdj,   note:d.deal_type || '—' },
+        { label:'Days Elapsed',    adj:daysAdj,   note:`${dd} days — ${daysNote}` },
+        { label:'Regulatory',      adj:regAdj,    note:regNote },
+        { label:'Deal Premium',    adj:premAdj,   note:premNote },
+        { label:'Financing Signal',adj:finAdj,    note:finNote },
     ];
+
+    const raw = 50 + factors.reduce((a,f)=>a+f.adj, 0);
+    const normalized = Math.min(100, Math.max(0, Math.round(((raw - (-35)) / (118 - (-35))) * 100)));
+
+    return { base:50, factors, raw, normalized };
 }
 
 // ============================================================
@@ -2143,17 +2198,38 @@ async function renderAnalysis(deal){
     + '</div>'
     + '<div style="margin-top:13px; font-size:11.5px; line-height:1.5; color:#8f8772;">Spread range sets the risk tier; the score refines within it.</div>');
 
-  var bars = (typeof getScoreBreakdown==='function') ? getScoreBreakdown(deal) : [];
-  _daSet('da-score-bars', bars.map(function(b){
-    return '<div style="padding:10px 0; border-top:1px solid rgba(238,228,208,0.08);">'
-      + '<div style="display:flex; justify-content:space-between; align-items:baseline;">'
-      +   '<span style="font-size:12px; letter-spacing:0.04em; color:#e2d8c0;">'+b.label+'</span>'
-      +   '<span style="font-size:14px; font-weight:600; color:'+b.color+';">'+b.score+'</span>'
+  var bd = (typeof getScoreBreakdown==='function') ? getScoreBreakdown(deal) : null;
+  if(bd){
+    var maxMag = 35; // largest possible single adjustment, for bar scaling
+    var factorHTML = bd.factors.map(function(f){
+      var pos = f.adj >= 0;
+      var col = pos ? '#5fe0c9' : '#f0735e';
+      var pct = Math.min(100, (Math.abs(f.adj) / maxMag) * 100);
+      return '<div style="padding:9px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+        + '<div style="display:flex; justify-content:space-between; align-items:baseline;">'
+        +   '<span style="font-size:12px; letter-spacing:0.04em; color:#e2d8c0;">'+f.label+'</span>'
+        +   '<span style="font-size:14px; font-weight:600; color:'+col+';">'+(pos?'+':'\u2212')+Math.abs(f.adj)+'</span>'
+        + '</div>'
+        // signed bar: grows right from center for +, left for −
+        + '<div style="margin-top:6px; height:5px; background:rgba(238,228,208,0.06); position:relative; display:flex; justify-content:'+(pos?'flex-start':'flex-end')+'; flex-direction:'+(pos?'row':'row-reverse')+';">'
+        +   '<div style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(238,228,208,0.18);"></div>'
+        +   '<div style="width:'+(pct/2)+'%; height:100%; background:'+col+'; margin-left:'+(pos?'50%':'0')+'; margin-right:'+(pos?'0':'50%')+';"></div>'
+        + '</div>'
+        + '<div style="margin-top:6px; font-size:11.5px; line-height:1.45; color:#9a9079;">'+f.note+'</div>'
+        + '</div>';
+    }).join('');
+    _daSet('da-score-bars',
+      '<div style="display:flex; justify-content:space-between; align-items:baseline; padding-bottom:9px; border-bottom:1px solid rgba(238,228,208,0.12);">'
+      +   '<span style="font-size:11px; letter-spacing:0.1em; color:#8f8772; text-transform:uppercase;">Base score</span>'
+      +   '<span style="font-size:14px; color:#cdc2a8;">50</span>'
       + '</div>'
-      + '<div style="margin-top:6px; height:5px; background:rgba(238,228,208,0.08);"><div style="width:'+b.score+'%; height:100%; background:'+b.color+';"></div></div>'
-      + (b.desc ? '<div style="margin-top:6px; font-size:11.5px; line-height:1.45; color:#9a9079;">'+b.desc+'</div>' : '')
-      + '</div>';
-  }).join(''));
+      + factorHTML
+      + '<div style="display:flex; justify-content:space-between; align-items:baseline; padding-top:11px; margin-top:4px; border-top:1px solid rgba(238,228,208,0.14);">'
+      +   '<span style="font-size:11px; letter-spacing:0.1em; color:'+m.fg+'; text-transform:uppercase;">Raw \u2192 normalized</span>'
+      +   '<span style="font-size:15px; font-weight:600; color:'+m.fg+';">'+bd.raw+' \u2192 '+bd.normalized+'</span>'
+      + '</div>'
+      + '<div style="margin-top:8px; font-size:10.5px; line-height:1.5; color:#6f6753;">Each factor adds to or subtracts from the base 50. The raw total is normalized to 0\u2013100. These are analyst-set weights, not backtested \u2014 the forward record calibrates them as deals resolve.</div>');
+  }
 
   // ---- risk factors ----
   var rf = (typeof getRiskFactors==='function') ? getRiskFactors(deal) : [];
