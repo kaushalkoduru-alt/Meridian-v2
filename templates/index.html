@@ -2234,7 +2234,7 @@ async function renderAnalysis(deal){
                    : n >= 70 ? 'the upper-middle range of what the model scores'
                    : n >= 55 ? 'the middle range of what the model scores'
                    : 'the lower range of what the model scores';
-          return '<div style="margin-top:10px; font-size:11px; line-height:1.6; color:#8f8772;"><span style="color:#cdc2a8;">Score '+n+'</span> = this deal sits '+n+'% of the way from the worst possible setup (\u221235) to the best possible (118), after every factor is added to the base 50. That puts it in '+tier+'. The math is shown above, nothing hidden.</div>';
+          return '<div style="margin-top:10px; font-size:11px; line-height:1.6; color:#e8e0d0;"><span style="color:#cdc2a8;">Score '+n+'</span> = this deal sits '+n+'% of the way from the worst possible setup (\u221235) to the best possible (118), after every factor is added to the base 50. That puts it in '+tier+'. The math is shown above, nothing hidden.</div>';
         })()
       + '<div style="margin-top:8px; font-size:10px; line-height:1.5; color:#6f6753;">These are analyst-set weights, not backtested. The forward record calibrates them as deals resolve.</div>');
   }
