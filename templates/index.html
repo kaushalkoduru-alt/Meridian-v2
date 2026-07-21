@@ -2228,7 +2228,15 @@ async function renderAnalysis(deal){
       +   '<span style="font-size:11px; letter-spacing:0.1em; color:'+m.fg+'; text-transform:uppercase;">Raw \u2192 normalized</span>'
       +   '<span style="font-size:15px; font-weight:600; color:'+m.fg+';">'+bd.raw+' \u2192 '+bd.normalized+'</span>'
       + '</div>'
-      + '<div style="margin-top:8px; font-size:10.5px; line-height:1.5; color:#6f6753;">Each factor adds to or subtracts from the base 50. The raw total is normalized to 0\u2013100. These are analyst-set weights, not backtested \u2014 the forward record calibrates them as deals resolve.</div>');
+      + (function(){
+          var n = bd.normalized;
+          var tier = n >= 85 ? 'the top range of what the model scores'
+                   : n >= 70 ? 'the upper-middle range of what the model scores'
+                   : n >= 55 ? 'the middle range of what the model scores'
+                   : 'the lower range of what the model scores';
+          return '<div style="margin-top:10px; font-size:11px; line-height:1.6; color:#8f8772;"><span style="color:#cdc2a8;">Score '+n+'</span> = this deal sits '+n+'% of the way from the worst possible setup (\u221235) to the best possible (118), after every factor is added to the base 50. That puts it in '+tier+'. The math is shown above, nothing hidden.</div>';
+        })()
+      + '<div style="margin-top:8px; font-size:10px; line-height:1.5; color:#6f6753;">These are analyst-set weights, not backtested. The forward record calibrates them as deals resolve.</div>');
   }
 
   // ---- risk factors ----
