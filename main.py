@@ -948,24 +948,24 @@ Filing text:
 {text_block[:3000]}"""
 
         resp = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
+            "https://api.anthropic.com/v1/messages",
             headers={
-                "Authorization": f"Bearer {groq_key}",
+                "x-api-key": anthropic_key,
+                "anthropic-version": "2023-06-01",
                 "Content-Type": "application/json"
             },
             json={
-                "model": "llama-3.1-8b-instant",
+                "model": "claude-sonnet-5",
                 "max_tokens": 100,
-                "temperature": 0,
+                "system": "You are an M&A data extractor. Return only valid JSON, no other text.",
                 "messages": [
-                    {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
                     {"role": "user", "content": prompt}
                 ]
             },
             timeout=15
         )
         if resp.status_code == 200:
-            content = resp.json()['choices'][0]['message']['content'].strip()
+            content = resp.json()['content'][0]['text'].strip()
             content = content.replace('```json', '').replace('```', '').strip()
             data = json.loads(content)
             acquirer = data.get('acquirer')
@@ -994,6 +994,7 @@ def extract_deal_metadata_llm(text_block, ticker):
     One call for both fields — minimal API usage.
     """
     groq_key = os.environ.get("GROQ_API_KEY", "")
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not groq_key:
         return {'tx_value': None, 'close_date': None}
     try:
@@ -1012,24 +1013,24 @@ Filing text:
 {text_block[:3000]}"""
 
         resp = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
+            "https://api.anthropic.com/v1/messages",
             headers={
-                "Authorization": f"Bearer {groq_key}",
+                "x-api-key": anthropic_key,
+                "anthropic-version": "2023-06-01",
                 "Content-Type": "application/json"
             },
             json={
-                "model": "llama-3.1-8b-instant",
+                "model": "claude-sonnet-5",
                 "max_tokens": 100,
-                "temperature": 0,
+                "system": "You are an M&A data extractor. Return only valid JSON, no other text.",
                 "messages": [
-                    {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
                     {"role": "user", "content": prompt}
                 ]
             },
             timeout=15
         )
         if resp.status_code == 200:
-            content = resp.json()['choices'][0]['message']['content'].strip()
+            content = resp.json()['content'][0]['text'].strip()
             content = content.replace('```json', '').replace('```', '').strip()
             data = json.loads(content)
             tx = data.get('tx_value')
@@ -1489,6 +1490,7 @@ def fetch_deals_from_edgar():
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan complete.")
         # Background enrichment — fill missing tx_value and close_date via Groq
         groq_key = os.environ.get("GROQ_API_KEY", "")
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
         if groq_key:
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting background enrichment...")
             enriched = False
@@ -1511,14 +1513,14 @@ def fetch_deals_from_edgar():
                     try:
                         time.sleep(3.0)
                         resp = requests.post(
-                            "https://api.groq.com/openai/v1/chat/completions",
-                            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                            "https://api.anthropic.com/v1/messages",
+                            headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
                             json={
-                                "model": "llama-3.1-8b-instant",
+                                "model": "claude-sonnet-5",
                                 "max_tokens": 100,
-                                "temperature": 0,
+                                
+                                "system": "You are an M&A data extractor. Return only valid JSON, no other text.",
                                 "messages": [
-                                    {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
                                     {"role": "user", "content": f"""Extract the acquiring company name from this SEC 8-K merger filing.
 The TARGET company ticker is {ticker} and company name is {deal.get('company')} — do NOT return this as the acquirer.
 The acquirer is the company BUYING the target.
@@ -1533,7 +1535,7 @@ If you cannot identify the acquirer with confidence, return: {{"acquirer": null}
                             timeout=15
                         )
                         if resp.status_code == 200:
-                            content = resp.json()['choices'][0]['message']['content'].strip()
+                            content = resp.json()['content'][0]['text'].strip()
                             content = content.replace('```json','').replace('```','').strip()
                             data = json.loads(content)
                             acq = data.get('acquirer')
@@ -1554,14 +1556,13 @@ If you cannot identify the acquirer with confidence, return: {{"acquirer": null}
                 try:
                     time.sleep(3.0)
                     resp = requests.post(
-                        "https://api.groq.com/openai/v1/chat/completions",
-                        headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                        "https://api.anthropic.com/v1/messages",
+                        headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
                         json={
-                            "model": "llama-3.1-8b-instant",
+                            "model": "claude-sonnet-5",
                             "max_tokens": 150,
-                            "temperature": 0,
+                            "system": "You are an M&A data extractor. Return only valid JSON, no other text.",
                             "messages": [
-                                {"role": "system", "content": "You are an M&A data extractor. Return only valid JSON, no other text."},
                                 {"role": "user", "content": f"""Extract from this SEC 8-K merger filing text:
 1. Total transaction value in billions (number only, e.g. 2.5 for $2.5 billion, 0.45 for $450 million)
 2. Expected closing timeframe (e.g. 'Q3 2026', 'second half of 2026', 'early 2027')
@@ -1579,7 +1580,7 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                         timeout=15
                     )
                     if resp.status_code == 200:
-                        content = resp.json()['choices'][0]['message']['content'].strip()
+                        content = resp.json()['content'][0]['text'].strip()
                         content = content.replace('```json','').replace('```','').strip()
                         data = json.loads(content)
                         tx = data.get('tx_value')
