@@ -1327,7 +1327,7 @@ def fetch_deals_from_edgar():
         # Background enrichment — fill missing tx_value and close_date via Groq
         groq_key = os.environ.get("GROQ_API_KEY", "")
         anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if groq_key:
+        if anthropic_key:
             print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting background enrichment...")
             enriched = False
             for deal in results:
@@ -1442,6 +1442,35 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                 clean = [{k: v for k, v in r.items() if k != '_filing_text'} for r in results]
                 save_cache(clean)
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Enrichment complete — cache updated.")
+        # ── VERIFICATION GATE (shadow mode) ──────────────────────────────────
+        # Every deal must be provable by a real EDGAR filing. Records a verdict
+        # and an accession number; blocks nothing until GATE_ENFORCING is True.
+        try:
+            from deal_gate import gate_deal, gate_report, GATE_ENFORCING, VERDICT_VERIFIED
+            
+            for _d in results:
+                _d['gate'] = gate_deal(
+                    _d.get('ticker'),
+                    SEC_CIK_MAP.get(_d.get('ticker', ''), ''),
+                    _d.get('filed'),
+                    cached_verdict=_d.get('gate'),
+                    finder=_find_announcement_filing_for_validation,
+                    merger_signals=VALIDATION_MERGER_SIGNALS,
+                    irrelevant_signals=VALIDATION_IRRELEVANT_SIGNALS,
+                )
+            _hdr, _lines = gate_report(results)
+            print(_hdr)
+            for _ln in _lines:
+                print(_ln)
+            if GATE_ENFORCING:
+                _before = len(results)
+                results = [r for r in results if r.get('gate', {}).get('verdict') == VERDICT_VERIFIED]
+                if len(results) != _before:
+                    print(f"[Gate] blocked {_before - len(results)} unverified deal(s)")
+            _clean = [{k: v for k, v in r.items() if k != '_filing_text'} for r in results]
+            save_cache(_clean)
+        except Exception as _ge:
+            print(f"[Gate] error (non-fatal, nothing blocked): {_ge}")
     else:
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan returned no results — Redis unchanged.")
 
