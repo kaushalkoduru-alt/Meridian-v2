@@ -15,6 +15,7 @@ import random
 import time
 from contextlib import asynccontextmanager
 import stripe
+from find_announcement import find_announcement_8k_backward
 
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
@@ -423,6 +424,10 @@ EDGAR_QUERIES = [
     {'type': 'Cash + Stock', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22cash+and+stock%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
     {'type': 'Private Equity', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22+%22sponsor%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
     {'type': 'Tender Offer', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22tender+offer%22+%22per+share%22+%22definitive+agreement%22&forms=8-K&dateRange=custom&startdt=2025-06-01&enddt=2026-06-30&from={start}&size=100'},
+    # Merger proxies. The proxy itself is unparseable (300+ pages, terms buried),
+    # so path B resolves each hit back to its announcement 8-K and parses that.
+    # Catches cash deals whose announcement 8-K our phrase queries missed.
+    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22+%22merger+agreement%22&forms=DEFM14A&dateRange=custom&startdt=2025-10-01&enddt=2026-07-24&from={start}&size=100'},
 ]
 
 # FALLBACK_DEALS eliminated. No hardcoded deals. Zero real deals > fake deals.
@@ -1093,7 +1098,7 @@ def fetch_deals_from_edgar():
     for i,hit in enumerate(all_hits):
         src=hit['_source']
         deal_type=hit.get('_deal_type','All Cash')
-        form_type=src.get('form_type','')
+        form_type=src.get('form','') or (src.get('root_forms') or [''])[0]
         # SC 14D9 filings are always tender offers
         if 'SC 14D9' in form_type or 'SC14D9' in form_type:
             deal_type='Tender Offer'
@@ -1103,6 +1108,28 @@ def fetch_deals_from_edgar():
         cik=src['ciks'][0].lstrip('0') if src['ciks'] else None
         accession=src['adsh']
         if not ticker or not cik or not accession: continue
+        # ── PATH B: proxy hits resolve back to their announcement 8-K ─────────
+        # A DEFM14A proves a deal exists but buries the terms. The announcement
+        # 8-K states them in a press release, which our extractor handles well.
+        # If no announcement is found, the deal is skipped rather than guessed at.
+        
+        if 'DEFM14A' in form_type.upper() or 'PREM14A' in form_type.upper():
+            _proxy_date = src.get('file_date') or src.get('filing_date') or ''
+            _ann = find_announcement_8k_backward(
+                str(cik).zfill(10), _proxy_date or datetime.utcnow().strftime('%Y-%m-%d'),
+                EDGAR_HEADERS, lookback_days=400,
+                merger_signals=VALIDATION_MERGER_SIGNALS,
+                irrelevant_signals=VALIDATION_IRRELEVANT_SIGNALS,
+                text_fetcher=_get_text_for_validation,
+            )
+            if not _ann:
+                print(f"  [PathB] {ticker}: proxy found but no announcement 8-K in lookback — skipping")
+                continue
+            _adate, _aacc, _aform, _adoc = _ann
+            print(f"  [PathB] {ticker}: proxy resolved to {_aform} {_adate} ({_aacc})")
+            accession = _aacc
+            src = dict(src)
+            src['file_date'] = _adate
         if ticker in seen_tickers: continue
         if ticker in EXCLUDED_TICKERS: continue
 
