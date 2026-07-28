@@ -1108,6 +1108,7 @@ def fetch_deals_from_edgar():
         cik=src['ciks'][0].lstrip('0') if src['ciks'] else None
         accession=src['adsh']
         if not ticker or not cik or not accession: continue
+        print(f"  [Loop] processing {ticker} ({form_type}) {accession}")
         # ── PATH B: proxy hits resolve back to their announcement 8-K ─────────
         # A DEFM14A proves a deal exists but buries the terms. The announcement
         # 8-K states them in a press release, which our extractor handles well.
@@ -1132,7 +1133,20 @@ def fetch_deals_from_edgar():
             src['file_date'] = _adate
         if ticker in seen_tickers: continue
         if ticker in EXCLUDED_TICKERS: continue
-
+        # ── Age gate (moved up) ───────────────────────────────────────────────
+        # Age was checked ~100 lines below, after a Yahoo price lookup. Path B
+        # surfaces many old proxies whose targets have already delisted, so that
+        # ordering meant a slow failing price fetch for deals we then discarded.
+        # Checking the date first skips them before any network call.
+        try:
+            _age_days = (datetime.utcnow().date()
+                         - datetime.strptime(src['file_date'], '%Y-%m-%d').date()).days
+            if _age_days > 548:
+                print(f"  [AgeSkip] {ticker}: announced {_age_days} days ago — skipping before price fetch")
+                seen_tickers.add(ticker)
+                continue
+        except Exception:
+            pass
         # ── SPAC filter ───────────────────────────────────────────────────────
         # SPACs have no real merger target yet — exclude them entirely
         spac_keywords = ['acquisition corp', 'acquisition co', 'blank check', 
@@ -1146,7 +1160,6 @@ def fetch_deals_from_edgar():
 
         # ── 8-K Item filter ───────────────────────────────────────────────────
         # Only process filings that include Item 1.01 (Entry into Material Definitive Agreement)
-        src = hit.get('_source', {})
         items = src.get('items', [])
         if items:  
             item_strs = [str(i) for i in items]
@@ -1155,12 +1168,30 @@ def fetch_deals_from_edgar():
                 print(f"  Skip {ticker}: 8-K items {items} — no Item 1.01")
                 continue
         try:
-            h=yf.Ticker(ticker).history(period='5d')
-            if h.empty:
-                time.sleep(2)
-                h=yf.Ticker(ticker).history(period='5d')
-            if h.empty:
-                print(f"${ticker}: possibly delisted; no price data found  (period=5d)")
+            # yfinance 1.5.1 wraps history() as (*args, **kwargs) and swallows a
+            # timeout kwarg, so a delisted ticker can hang the scan indefinitely.
+            # Path B surfaces many already-closed deals whose targets have stopped
+            # trading, so this went from rare to routine. Enforce the deadline
+            # ourselves: run the fetch in a worker thread and abandon it if it
+            # overruns. The thread is left to die on its own; we just stop waiting.
+            import concurrent.futures as _cf
+            def _fetch_hist(tk):
+                return yf.Ticker(tk).history(period='5d')
+            h = None
+            with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
+                _fut = _ex.submit(_fetch_hist, ticker)
+                try:
+                    h = _fut.result(timeout=10)
+                except _cf.TimeoutError:
+                    print(f"${ticker}: price fetch exceeded 10s — abandoning, skipping")
+                    seen_tickers.add(ticker)
+                    continue
+                except Exception as _pe:
+                    print(f"${ticker}: price fetch failed ({_pe}) — skipping")
+                    seen_tickers.add(ticker)
+                    continue
+            if h is None or h.empty:
+                print(f"${ticker}: no price data (period=5d) — likely delisted, skipping")
                 seen_tickers.add(ticker)
                 continue
             cp=float(h['Close'].iloc[-1])
@@ -1248,7 +1279,9 @@ def fetch_deals_from_edgar():
                 except Exception as e:
                     print(f"  Filing parse error {ticker}: {e}")
                     continue
-            if not dp: continue
+            if not dp:
+                print(f"  [NoPrice] {ticker}: no deal price extracted from {accession} — skipped")
+                continue
             sp_pct=((dp-cp)/cp)*100
             if sp_pct<-10 or sp_pct>60: continue
             days=(datetime.utcnow().date()-datetime.strptime(src['file_date'],'%Y-%m-%d').date()).days
