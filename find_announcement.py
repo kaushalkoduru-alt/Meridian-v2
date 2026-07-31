@@ -74,6 +74,8 @@ def find_announcement_8k_backward(cik, from_date_str, headers,
     # newest first -- the announcement is the most recent merger 8-K before the proxy
     candidates.sort(key=lambda x: x[4], reverse=True)
 
+    if candidates:
+        print(f"    [Lookback] CIK {cik}: checking up to {min(len(candidates), 25)} filings for the announcement")
     for date_str, acc, form, doc, _ in candidates[:25]:
         acc_clean = acc.replace("-", "")
         url = (f"https://www.sec.gov/Archives/edgar/data/"

@@ -16,6 +16,8 @@ import time
 from contextlib import asynccontextmanager
 import stripe
 from find_announcement import find_announcement_8k_backward
+from deal_direction import (check_direction, direction_report,
+                            DIRECTION_ENFORCING, VERDICT_TARGET)
 
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
@@ -410,6 +412,9 @@ EXCLUDED_TICKERS = {
     'CLST',  # Catalyst Bancorp is the ACQUIRER of Lakeside Bancshares (OTC: LKSB), not a target — wrongly ingested from Catalyst's own merger 8-K
     'TBPH',  # temporary — CVR deal (Zymeworks, $17/share cash + contingent value right), model doesn't handle CVR spread/close-date correctly yet
     'JHG',   # Closed June 30 2026, cashed out at $52/share, delisted from NYSE
+    'RKLB',  # Rocket Lab is the ACQUIRER of Iridium (IRDM), not a target — ingested from
+             # its own merger 8-K. Entered at -7.85% spread (target above offer, structurally
+             # impossible) with break price 44% above market. IRDM is the deal worth tracking.
 }
 SECTOR_ETF_MAP = {
     'CACC':'XLF','NTCT':'XLK','NUAN':'XLK','SGEN':'XLV','CCXI':'XLV',
@@ -1283,7 +1288,13 @@ def fetch_deals_from_edgar():
                 print(f"  [NoPrice] {ticker}: no deal price extracted from {accession} — skipped")
                 continue
             sp_pct=((dp-cp)/cp)*100
-            if sp_pct<-10 or sp_pct>60: continue
+            # A target trading ABOVE its offer price is nearly always a sign the
+            # filer is the acquirer, not the target. Genuine negative spreads happen
+            # when the market expects a topping bid, but those run 1-3%, not 8%.
+            # RKLB (acquiring Iridium) entered the feed at -7.85% under the old -10 gate.
+            if sp_pct < -3 or sp_pct > 60:
+                print(f"  [SpreadGate] {ticker}: spread {sp_pct:.2f}% out of range — skipping")
+                continue
             days=(datetime.utcnow().date()-datetime.strptime(src['file_date'],'%Y-%m-%d').date()).days
             if days > 548:
                 print(f"  Rolling drop: {ticker} — deal is {days} days old, likely closed")
@@ -1505,6 +1516,47 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         # ── VERIFICATION GATE (shadow mode) ──────────────────────────────────
         # Every deal must be provable by a real EDGAR filing. Records a verdict
         # and an accession number; blocks nothing until GATE_ENFORCING is True.
+        # ── DEAL DIRECTION (shadow) ───────────────────────────────────────────
+        # The pipeline assumes the filer is the target. That was wrong twice
+        # (CLST, RKLB). Layer 1 is arithmetic; layer 2 asks Sonnet. UNCLEAR is
+        # not a pass -- with enforcing on, only TARGET ships.
+        try:
+            def _direction_llm(prompt):
+                _r = requests.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={"x-api-key": anthropic_key,
+                             "anthropic-version": "2023-06-01",
+                             "Content-Type": "application/json"},
+                    json={"model": "claude-sonnet-5", "max_tokens": 20,
+                          "system": "You answer with exactly one word. No explanation.",
+                          "messages": [{"role": "user", "content": prompt}]},
+                    timeout=25)
+                if _r.status_code != 200:
+                    raise RuntimeError(f"HTTP {_r.status_code}")
+                return _r.json()["content"][0]["text"]
+
+            for _d in results:
+                if _d.get('direction', {}).get('verdict') == VERDICT_TARGET:
+                    continue  # already established, don't pay for it again
+                _d['direction'] = check_direction(
+                    _d.get('ticker'), _d.get('company'), _d.get('_filing_text', ''),
+                    deal_price=_d.get('dp'), current_price=_d.get('cp'),
+                    spread_pct=_d.get('sp_pct'),
+                    llm_fn=_direction_llm if anthropic_key else None,
+                )
+            _dhdr, _dlines = direction_report(results)
+            print(_dhdr)
+            for _ln in _dlines:
+                print(_ln)
+            if DIRECTION_ENFORCING:
+                _pre = len(results)
+                results = [r for r in results
+                           if r.get('direction', {}).get('verdict') == VERDICT_TARGET]
+                if len(results) != _pre:
+                    print(f"[Direction] blocked {_pre - len(results)} deal(s) not confirmed as targets")
+        except Exception as _de:
+            print(f"[Direction] error (non-fatal, nothing blocked): {_de}")
+
         try:
             from deal_gate import gate_deal, gate_report, GATE_ENFORCING, VERDICT_VERIFIED
             
@@ -1981,6 +2033,18 @@ def check_filer_role(ticker, company_name, acquirer, filing_text):
     Returns (flagged: bool, reason: str, listed_target_ticker_or_None).
     FLAG-FIRST — never auto-removes.
     """
+    # An 'Undisclosed' acquirer is itself a filer-as-acquirer signal: extract_acquirer
+    # found the filer's own name, the same-entity check rejected it, and the field fell
+    # back to blank. Requiring a non-blank acquirer meant this check never fired on the
+    # exact case it exists to catch (see RKLB / Iridium).
+    if (not acquirer or acquirer == 'Undisclosed') and company_name:
+        listed_target = find_listed_target_ticker(filing_text, ticker)
+        if listed_target:
+            return True, (
+                f"Filer \"{company_name}\" has no extractable acquirer, and the filing "
+                f"names another listed company ({listed_target}). Filer is likely the "
+                f"ACQUIRER. Real target may be trackable: {listed_target}."
+            ), listed_target
     if acquirer and acquirer != 'Undisclosed' and company_name:
         score = _name_overlap_score(acquirer, company_name)
         if score >= 0.6:
