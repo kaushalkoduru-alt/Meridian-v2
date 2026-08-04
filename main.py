@@ -288,6 +288,31 @@ def rolling_merge(new_deals):
     - Deals missing for more than ROLLING_CARRY_MAX_AGE_HOURS are dropped
     - Deals whose stock has crashed more than 15% below deal price are dropped immediately
     """
+    # Restore the true detection values FIRST, from the CSV rather than Redis.
+    #
+    # These were previously restored from redis_get() below, which meant the
+    # freeze silently stopped working whenever Redis did -- and Redis fails
+    # locally, so the bug survived every local test. The CSV is always present.
+    #
+    # Every scan rebuilds a deal from scratch and sets sp_pct_at_detection to
+    # the CURRENT spread, so a deal detected in January was carrying July's
+    # number. These three fields are the entire basis of the forward track
+    # record: if they move, there is no record.
+    _frozen = ('sp_pct_at_detection', 'score_at_detection', 'risk_at_detection')
+    try:
+        _prior_rows = load_cache() or []
+        _prior = {r.get('ticker'): r for r in _prior_rows if r.get('ticker')}
+        for d in new_deals:
+            old = _prior.get(d.get('ticker'))
+            if not old:
+                continue  # genuinely new deal -- today's values ARE the detection values
+            for f in _frozen:
+                v = old.get(f)
+                if v is not None and v != '':
+                    d[f] = v
+    except Exception as e:
+        print(f"[Freeze] could not restore detection values: {e}")
+
     existing = redis_get()
     if not existing:
         return new_deals
