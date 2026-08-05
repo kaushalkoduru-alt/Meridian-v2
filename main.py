@@ -1573,7 +1573,9 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
             print(_dhdr)
             for _ln in _dlines:
                 print(_ln)
-            if DIRECTION_ENFORCING:
+            # A missing API key makes every deal UNCLEAR, which enforcing would
+            # treat as a rejection and wipe the feed. Never enforce blind.
+            if DIRECTION_ENFORCING and anthropic_key:
                 _pre = len(results)
                 results = [r for r in results
                            if r.get('direction', {}).get('verdict') == VERDICT_TARGET]

@@ -43,8 +43,15 @@ VERDICT_TARGET   = "TARGET"
 VERDICT_ACQUIRER = "ACQUIRER"
 VERDICT_UNCLEAR  = "UNCLEAR"
 
-# Shadow mode. Flip only after several cycles of correct verdicts on real deals.
-DIRECTION_ENFORCING = False
+# ENFORCING as of 2026-08-04. Ran in shadow across many cycles: 12/12 to 15/15
+# TARGET every time with the model layer active, and it caught Rocket Lab on
+# arithmetic alone before that deal reached the feed. No false rejections.
+#
+# One hazard worth knowing: when ANTHROPIC_API_KEY is missing the model layer
+# cannot run and every deal returns UNCLEAR, which enforcing treats as a
+# rejection. That would empty the feed. The caller in main.py must not enforce
+# when the key is absent.
+DIRECTION_ENFORCING = True
 
 # A target CAN trade above its offer -- when the market expects a topping bid --
 # but those spreads run 1-3%. Beyond this the filer's stock is not pinned to the
