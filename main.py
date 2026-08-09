@@ -437,6 +437,11 @@ EXCLUDED_TICKERS = {
     'CLST',  # Catalyst Bancorp is the ACQUIRER of Lakeside Bancshares (OTC: LKSB), not a target — wrongly ingested from Catalyst's own merger 8-K
     'TBPH',  # temporary — CVR deal (Zymeworks, $17/share cash + contingent value right), model doesn't handle CVR spread/close-date correctly yet
     'JHG',   # Closed June 30 2026, cashed out at $52/share, delisted from NYSE
+    'FSK',   # FS KKR Capital Corp is a BDC that ACQUIRES other BDCs (FSKR 2021,
+             # CCT 2018), not a target. Enrichment reads its external manager KKR
+             # as the "acquirer." The direction check returned UNCLEAR on one run
+             # and TARGET on the next for the same filing, so the model is not
+             # reliable here and this needs a hard exclusion.
     'RKLB',  # Rocket Lab is the ACQUIRER of Iridium (IRDM), not a target — ingested from
              # its own merger 8-K. Entered at -7.85% spread (target above offer, structurally
              # impossible) with break price 44% above market. IRDM is the deal worth tracking.
@@ -1079,6 +1084,29 @@ def get_filing_links(cik, accession, headers):
 # ─── CORE PIPELINE ───────────────────────────────────────────────────────────
 
 def fetch_deals_from_edgar():
+    # Capture prior direction verdicts BEFORE anything writes to the cache.
+    # The direction block near the end of this function runs after save_cache()
+    # has already overwritten the CSV with fresh results carrying no verdict,
+    # so reading there finds nothing and every deal gets re-checked -- roughly
+    # 3,500 API calls a month to re-answer a settled question.
+    _prior_directions = {}
+    try:
+        for _row in (load_cache() or []):
+            _tk, _dv = _row.get('ticker'), _row.get('direction')
+            if _tk and _dv:
+                # The CSV stores this dict as its repr, so it comes back a
+                # string. Parse it once here rather than making every
+                # downstream .get() defend itself.
+                if isinstance(_dv, str) and _dv.strip().startswith('{'):
+                    try:
+                        import ast as _ast
+                        _dv = _ast.literal_eval(_dv)
+                    except Exception:
+                        continue
+                if isinstance(_dv, dict):
+                    _prior_directions[_tk] = _dv
+    except Exception as _pe:
+        print(f"[Direction] could not capture prior verdicts: {_pe}")
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background EDGAR scan started.")
     headers={'User-Agent':'Kaushal Koduru kaushalkoduru@gmail.com'}
     all_hits=[]
@@ -1560,9 +1588,27 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     raise RuntimeError(f"HTTP {_r.status_code}")
                 return _r.json()["content"][0]["text"]
 
+            print(f"[DirDebug] _prior_directions has {len(_prior_directions)} entries; "
+                  f"tickers: {sorted(list(_prior_directions))[:5]}")
             for _d in results:
-                if _d.get('direction', {}).get('verdict') == VERDICT_TARGET:
-                    continue  # already established, don't pay for it again
+                _cached = _d.get('direction') or _prior_directions.get(_d.get('ticker'))
+                if isinstance(_cached, dict):
+                    _v = _cached.get('verdict')
+                elif isinstance(_cached, str):
+                    _v = VERDICT_TARGET if ('TARGET' in _cached and 'ACQUIRER' not in _cached) else None
+                else:
+                    _v = None
+                if _d.get('ticker') == 'NATH':
+                    print(f"[DirDebug] NATH cached={type(_cached).__name__} "
+                          f"_v={_v!r} VERDICT_TARGET={VERDICT_TARGET!r} match={_v == VERDICT_TARGET}")
+                if _v == VERDICT_TARGET:
+                    # Already established as a target on a previous scan. Keep
+                    # the verdict and skip the model call -- re-asking a settled
+                    # question every hour is what turned this into ~3,500 API
+                    # calls a month.
+                    _d['direction'] = _cached
+                    continue
+                    
                 _d['direction'] = check_direction(
                     _d.get('ticker'), _d.get('company'), _d.get('_filing_text', ''),
                     deal_price=_d.get('dp'), current_price=_d.get('cp'),
@@ -1577,8 +1623,17 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
             # treat as a rejection and wipe the feed. Never enforce blind.
             if DIRECTION_ENFORCING and anthropic_key:
                 _pre = len(results)
-                results = [r for r in results
-                           if r.get('direction', {}).get('verdict') == VERDICT_TARGET]
+                def _verdict_of(r):
+                    """A cached verdict arrives as a string from the CSV, so a
+                    bare .get('verdict') raises. This crashed the whole
+                    direction block once, and the handler swallowed it."""
+                    v = r.get('direction')
+                    if isinstance(v, dict):
+                        return v.get('verdict')
+                    if isinstance(v, str):
+                        return VERDICT_TARGET if ('TARGET' in v and 'ACQUIRER' not in v) else None
+                    return None
+                results = [r for r in results if _verdict_of(r) == VERDICT_TARGET]
                 if len(results) != _pre:
                     print(f"[Direction] blocked {_pre - len(results)} deal(s) not confirmed as targets")
         except Exception as _de:

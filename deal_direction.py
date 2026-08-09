@@ -192,8 +192,14 @@ def direction_report(deals):
         v = r.get("verdict", VERDICT_UNCLEAR)
         counts[v] = counts.get(v, 0) + 1
         mark = {VERDICT_TARGET: "  ", VERDICT_ACQUIRER: " !", VERDICT_UNCLEAR: " ?"}.get(v, " ?")
+        # A cached verdict still carries layer='model' from whenever it was
+        # first computed, which reads as though the API was just called. It
+        # was not. Distinguish the two so the log means what it looks like.
+        _layer = r.get('layer') or '-'
+        if not r.get('checked_llm') and _layer == 'model':
+            _layer = 'cached'
         lines.append(f"{mark} {d.get('ticker','?'):<6} {v:<9} "
-                     f"[{r.get('layer') or '-':<10}] {r.get('reason','')[:76]}")
+                     f"[{_layer:<10}] {r.get('reason','')[:76]}")
     header = (f"[Direction] {counts[VERDICT_TARGET]} target, "
               f"{counts[VERDICT_ACQUIRER]} acquirer, {counts[VERDICT_UNCLEAR]} unclear"
               + (" (ENFORCING)" if DIRECTION_ENFORCING else " (SHADOW — nothing blocked)"))
