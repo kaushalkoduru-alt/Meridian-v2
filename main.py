@@ -218,6 +218,40 @@ def save_cache(records):
             if t:
                 source_by_ticker[t] = {k: v for k, v in r.items() if k != '_filing_text'}
 
+        # Step 0: restore prior history BEFORE appending.
+        #
+        # source_by_ticker is built from the fresh scan records, which carry no
+        # history at all. So append_snapshot was appending to an empty list every
+        # hour and writing back a single entry -- months of snapshots overwritten,
+        # one at a time. Redis holds the only accumulated copy.
+        #
+        # Third time this exact shape has appeared: the detection-value freeze
+        # and the direction verdicts failed the same way. A record rebuilt from
+        # scratch has none of the state the code assumes is there.
+        try:
+            _prior_hist = {}
+            for _old in (redis_get() or []):
+                _t = _old.get('ticker')
+                if not _t:
+                    continue
+                _prior_hist[_t] = {
+                    'spread_history': _old.get('spread_history'),
+                    'score_history': _old.get('score_history'),
+                }
+            _restored = 0
+            for ticker, d in source_by_ticker.items():
+                old = _prior_hist.get(ticker)
+                if not old:
+                    continue
+                for f in LIST_FIELDS:
+                    if isinstance(old.get(f), list) and old[f]:
+                        d[f] = list(old[f])
+                        _restored += 1
+            if _restored:
+                print(f"[History] restored {_restored} prior history arrays before appending")
+        except Exception as _he:
+            print(f"[History] could not restore prior history: {_he}")
+
         # Step 1: append snapshots to pre-pandas source dicts.
         for ticker, d in source_by_ticker.items():
             sp = d.get('sp_pct')
