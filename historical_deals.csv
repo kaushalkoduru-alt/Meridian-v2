@@ -1,0 +1,2 @@
+ticker,cik,company,announced_date,announced_accession,acquirer,deal_price,consideration_type,price_at_announcement,spread_at_announcement_pct,outcome,outcome_date,outcome_accession,days_to_resolution,price_source,notes
+TGNA,0000039899,TEGNA INC,2022-02-22,0001193125-22-048646,Standard General,24.0,All Cash,22.44,6.95,BROKEN,2022-03-15,0001193125-22-076150,21,targeted-section,termination language in 8-K

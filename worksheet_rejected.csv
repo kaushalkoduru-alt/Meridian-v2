@@ -1,0 +1,24 @@
+ticker,company,cik,announced_date,announcement_url,deal_price,acquirer,consideration_notes,price_at_announcement,spread_at_announcement_pct,outcome,outcome_date,outcome_url,days_to_resolution,verified_by_hand,notes
+CHTH,"CNL Healthcare Properties, Inc.",0001496454,,,,,,,,,,,,,no announcement 8-K found in lookback
+PQEFF,PETROTEQ ENERGY INC.,0001561180,,,,,,,,,,,,,no announcement 8-K found in lookback
+CMRF,"CIM REAL ESTATE FINANCE TRUST, INC.",0001498547,,,,,,,,,,,,,no announcement 8-K found in lookback
+SGIC,"Strategic Realty Trust, Inc.",0001446371,,,,,,,,,,,,,no announcement 8-K found in lookback
+MVLA,Pathfinder Acquisition Corp,0001839132,,,,,,,,,,,,,SPAC shell
+AEON,Priveterra Acquisition Corp.,0001837607,,,,,,,,,,,,,SPAC shell
+BGC,"BGC Partners, Inc.",0001094831,,,,,,,,,,,,,no announcement 8-K found in lookback
+INFIQ,"INFINITY PHARMACEUTICALS, INC.",0001113148,,,,,,,,,,,,,no announcement 8-K found in lookback
+MAX,"MediaAlpha, Inc.",0001818383,,,,,,,,,,,,,no announcement 8-K found in lookback
+SSYS,STRATASYS LTD.,0001517396,,,,,,,,,,,,,no announcement 8-K found in lookback
+SVA,SINOVAC BIOTECH LTD,0001084201,,,,,,,,,,,,,no announcement 8-K found in lookback
+LGIQ,"LOGIQ, INC.",0001335112,,,,,,,,,,,,,no announcement 8-K found in lookback
+PSHG,Performance Shipping Inc.,0001481241,,,,,,,,,,,,,no announcement 8-K found in lookback
+WH,"WYNDHAM HOTELS & RESORTS, INC.",0001722684,,,,,,,,,,,,,no announcement 8-K found in lookback
+SQNS,SEQUANS COMMUNICATIONS,0001383395,,,,,,,,,,,,,no announcement 8-K found in lookback
+EXTO,Almacenes Exito S.A.,0001957146,,,,,,,,,,,,,no announcement 8-K found in lookback
+MANU,Manchester United plc,0001549107,,,,,,,,,,,,,no announcement 8-K found in lookback
+VASO,VASO Corp,0000839087,,,,,,,,,,,,,no announcement 8-K found in lookback
+NHHS,"NorthStar Healthcare Income, Inc.",0001503707,,,,,,,,,,,,,no announcement 8-K found in lookback
+MPSYF,MorphoSys AG,0001340243,,,,,,,,,,,,,no announcement 8-K found in lookback
+IOR,INCOME OPPORTUNITY REALTY INVESTORS INC /TX/,0000949961,,,,,,,,,,,,,no announcement 8-K found in lookback
+ACCD,"Accolade, Inc.",0001481646,,,,,,,,,,,,,no announcement 8-K found in lookback
+AMPY,Amplify Energy Corp.,0001533924,,,,,,,,,,,,,filer is the acquirer

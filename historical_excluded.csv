@@ -1,0 +1,25 @@
+ticker,cik,company,announced_date,announced_accession,acquirer,deal_price,consideration_type,price_at_announcement,spread_at_announcement_pct,outcome,outcome_date,outcome_accession,days_to_resolution,price_source,notes
+IONI,0001580490,I-ON Digital Corp.,2021-05-04,0001140361-21-015615,,,,,,ACQUIRER_SIDE,,,,,"filer is the ACQUIRER — model read the filer as the buyer, not the acquired party"
+BRBR,0001772016,"BELLRING BRANDS, INC.",2021-02-26,0001772016-21-000029,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+AURX,0001091596,"Nuo Therapeutics, Inc.",2020-10-06,0001437749-20-020804,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+DSGR,0000703604,LAWSON PRODUCTS INC/NEW/DE/,2021-12-29,0001193125-21-368557,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+NUTX,0001479681,"Clinigence Holdings, Inc.",2021-03-02,0001607062-21-000039,,,,,,ACQUIRER_SIDE,,,,,"filer is the ACQUIRER — model read the filer as the buyer, not the acquired party"
+DWSN,0000799165,DAWSON GEOPHYSICAL CO,2021-04-08,0001104659-21-048154,,,,,,UNCLEAR_SIDE,,,,,direction unconfirmed — model gave no usable verdict (returned 'UNCLEAR')
+CHTH,0001496454,"CNL Healthcare Properties, Inc.",2021-05-27,0001193125-21-175173,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+SWX,0001692115,"Southwest Gas Holdings, Inc.",2021-03-23,0001193125-21-091268,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+VVX,0001601548,"Vectrus, Inc.",2020-12-29,0001601548-20-000154,,,,,,ACQUIRER_SIDE,,,,,"filer is the ACQUIRER — model read the filer as the buyer, not the acquired party (target may be VEC)"
+SNTI,0001854270,Dynamics Special Purpose Corp.,2022-05-13,0001193125-22-150141,,,,,,NO_ANNOUNCEMENT,,,,,no announcement 8-K found within 500 days before the proxy
+TXMD,0000025743,"TherapeuticsMD, Inc.",2021-02-16,0001387131-21-002393,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+VANI,0001266806,SECOND SIGHT MEDICAL PRODUCTS INC,2021-04-05,0001564590-21-017519,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+NEOG,0000711377,NEOGEN CORP,2021-12-15,0001193125-21-357430,,,,,,ACQUIRER_SIDE,,,,,"filer is the ACQUIRER — model read the filer as the buyer, not the acquired party"
+RBCN,0001410172,"Rubicon Technology, Inc.",2022-07-05,0001213900-22-037059,,,,,,SPREAD_FLAG,,,,,"spread -26.91% outside -5%..+40% — price or direction is wrong, not an opportunity"
+PR,0001658566,"Centennial Resource Development, Inc.",2022-02-23,0001658566-22-000017,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+GIGA,0000719274,GIGA TRONICS INC,2021-11-18,0001437749-21-027074,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+STCN,0000914712,"Steel Connect, Inc.",2021-07-06,0001213900-21-035790,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+PQEFF,0001561180,PETROTEQ ENERGY INC.,2022-08-26,0001062993-22-018790,,,,,,NO_ANNOUNCEMENT,,,,,no announcement 8-K found within 500 days before the proxy
+IRBT,0001159167,IROBOT CORP,2021-08-03,0001159167-21-000038,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+SAVE,0001498710,"Spirit Airlines, Inc.",2022-02-07,0001193125-22-029011,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+SPRY,0001671858,"Silverback Therapeutics, Inc.",2021-07-02,0001193125-21-207593,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+SFRT,0001821075,PROPTECH INVESTMENT CORP. II,2022-10-28,0001213900-22-067216,,,,,,SPAC,,,,,SPAC shell — not a merger-arb target
+CMRF,0001498547,"CIM REAL ESTATE FINANCE TRUST, INC.",2021-07-21,0001498547-21-000035,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
+INRE,0001528985,"Inland Real Estate Income Trust, Inc.",2022-02-09,0001564590-22-004388,,,,,,EXCLUDED,,,,,no deal price extractable from announcement
