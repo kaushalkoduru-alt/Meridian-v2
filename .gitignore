@@ -2,3 +2,21 @@
 .ipynb_checkpoints/
 __pycache__/
 *.log
+
+# one-off probes and diagnostics
+probe_*.py
+diagnose_*.py
+find_cash_proxy.py
+find_form_examples.py
+test_stooq.py
+test_tiingo.py
+test_direction_live.py
+test_direction_logic.py
+test_gate_live.py
+test_pathb.py
+test_sonnet_acquirer.py
+
+# excel artifacts and local backups
+*.xlsx
+meridian_cache_backup.csv
+python
