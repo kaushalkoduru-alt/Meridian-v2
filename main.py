@@ -9,6 +9,7 @@ import yfinance as yf
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 import asyncio
+import ast
 import json
 import math
 import random
@@ -969,6 +970,33 @@ def compute_equity_tx_fallback(dp, ticker):
         print(f"  [TxFallback] {ticker}: equity calc error — {e}")
     return None, None
 
+def parse_structured(value):
+    """
+    Undoes the CSV repr() round-trip for a structured (list/dict) field.
+
+    pandas.to_csv() has no concept of nested types, so any list-of-dicts or
+    dict field gets written as its Python repr() (single-quoted) rather than
+    JSON. Redis round-trips these fields correctly via json.dumps/loads; this
+    only bites on the CSV fallback path, when Redis is unavailable.
+
+    Four fields have hit this so far: direction verdicts, the gate dict,
+    spread_history, and flags. Reuse this helper for the next one instead of
+    writing another one-off parse.
+    """
+    if isinstance(value, (list, dict)):
+        return value
+    if isinstance(value, str):
+        s = value.strip()
+        if s.startswith('[') or s.startswith('{'):
+            try:
+                parsed = ast.literal_eval(s)
+                if isinstance(parsed, (list, dict)):
+                    return parsed
+            except Exception:
+                pass
+            return [] if s.startswith('[') else {}
+    return {}
+
 def clean_records(records):
     cleaned=[]
     for r in records:
@@ -1551,6 +1579,21 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         except Exception as _de:
             print(f"[Direction] error (non-fatal, nothing blocked): {_de}")
 
+        # ── DEAL FLAGS ─────────────────────────────────────────────────────────
+        # Pure string matching against filing text, no API calls. Display-only —
+        # must never take down a scan.
+        try:
+            from deal_flags import detect_flags, flags_summary
+            for _d in results:
+                if not _d.get('flags'):
+                    _d['flags'] = detect_flags(_d.get('_filing_text', ''))
+            _flagged = [_d for _d in results if _d.get('flags')]
+            print(f"[Flags] {len(_flagged)} flagged deal(s)")
+            for _d in _flagged:
+                print(f"  [Flags] {_d.get('ticker')}: {flags_summary(_d['flags'])}")
+        except Exception as _fe:
+            print(f"[Flags] error (non-fatal): {_fe}")
+
         try:
             from deal_gate import gate_deal, gate_report, GATE_ENFORCING, VERDICT_VERIFIED
             
@@ -1843,6 +1886,9 @@ def get_clean_deals():
     1. Filter out EXCLUDED_TICKERS — deals gone from feed immediately on deploy,
        no cache purge needed.
     2. Apply VERIFIED_ACQUIRERS overlay — hardcodes always win over cache.
+    3. Parse structured fields (flags, direction) back from the CSV repr()
+       string they round-trip as when Redis is unavailable — see
+       parse_structured().
     Admin endpoints bypass this and read load_cache() directly so they can
     still see the full raw cache state.
     """
@@ -1863,6 +1909,11 @@ def get_clean_deals():
         t = d.get('ticker')
         if t and t in VERIFIED_ACQUIRERS:
             d['acquirer'] = VERIFIED_ACQUIRERS[t]
+    # Step 3: undo the CSV repr() round-trip on structured fields before they
+    # reach the frontend.
+    for d in deals:
+        d['flags'] = parse_structured(d.get('flags', []))
+        d['direction'] = parse_structured(d.get('direction', {}))
     return deals
 
 @app.get("/api/deals")

@@ -1362,6 +1362,18 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </div>
 
+  <!-- ============ 3.5 · STRUCTURE NOTES (deal flags; hidden when a deal has none) ============ -->
+  <div id="da-structure-section" style="display:none;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
+      <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Structure Notes</span>
+      <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">what the headline price doesn&#8217;t say</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+    </div>
+    <div class="da-section" style="position:relative;">
+      <div id="da-structure-notes" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:6px 22px;"></div>
+    </div>
+  </div>
+
   <!-- ============ 4 · V3 SCORE BREAKDOWN ============ -->
   <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
     <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">V3 Score Breakdown</span>
@@ -2197,6 +2209,26 @@ async function renderAnalysis(deal){
       + '</div>');
   }
 
+  // ---- structure notes (deal flags) — neutral facts about what the price means ----
+  var structSection = document.getElementById('da-structure-section');
+  if(deal.flags && deal.flags.length){
+    if(structSection) structSection.style.display = '';
+    _daSet('da-structure-notes', deal.flags.map(function(f){
+      var c = dealFlagColor(f.flag);
+      var label = DEAL_FLAG_LABELS[f.flag] || f.flag;
+      return '<div style="padding:14px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+        + '<span style="display:inline-block; padding:3px 8px; font-family:\'DM Mono\',monospace; font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:'+c+'; border:1px solid '+c+'59;">'+label+'</span>'
+        + '<div style="margin-top:8px; font-size:12.5px; line-height:1.55; color:#cdc2a8;">'+f.meaning+'</div>'
+        + (f.context ? (
+            '<div style="margin-top:9px; font-size:9px; letter-spacing:0.12em; color:#7d745f; text-transform:uppercase;">From the SEC filing</div>'
+            + '<blockquote style="margin:5px 0 0; padding:2px 0 2px 14px; border-left:2px solid '+c+'59; font-family:\'DM Mono\',monospace; font-size:11px; line-height:1.6; color:#e8e0d0; font-style:normal;">“'+f.context+'”</blockquote>'
+          ) : '')
+        + '</div>';
+    }).join(''));
+  } else if(structSection) {
+    structSection.style.display = 'none';
+  }
+
   // ---- V3 score: overall + real factor bars ----
   _daSet('da-score-overall',
     '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">V3 Composite</div>'
@@ -2321,6 +2353,24 @@ function toggleSection(id){
     }
 }
 
+// ── DEAL STRUCTURE FLAGS ──────────────────────────────────────────────────────
+// flag -> short badge label. Amber = changes what a holder receives; muted =
+// risk context only, price is still the whole story.
+var DEAL_FLAG_LABELS = { CVR:'CVR', ELECTION:'ELECTION', ADJUSTMENT:'ADJUSTS', REPRICED:'REPRICED', GO_SHOP:'GO-SHOP', CONTROLLING_HOLDER:'CONTROL' };
+var DEAL_FLAG_AMBER  = { CVR:true, ELECTION:true, ADJUSTMENT:true, REPRICED:true };
+function dealFlagColor(flag){ return DEAL_FLAG_AMBER[flag] ? '#d4a24c' : '#8f8772'; }
+// Returns inline badge <span>s only (no wrapping row) — the caller places
+// these directly beside the deal-type badge, in a flex container that
+// already provides the gap between siblings.
+function dealFlagBadgesHTML(flags){
+  if(!flags || !flags.length) return '';
+  return flags.map(function(f){
+      var c = dealFlagColor(f.flag);
+      var label = DEAL_FLAG_LABELS[f.flag] || f.flag;
+      return '<span style="font-family:\'DM Mono\',monospace; font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:'+c+'; border:1px solid '+c+'59; background:transparent; padding:3px 7px; display:inline-block; white-space:nowrap;">'+label+'</span>';
+    }).join('');
+}
+
 // ============================================================
 // NEW renderDeals — hero cards + risk-grouped table + stats
 // Real fields: ticker, acquirer, company, cp, dp, sp_pct, ann,
@@ -2423,7 +2473,7 @@ function renderDeals(deals){
   }
 
   // ================= TABLE (risk-grouped) =================
-  var cols = '92px 74px minmax(120px,1.1fr) minmax(150px,1.5fr) 82px 82px 100px 92px 104px';
+  var cols = '92px 170px minmax(120px,1.1fr) minmax(150px,1.5fr) 82px 82px 100px 92px 104px';
   var groupDefs = [
     { risk:'Very Low', label:'Very Low Risk' },
     { risk:'Low',      label:'Low Risk' },
@@ -2453,9 +2503,10 @@ function renderDeals(deals){
       var m2 = riskMeta(d.risk);
       html += '<div class="deal-row-mobile" onclick="showAnalysis(\''+d.ticker+'\')" style="display:none; cursor:pointer; padding:14px 16px; border-bottom:1px solid rgba(238,228,208,0.07);">'
             +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">'
-            +     '<div style="display:flex; align-items:center; gap:9px;">'
+            +     '<div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">'
             +       '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:19px; color:#f4eee0;">'+d.ticker+'</span>'
             +       typeHTML(d.deal_type)
+            +       dealFlagBadgesHTML(d.flags)
             +     '</div>'
             +     tagHTML(d.risk)
             +   '</div>'
@@ -2469,7 +2520,7 @@ function renderDeals(deals){
             + '</div>';
       html += '<div class="deal-row-desktop" onclick="showAnalysis(\''+d.ticker+'\')" onmouseover="this.style.background=\'rgba(92,192,173,0.05)\'" onmouseout="this.style.background=\'transparent\'" style="cursor:pointer; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; border-bottom:1px solid rgba(238,228,208,0.07); transition:background 0.12s ease; background:transparent;">'
             +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">'+d.ticker+'</div>'
-            +   '<div>'+typeHTML(d.deal_type)+'</div>'
+            +   '<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">'+typeHTML(d.deal_type)+dealFlagBadgesHTML(d.flags)+'</div>'
             +   '<div style="font-size:13px; font-weight:500; color:#f3ead7;">'+(d.acquirer||'\u2014')+'</div>'
             +   '<div style="font-size:13px; font-weight:500; color:#cdc2a8;">'+(d.company||'')+'</div>'
             +   '<div style="text-align:right; font-size:13px; color:#cdbf9f;">'+usd(d.cp)+'</div>'
