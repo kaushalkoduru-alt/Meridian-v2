@@ -472,6 +472,9 @@ EXCLUDED_TICKERS = {
     'CLST',  # Catalyst Bancorp is the ACQUIRER of Lakeside Bancshares (OTC: LKSB), not a target — wrongly ingested from Catalyst's own merger 8-K
     'TBPH',  # temporary — CVR deal (Zymeworks, $17/share cash + contingent value right), model doesn't handle CVR spread/close-date correctly yet
     'JHG',   # Closed June 30 2026, cashed out at $52/share, delisted from NYSE
+    'GHXI',  # Gores Holdings XI is a SPAC. The name filter missed it because it
+             # reads "Holdings" rather than "Acquisition Corp". Gores runs a
+             # numbered series, so the whole family will recur.
     'FSK',   # FS KKR Capital Corp is a BDC that ACQUIRES other BDCs (FSKR 2021,
              # CCT 2018), not a target. Enrichment reads its external manager KKR
              # as the "acquirer." The direction check returned UNCLEAR on one run
