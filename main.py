@@ -25,7 +25,28 @@ STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
 CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
 BASE_URL = 'https://meridian-v2-production-cffa.up.railway.app'
 
+# ─── DEAL STRUCTURES (TEMPORARY, HAND-VERIFIED) ──────────────────────────────
+# Automatic extraction replaces this table later. It exists because the display
+# and the thirteen barriers have to be proven against numbers already known to
+# be correct — a barrier tuned against extracted values can only tell you the
+# extractor and the barrier agree, not that either is right.
+# Every entry carries the accession number it was read from. Nothing goes in
+# here that a filing does not prove.
+DEAL_STRUCTURES = {
+    'GSAT': {
+        'cash': 90.00,
+        'ratio': 0.3210,
+        'acquirer_ticker': 'AMZN',
+        'cash_cap': 0.40,
+        'collar_high': 90.00,
+        'structure_hint': 'ELECTION_CAPPED',
+        'source': 'hand-verified from 8-K 0001140361-26-014528',
+    },
+}
 
+# Gates the display change only. False means the blended value is computed and
+# logged but dp, sp_pct and everything the frontend reads stay untouched.
+DEAL_PRICING_ENFORCING = False
 
 # ─── REDIS CACHE ─────────────────────────────────────────────────────────────
 
@@ -1597,6 +1618,101 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         except Exception as _fe:
             print(f"[Flags] error (non-fatal): {_fe}")
 
+        # ── BLENDED CONSIDERATION — SHADOW MODE ────────────────────────────────
+        # What a holder actually receives on an election or collar, run against
+        # the thirteen barriers and logged. Computed only: dp, sp_pct and every
+        # field the frontend reads are left exactly as they were. Turning the
+        # display on is DEAL_PRICING_ENFORCING, and that stays False until the
+        # barrier failures have been watched on live scans and checked by hand.
+        try:
+            from deal_pricing import run_barriers, barrier_report
+
+            def _num(v):
+                """dp and cp arrive as floats on a fresh scan and as strings off
+                the CSV. The barriers do arithmetic on both."""
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    return None
+
+            _acq_quotes = {}  # acquirer ticker -> (price, naive UTC timestamp)
+
+            def _acquirer_quote(tk):
+                """Last close and the timestamp of the bar it came from.
+
+                The timestamp is the bar's own, not the time of the fetch —
+                barrier 9 measures how stale the quote is, and stamping now()
+                onto a three-day-old close would make it pass every time.
+                Same abandon-on-timeout pattern as the target price fetch:
+                yfinance swallows a timeout kwarg and can hang a scan.
+                """
+                if tk in _acq_quotes:
+                    return _acq_quotes[tk]
+                _px = _ts = None
+                try:
+                    import concurrent.futures as _cf
+                    with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
+                        _h = _ex.submit(
+                            lambda: yf.Ticker(tk).history(period='5d')
+                        ).result(timeout=10)
+                    if _h is not None and not _h.empty:
+                        _px = float(_h['Close'].iloc[-1])
+                        _bar = _h.index[-1]
+                        if _bar.tzinfo is not None:
+                            _bar = _bar.tz_convert('UTC').tz_localize(None)
+                        _ts = _bar.to_pydatetime()
+                    else:
+                        print(f"  [Pricing] acquirer {tk}: no price data")
+                except Exception as _qe:
+                    print(f"  [Pricing] acquirer {tk}: price fetch failed ({_qe})")
+                _acq_quotes[tk] = (_px, _ts)
+                return _acq_quotes[tk]
+
+            for _d in results:
+                _terms = DEAL_STRUCTURES.get(_d.get('ticker'))
+                if not _terms:
+                    continue
+                _px, _ts = _acquirer_quote(_terms.get('acquirer_ticker', ''))
+                # Barrier 6 checks the cash figure against the sentence the
+                # filing states it in — that is what the ELECTION flag already
+                # captured, so reuse it rather than re-matching the document.
+                _quote = ''
+                for _fl in (_d.get('flags') or []):
+                    if isinstance(_fl, dict) and _fl.get('flag') == 'ELECTION':
+                        _quote = _fl.get('context', '') or ''
+                        break
+                _headline = _num(_d.get('dp'))
+                _blended, _why, _bars = run_barriers(
+                    _terms,
+                    headline_price=_headline,
+                    target_price=_num(_d.get('cp')),
+                    acquirer_price=_px,
+                    acquirer_price_time=_ts,
+                    filing_text=_d.get('_filing_text', '') or '',
+                    filing_quote=_quote,
+                )
+                _d['pricing'] = {
+                    'blended': _blended,
+                    'explanation': _why,
+                    'barriers': [{'barrier': _b.barrier, 'passed': _b.passed,
+                                  'detail': _b.detail} for _b in _bars],
+                    'all_passed': all(_b.passed for _b in _bars),
+                }
+                if _headline is None:
+                    # barrier_report formats the headline, so it cannot be
+                    # called without one. Report the barriers anyway.
+                    print(f"[Pricing] {_d.get('ticker')}: no headline price — "
+                          f"{sum(1 for _b in _bars if not _b.passed)} barrier(s) failed")
+                    _lines = [f"    {_b}" for _b in _bars]
+                else:
+                    _hdr, _lines = barrier_report(_d.get('ticker'), _blended,
+                                                  _headline, _bars)
+                    print(_hdr)
+                for _ln in _lines:
+                    print(_ln)
+        except Exception as _pce:
+            print(f"[Pricing] error (non-fatal, nothing changed): {_pce}")
+
         try:
             from deal_gate import gate_deal, gate_report, GATE_ENFORCING, VERDICT_VERIFIED
             
@@ -1917,6 +2033,10 @@ def get_clean_deals():
     for d in deals:
         d['flags'] = parse_structured(d.get('flags', []))
         d['direction'] = parse_structured(d.get('direction', {}))
+        # Shadow-mode field: parsed so it is a dict rather than a repr string
+        # the day the display is switched on. Nothing reads it yet.
+        if 'pricing' in d:
+            d['pricing'] = parse_structured(d.get('pricing', {}))
     return deals
 
 @app.get("/api/deals")
