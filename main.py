@@ -1625,7 +1625,8 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         # display on is DEAL_PRICING_ENFORCING, and that stays False until the
         # barrier failures have been watched on live scans and checked by hand.
         try:
-            from deal_pricing import run_barriers, barrier_report
+            from deal_pricing import (run_barriers, barrier_report,
+                                      classify_structure, stock_leg_value)
 
             def _num(v):
                 """dp and cp arrive as floats on a fresh scan and as strings off
@@ -1697,6 +1698,23 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     'barriers': [{'barrier': _b.barrier, 'passed': _b.passed,
                                   'detail': _b.detail} for _b in _bars],
                     'all_passed': all(_b.passed for _b in _bars),
+                    # The legs the blended value was built from. The card writes
+                    # its own sentence out of these -- a reader who has never
+                    # heard of proration needs "40% at $90.00, the rest in stock
+                    # worth $84.31", not a one-line summary of the result.
+                    'structure': classify_structure(_terms),
+                    'cash': _terms.get('cash'),
+                    'ratio': _terms.get('ratio'),
+                    'cash_cap': _terms.get('cash_cap'),
+                    'collar_low': _terms.get('collar_low'),
+                    'collar_high': _terms.get('collar_high'),
+                    'acquirer_ticker': _terms.get('acquirer_ticker'),
+                    'stock_leg': stock_leg_value(_terms, _px),
+                    'acquirer_price': _px,
+                    # ISO string, never a datetime: this dict round-trips
+                    # through repr() into the CSV when Redis is down, and
+                    # ast.literal_eval cannot rebuild a datetime from that.
+                    'acquirer_price_at': _ts.isoformat() if _ts else None,
                 }
                 if _headline is None:
                     # barrier_report formats the headline, so it cannot be
@@ -2033,15 +2051,19 @@ def get_clean_deals():
     for d in deals:
         d['flags'] = parse_structured(d.get('flags', []))
         d['direction'] = parse_structured(d.get('direction', {}))
-        # Shadow-mode field: parsed so it is a dict rather than a repr string
-        # the day the display is switched on. Nothing reads it yet.
+        # Parsed so it is a dict rather than a repr string. The card reads it
+        # only when DEAL_PRICING_ENFORCING is True; until then it rides along.
         if 'pricing' in d:
             d['pricing'] = parse_structured(d.get('pricing', {}))
     return deals
 
 @app.get("/api/deals")
 async def get_deals():
-    return JSONResponse(content={"deals": get_clean_deals()})
+    # pricing_display is the one gate on the blended-consideration display.
+    # While DEAL_PRICING_ENFORCING is False the frontend renders every card
+    # exactly as it did before, and the pricing dict rides along unread.
+    return JSONResponse(content={"deals": get_clean_deals(),
+                                 "pricing_display": DEAL_PRICING_ENFORCING})
 
 @app.get("/api/scan-status")
 async def scan_status():

@@ -1315,6 +1315,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
           <span id="da-score-num" style="font-family:'Playfair Display', serif; font-weight:600; font-size:32px; line-height:0.9; color:#6bbaa8;">--</span>
           <span style="font-size:13px; color:#7d745f;">/100</span>
         </div>
+        <!-- price block: what a holder receives. Empty until DEAL_PRICING_ENFORCING. -->
+        <div id="da-price-block"></div>
       </div>
     </div>
 
@@ -2049,6 +2051,13 @@ async function renderAnalysis(deal){
     '<div style="display:inline-flex; align-items:center; gap:7px; padding:6px 13px; font-size:11px; letter-spacing:0.16em; font-weight:600; color:'+m.fg+'; background:'+m.bg+'; border:1px solid '+m.bd+';">'
     + '<span style="width:6px; height:6px; transform:rotate(45deg); background:'+m.fg+';"></span>'+(deal.risk||'').toUpperCase()+' RISK</div>');
 
+  // ---- price block: the blended value as the primary number ----
+  var heroPv = pricingView(deal);
+  _daSet('da-price-block', PRICING_DISPLAY
+    ? '<div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(238,228,208,0.10);">'
+      + priceBlockHTML(deal, heroPv, {big:32}) + '</div>'
+    : '');
+
   // ---- metrics strip ----
   var cells = [
     { l:'Current Price', v:_daUsd(deal.cp),  c:'#f4eee0' },
@@ -2209,11 +2218,13 @@ async function renderAnalysis(deal){
       + '</div>');
   }
 
-  // ---- structure notes (deal flags) — neutral facts about what the price means ----
+  // ---- structure notes (deal flags + blended consideration) — neutral facts
+  //      about what the price means ----
   var structSection = document.getElementById('da-structure-section');
+  var structPv = pricingView(deal);
+  var structHtml = '';
   if(deal.flags && deal.flags.length){
-    if(structSection) structSection.style.display = '';
-    _daSet('da-structure-notes', deal.flags.map(function(f){
+    structHtml += deal.flags.map(function(f){
       var c = dealFlagColor(f.flag);
       var label = DEAL_FLAG_LABELS[f.flag] || f.flag;
       return '<div style="padding:14px 0; border-top:1px solid rgba(238,228,208,0.08);">'
@@ -2224,7 +2235,19 @@ async function renderAnalysis(deal){
             + '<blockquote style="margin:5px 0 0; padding:2px 0 2px 14px; border-left:2px solid '+c+'59; font-family:\'DM Mono\',monospace; font-size:11px; line-height:1.6; color:#e8e0d0; font-style:normal;">“'+f.context+'”</blockquote>'
           ) : '')
         + '</div>';
-    }).join(''));
+    }).join('');
+  }
+  // The explainer only. The blended value itself belongs in the price block
+  // on the right, never as a note beside the flag badges.
+  if(structPv.show){
+    structHtml += '<div style="padding:14px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+      + explainerStripHTML(structPv, 0)
+      + acquirerQuoteLineHTML(deal.pricing || {})
+      + '</div>';
+  }
+  if(structHtml){
+    if(structSection) structSection.style.display = '';
+    _daSet('da-structure-notes', structHtml);
   } else if(structSection) {
     structSection.style.display = 'none';
   }
@@ -2371,6 +2394,145 @@ function dealFlagBadgesHTML(flags){
     }).join('');
 }
 
+// ── BLENDED CONSIDERATION ─────────────────────────────────────────────────────
+// What a holder actually receives, which on an election or a collar is not the
+// headline the filing leads with. Every read below is gated on PRICING_DISPLAY,
+// which mirrors DEAL_PRICING_ENFORCING in main.py: while it is false the cards
+// render exactly as they did before and none of this runs.
+var PRICING_DISPLAY = false;
+
+function _pcNum(v){ if(v===null||v===undefined||v==='') return null; var n=Number(v); return isNaN(n)?null:n; }
+function _pcMoney(v){ var n=_pcNum(v); return n===null ? '—' : '$'+n.toFixed(2); }
+var _PC_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// The acquirer timestamp is an ISO string of a daily bar. Split it rather than
+// letting Date() shift it a day backwards in a western timezone.
+function _pcWhen(iso){
+  if(!iso || typeof iso !== 'string') return '';
+  var d = iso.split('T')[0].split('-');
+  if(d.length !== 3) return '';
+  var mi = parseInt(d[1],10) - 1;
+  if(!(mi>=0 && mi<12)) return '';
+  return _PC_MONTHS[mi]+' '+parseInt(d[2],10)+', '+d[0];
+}
+
+// One place decides whether a deal shows a blended value, so the price block,
+// the spread and the deal page can never disagree about it.
+function pricingView(d){
+  var out = { show:false, blended:null, spread:(d ? d.sp_pct : null), prose:'' };
+  var p = d && d.pricing;
+  if(!PRICING_DISPLAY || !p || !p.all_passed) return out;
+  var b = _pcNum(p.blended);
+  if(b === null) return out;
+  out.show = true;
+  out.blended = b;
+  // The whole point of the feature: the spread is measured against what a
+  // holder receives, not against a price nobody is paid.
+  var cp = _pcNum(d.cp);
+  if(cp) out.spread = ((b - cp) / cp) * 100;
+  out.prose = blendedProse(d, p, b);
+  return out;
+}
+
+// The explainer, written out of the legs rather than printed from the
+// explanation string, so it reads as prose to someone who has never heard the
+// word proration.
+function blendedProse(d, p, b){
+  var acq  = (d.acquirer && d.acquirer !== 'Undisclosed') ? d.acquirer
+                                                         : (p.acquirer_ticker || 'the acquirer');
+  var cash = _pcNum(p.cash), ratio = _pcNum(p.ratio), cap = _pcNum(p.cash_cap);
+  var leg  = _pcNum(p.stock_leg), lo = _pcNum(p.collar_low), hi = _pcNum(p.collar_high);
+  var hd   = _pcNum(d.dp);
+  // Only worth saying when the two numbers actually differ.
+  var vs   = (hd !== null && Math.abs(hd - b) >= 0.005)
+               ? ' Spread is measured against that, not the '+_pcMoney(hd)+'.' : '';
+  var sh   = function(r){ return r.toFixed(4); };
+
+  if(p.structure === 'ELECTION_CAPPED' && cash!==null && ratio!==null && cap!==null && leg!==null){
+    var pct = Math.round(cap * 100);
+    return 'The filing offers '+_pcMoney(cash)+' a share, but only for '+pct+'% of shares. '
+         + 'The other '+(100-pct)+'% is paid in '+acq+' stock at '+sh(ratio)+' shares each, worth '+_pcMoney(leg)+' today. '
+         + 'Blend the two and a shareholder receives '+_pcMoney(b)+'.' + vs;
+  }
+  if(p.structure === 'ELECTION_UNCAPPED' && cash!==null && ratio!==null && leg!==null){
+    return 'The filing offers '+_pcMoney(cash)+' a share in cash, or '+sh(ratio)+' shares of '+acq
+         + ' stock instead, worth '+_pcMoney(leg)+' today. Nothing caps how many holders can take the cash, '
+         + 'so a shareholder takes whichever leg is worth more and receives '+_pcMoney(b)+'.' + vs;
+  }
+  if(p.structure === 'CASH_AND_STOCK' && cash!==null && ratio!==null && leg!==null){
+    return 'Every share receives '+_pcMoney(cash)+' in cash plus '+sh(ratio)+' shares of '+acq
+         + ' stock, worth '+_pcMoney(leg)+' today. Together that is '+_pcMoney(b)+' a share.' + vs;
+  }
+  if(p.structure === 'COLLAR' && ratio!==null){
+    var band = (lo!==null && hi!==null)
+      ? ' The ratio is collared, so the value tracks '+acq+' between '+_pcMoney(lo)+' and '+_pcMoney(hi)
+        + ' and stops moving outside that band.' : '';
+    return 'Each share converts into '+sh(ratio)+' shares of '+acq+' stock rather than cash, worth '
+         + _pcMoney(b)+' today.' + band + vs;
+  }
+  if(p.structure === 'CASH_ONLY' && cash!==null){
+    return 'The filing offers '+_pcMoney(cash)+' a share, all of it in cash, so '+_pcMoney(b)
+         + ' is what a shareholder receives.';
+  }
+  return 'Once the cash and stock legs are blended, a shareholder receives '+_pcMoney(b)+' a share.' + vs;
+}
+
+// The price block on the right of a deal card. Every deal gets it, blended or
+// not: if only the structured deals carried the label it would read as a
+// warning badge instead of the question the product answers for all of them.
+function priceBlockHTML(d, pv, opts){
+  opts = opts || {};
+  var big   = (opts.big   || 24) + 'px';
+  var small = (opts.small || 14) + 'px';
+  var gap   = (opts.gap   == null ? 9 : opts.gap) + 'px';
+  var align = opts.align || 'right';
+  // A table row prices in DM Mono. Playfair would read as a different
+  // kind of number sitting next to Last and Break.
+  var face  = opts.mono ? 'font-weight:600; ' : 'font-family:\'Playfair Display\',serif; font-weight:600; ';
+  // The label leads. Underneath the number, it makes a reader hit the figure
+  // first and backtrack to find out what they just read.
+  var lbl = function(t, c, mt){
+    return '<div style="margin-top:'+mt+'; font-size:9.5px; letter-spacing:0.07em; text-transform:uppercase; color:'+c+';">'+t+'</div>';
+  };
+  var TEAL_LBL = 'rgba(95,224,201,0.8)';
+  if(pv.show){
+    // The blended value IS the headline number here. The filing's offer sits
+    // below it as secondary context, not the other way round.
+    return '<div style="text-align:'+align+';">'
+      + lbl('what you’d receive', TEAL_LBL, '0px')
+      + '<div style="margin-top:4px; '+face+'font-size:'+big+'; line-height:1; color:#5fe0c9;">'+_pcMoney(pv.blended)+'</div>'
+      + lbl('offer in the filing', '#6f6753', gap)
+      // A real number from a real filing, only incomplete, so it is muted
+      // rather than struck through.
+      + '<div style="margin-top:4px; font-size:'+small+'; color:#8f8772;">'+_pcMoney(d.dp)+'</div>'
+      + '</div>';
+  }
+  return '<div style="text-align:'+align+';">'
+    + lbl('what you’d receive', TEAL_LBL, '0px')
+    + '<div style="margin-top:4px; '+face+'font-size:'+big+'; line-height:1; color:#f7f1e4;">'+_pcMoney(d.dp)+'</div>'
+    + '</div>';
+}
+
+// The strip that explains a blended value. Nothing to explain without one.
+function explainerStripHTML(pv, marginTop){
+  if(!pv.show || !pv.prose) return '';
+  return '<div style="margin-top:'+(marginTop||16)+'px; background:rgba(212,162,76,0.05); '
+    + 'border-left:2px solid rgba(212,162,76,0.5); border-radius:0; padding:10px 12px; '
+    + 'font-size:11.5px; line-height:1.7; color:#c9c0ad;">'+pv.prose+'</div>';
+}
+
+// The blended value moves with the acquirer, so the deal page says which quote
+// it was struck from and when.
+function acquirerQuoteLineHTML(p){
+  var px = _pcNum(p && p.acquirer_price);
+  if(px === null) return '';
+  var tk = (p.acquirer_ticker || '').toUpperCase();
+  var when = _pcWhen(p.acquirer_price_at);
+  return '<div style="margin-top:10px; font-size:10.5px; letter-spacing:0.04em; color:#8f8772;">'
+    + (tk ? tk+' at ' : 'Acquirer at ') + _pcMoney(px)
+    + (when ? ', last updated '+when : '')
+    + ' · the blended value moves with it</div>';
+}
+
 // ============================================================
 // NEW renderDeals — hero cards + risk-grouped table + stats
 // Real fields: ticker, acquirer, company, cp, dp, sp_pct, ann,
@@ -2445,6 +2607,10 @@ function renderDeals(deals){
     var heroDeals = deals.slice().sort(function(a,b){ return (b.score||0)-(a.score||0); }).slice(0,3);
     heroWrap.innerHTML = heroDeals.map(function(d){
       var m = riskMeta(d.risk);
+      var pv = pricingView(d);
+      // With the price block carrying the consideration, a Deal cell in the
+      // metrics row would state the same thing twice, in two different ways.
+      var mcols = PRICING_DISPLAY ? 2 : 3;
       return ''
       + '<div onclick="showAnalysis(\''+d.ticker+'\')" style="cursor:pointer; position:relative; background:linear-gradient(180deg,#1f1b14,#18150f); border:1px solid rgba(95,224,201,0.22); padding:24px 24px 22px; overflow:hidden; box-shadow:0 18px 38px -12px rgba(0,0,0,0.75);">'
       +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,#5fe0c9,rgba(95,224,201,0.15));"></div>'
@@ -2459,21 +2625,28 @@ function renderDeals(deals){
       +       '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:24px; color:#6bbaa8; line-height:1;">'+(d.score!=null?d.score:'\u2014')+'</div>'
       +     '</div>'
       +   '</div>'
-      +   '<div style="margin-top:22px; display:flex; align-items:flex-end; gap:14px;">'
-      +     '<div style="font-family:\'DM Mono\',monospace; font-weight:600; font-size:42px; line-height:0.9; color:'+m.fg+';">'+sgn(d.sp_pct)+'</div>'
-      +     '<div style="font-size:10px; letter-spacing:0.2em; color:#7d745f; text-transform:uppercase; padding-bottom:7px;">spread<br>to deal</div>'
+      +   '<div style="margin-top:22px; display:flex; align-items:flex-end; justify-content:space-between; gap:14px;">'
+      +     '<div style="display:flex; align-items:flex-end; gap:14px;">'
+      +       '<div style="font-family:\'DM Mono\',monospace; font-weight:600; font-size:42px; line-height:0.9; color:'+m.fg+';">'+sgn(pv.spread)+'</div>'
+      +       '<div style="font-size:10px; letter-spacing:0.2em; color:#7d745f; text-transform:uppercase; padding-bottom:7px;">spread<br>to deal</div>'
+      +     '</div>'
+      +     (PRICING_DISPLAY ? priceBlockHTML(d, pv) : '')
       +   '</div>'
-      +   '<div style="margin-top:20px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding-top:16px; border-top:1px solid rgba(238,228,208,0.10);">'
+      +   '<div style="margin-top:20px; display:grid; grid-template-columns:repeat('+mcols+',1fr); gap:8px; padding-top:16px; border-top:1px solid rgba(238,228,208,0.10);">'
       +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Last Price</div><div style="margin-top:6px; font-size:16px; color:#efe7d6;">'+usd(d.cp)+'</div></div>'
-      +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Deal Price</div><div style="margin-top:6px; font-size:16px; color:#f7f1e4; font-weight:500;">'+usd(d.dp)+'</div></div>'
+      +     (PRICING_DISPLAY ? '' : '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Deal Price</div><div style="margin-top:6px; font-size:16px; color:#f7f1e4; font-weight:500;">'+usd(d.dp)+'</div></div>')
       +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Break Price</div><div style="margin-top:6px; font-size:16px; color:#f0735e;">'+usd(d.break_price)+'</div></div>'
       +   '</div>'
+      +   explainerStripHTML(pv)
       + '</div>';
     }).join('');
   }
 
   // ================= TABLE (risk-grouped) =================
-  var cols = '92px 170px minmax(120px,1.1fr) minmax(150px,1.5fr) 82px 82px 100px 92px 104px';
+  // The Deal column carries a labelled block once the display is on, and
+  // 82px cannot hold OFFER IN THE FILING without wrapping it.
+  var dealCol = PRICING_DISPLAY ? '132px' : '82px';
+  var cols = '92px 170px minmax(120px,1.1fr) minmax(150px,1.5fr) 82px '+dealCol+' 100px 92px 104px';
   var groupDefs = [
     { risk:'Very Low', label:'Very Low Risk' },
     { risk:'Low',      label:'Low Risk' },
@@ -2501,6 +2674,10 @@ function renderDeals(deals){
           + '</div>';
     rows.forEach(function(d){
       var m2 = riskMeta(d.risk);
+      // The list is where deals get compared against each other, so a row may
+      // never show a headline beside another row's blended value.
+      var pv = pricingView(d);
+      var rowBlock = priceBlockHTML(d, pv, {big:13, small:11.5, gap:6, mono:true, align:'right'});
       html += '<div class="deal-row-mobile" onclick="showAnalysis(\''+d.ticker+'\')" style="display:none; cursor:pointer; padding:14px 16px; border-bottom:1px solid rgba(238,228,208,0.07);">'
             +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">'
             +     '<div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">'
@@ -2513,8 +2690,10 @@ function renderDeals(deals){
             +   '<div style="margin-top:7px; font-size:12px; line-height:1.45; color:#cdc2a8;"><span style="color:#f3ead7;">'+(d.acquirer||'\u2014')+'</span> <span style="color:#5fe0c9;">\u2192</span> '+(d.company||'')+'</div>'
             +   '<div style="margin-top:11px; display:grid; grid-template-columns:1fr 1fr; gap:8px 14px;">'
             +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Last</div><div style="margin-top:2px; font-size:13px; color:#cdbf9f;">'+usd(d.cp)+'</div></div>'
-            +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Deal</div><div style="margin-top:2px; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div></div>'
-            +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Spread</div><div style="margin-top:2px; font-size:15px; font-weight:600; color:'+m2.fg+';">'+sgn(d.sp_pct)+'</div></div>'
+            +     (PRICING_DISPLAY
+                    ? '<div>'+priceBlockHTML(d, pv, {big:13, small:11.5, gap:6, mono:true, align:'left'})+'</div>'
+                    : '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Deal</div><div style="margin-top:2px; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div></div>')
+            +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Spread</div><div style="margin-top:2px; font-size:15px; font-weight:600; color:'+m2.fg+';">'+sgn(pv.spread)+'</div></div>'
             +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Annualized</div><div style="margin-top:2px; font-size:13px; color:#9a9079;">'+sgn1(d.ann)+'</div></div>'
             +   '</div>'
             + '</div>';
@@ -2524,8 +2703,10 @@ function renderDeals(deals){
             +   '<div style="font-size:13px; font-weight:500; color:#f3ead7;">'+(d.acquirer||'\u2014')+'</div>'
             +   '<div style="font-size:13px; font-weight:500; color:#cdc2a8;">'+(d.company||'')+'</div>'
             +   '<div style="text-align:right; font-size:13px; color:#cdbf9f;">'+usd(d.cp)+'</div>'
-            +   '<div style="text-align:right; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div>'
-            +   '<div style="text-align:right; font-size:14px; font-weight:600; color:'+m2.fg+';">'+sgn(d.sp_pct)+'</div>'
+            +   (PRICING_DISPLAY
+                  ? rowBlock
+                  : '<div style="text-align:right; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div>')
+            +   '<div style="text-align:right; font-size:14px; font-weight:600; color:'+m2.fg+';">'+sgn(pv.spread)+'</div>'
             +   '<div style="text-align:right; font-size:12.5px; color:#9a9079;">'+sgn1(d.ann)+'</div>'
             +   '<div style="text-align:right;">'+tagHTML(d.risk)+'</div>'
             + '</div>';
@@ -2547,6 +2728,8 @@ function toggleDeal(i){
 async function loadDeals(){
     try{
         const d=await fetch('/api/deals').then(r=>r.json());
+        // Mirrors DEAL_PRICING_ENFORCING in main.py. Read before any render.
+        PRICING_DISPLAY = (d.pricing_display === true);
         allDeals=(d.deals||[]).filter(d => d.cp !== null && d.cp > 0 && d.sp_pct !== null);
         dealsLoaded=true;
         renderDeals(allDeals);

@@ -187,6 +187,34 @@ def classify_structure(terms):
     return None
 
 
+def stock_leg_value(terms, acquirer_price):
+    """
+    What the stock half of the consideration is worth right now.
+
+    Split out of compute_blended because the display needs it as its own
+    number -- "0.3210 Amazon shares, worth $84.31 today" is the sentence that
+    makes a blended value legible, and a second copy of the collar rules
+    written for the frontend would be a second place for them to go wrong.
+
+    Returns None when this deal has no stock leg or no acquirer price.
+    """
+    ratio = _f(terms.get('ratio'))
+    if ratio is None or acquirer_price is None:
+        return None
+    lo, hi = _f(terms.get('collar_low')), _f(terms.get('collar_high'))
+    # A collar fixes value inside the band and fixes the share count outside it.
+    if lo is not None and hi is not None:
+        if acquirer_price < lo:
+            return ratio * lo
+        if acquirer_price > hi:
+            return ratio * hi
+        return ratio * acquirer_price
+    if hi is not None:
+        # A one-sided cap: the stock leg cannot be worth more than hi.
+        return min(ratio * acquirer_price, hi)
+    return ratio * acquirer_price
+
+
 def compute_blended(terms, acquirer_price):
     """
     The value a holder actually receives, at the acquirer's current price.
@@ -206,7 +234,6 @@ def compute_blended(terms, acquirer_price):
     cash = _f(terms.get('cash'))
     ratio = _f(terms.get('ratio'))
     cap = _f(terms.get('cash_cap'))
-    lo, hi = _f(terms.get('collar_low')), _f(terms.get('collar_high'))
 
     if structure == 'CASH_ONLY':
         return cash, f"${cash:.2f} in cash"
@@ -214,19 +241,7 @@ def compute_blended(terms, acquirer_price):
     if acquirer_price is None:
         return None, "no acquirer price available"
 
-    stock_leg = ratio * acquirer_price
-
-    # A collar fixes value inside the band and fixes the share count outside it.
-    if lo is not None and hi is not None:
-        if lo <= acquirer_price <= hi:
-            stock_leg = ratio * acquirer_price
-        elif acquirer_price < lo:
-            stock_leg = ratio * lo
-        else:
-            stock_leg = ratio * hi
-    elif hi is not None:
-        # A one-sided cap: the stock leg cannot be worth more than hi.
-        stock_leg = min(ratio * acquirer_price, hi)
+    stock_leg = stock_leg_value(terms, acquirer_price)
 
     if structure == 'COLLAR':
         return stock_leg, f"{ratio} shares, collared, currently ${stock_leg:.2f}"
