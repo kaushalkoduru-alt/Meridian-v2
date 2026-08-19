@@ -244,10 +244,10 @@ def compute_blended(terms, acquirer_price):
     stock_leg = stock_leg_value(terms, acquirer_price)
 
     if structure == 'COLLAR':
-        return stock_leg, f"{ratio} shares, collared, currently ${stock_leg:.2f}"
+        return round(stock_leg, 2), f"{ratio} shares, collared, currently ${stock_leg:.2f}"
 
     if structure == 'ELECTION_CAPPED':
-        blended = cap * cash + (1 - cap) * stock_leg
+        blended = round(cap * cash + (1 - cap) * stock_leg, 2)
         return blended, (
             f"${cash:.2f} cash for up to {cap*100:.0f}% of shares, the rest "
             f"converting to {ratio} acquirer shares currently worth "
@@ -257,14 +257,14 @@ def compute_blended(terms, acquirer_price):
     # Uncapped election: a holder can take all cash, so cash is the floor and
     # the rational choice is whichever leg is worth more.
     if structure == 'ELECTION_UNCAPPED':
-        blended = max(cash, stock_leg)
+        blended = round(max(cash, stock_leg), 2)
         return blended, (
             f"holders elect ${cash:.2f} cash or {ratio} shares worth "
             f"${stock_leg:.2f}; uncapped, so the better leg applies"
         )
 
     # Fixed cash-and-stock: both, not either.
-    blended = cash + stock_leg
+    blended = round(cash + stock_leg, 2)
     return blended, (
         f"${cash:.2f} cash plus {ratio} acquirer shares worth ${stock_leg:.2f}"
     )

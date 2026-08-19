@@ -46,7 +46,7 @@ DEAL_STRUCTURES = {
 
 # Gates the display change only. False means the blended value is computed and
 # logged but dp, sp_pct and everything the frontend reads stay untouched.
-DEAL_PRICING_ENFORCING = False
+DEAL_PRICING_ENFORCING = True
 
 # ─── REDIS CACHE ─────────────────────────────────────────────────────────────
 
