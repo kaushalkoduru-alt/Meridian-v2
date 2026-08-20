@@ -1731,6 +1731,86 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         except Exception as _pce:
             print(f"[Pricing] error (non-fatal, nothing changed): {_pce}")
 
+        # ── COMMITMENT TERMS ───────────────────────────────────────────────────
+        # How hard the buyer is contractually bound to close. These terms live in
+        # the merger agreement filed as EX-2.1, not in the 8-K body or the press
+        # release, so _filing_text is the wrong document and this pass fetches the
+        # exhibit separately off the deal's accession. Cached for good once read:
+        # a signed merger agreement does not change.
+        try:
+            from deal_commitment import assess_commitment
+
+            _read = 0
+            for _d in results:
+                if _d.get('commitment'):
+                    continue
+                _tk = _d.get('ticker')
+                _cik = SEC_CIK_MAP.get(_tk or '', '')
+                _acc = _d.get('accession')
+                if not _cik or not _acc:
+                    continue
+                _accn = _acc.replace('-', '')
+                try:
+                    _ix = requests.get(
+                        f"https://www.sec.gov/Archives/edgar/data/{_cik}/{_accn}/index.json",
+                        headers=EDGAR_HEADERS, timeout=10)
+                    time.sleep(0.12)  # SEC rate limit: 10 req/sec max
+                    if _ix.status_code != 200:
+                        print(f"  [Commitment] {_tk}: document list HTTP {_ix.status_code}")
+                        continue
+                    # Filer agents name the merger agreement three ways:
+                    # d62897dex21.htm, ef20070409_ex2-1.htm, exhibit21.htm.
+                    # Documents only — '...index2.htm' would otherwise match on
+                    # the 'ex2' in 'index', and the .jpg pages of a scanned
+                    # exhibit carry the exhibit's own name.
+                    _ex2 = None
+                    for _it in _ix.json().get('directory', {}).get('item', []):
+                        _nm = (_it.get('name') or '').lower()
+                        if not _nm.endswith(('.htm', '.html', '.txt')) or 'index' in _nm:
+                            continue
+                        if 'ex2' in _nm or 'ex-2' in _nm or 'exhibit2' in _nm:
+                            _ex2 = _it.get('name')
+                            break
+                    if not _ex2:
+                        # Plenty of 8-Ks announce a deal without attaching the
+                        # agreement. Nothing to read, so nothing is claimed.
+                        print(f"  [Commitment] {_tk}: no EX-2 exhibit in {_acc} — skipped")
+                        continue
+                    _txt = _get_text_for_validation(
+                        f"https://www.sec.gov/Archives/edgar/data/{_cik}/{_accn}/{_ex2}")
+                    if not _txt:
+                        print(f"  [Commitment] {_tk}: {_ex2} unreadable — skipped")
+                        continue
+                    # Merger agreements run past 300,000 characters, and the
+                    # termination fees sit in Article VIII near the end, so a tight
+                    # cap drops the most valuable field first. GSAT's EX-2.1 is
+                    # 500,072 characters and its $592M reverse fee falls past
+                    # 400,000; 600,000 reaches it.
+                    _txt = _txt[:600000]
+                    # tx_value is carried in billions. assess_commitment sizes the
+                    # reverse fee against deal value in dollars.
+                    try:
+                        _dv = float(_d.get('tx_value')) * 1e9 if _d.get('tx_value') else None
+                    except (TypeError, ValueError):
+                        _dv = None
+                    _d['commitment'] = assess_commitment(_txt, deal_value=_dv)
+                    _read += 1
+                except Exception as _ce:
+                    print(f"  [Commitment] {_tk}: {_ce}")
+
+            _committed = [_d for _d in results if _d.get('commitment')]
+            print(f"[Commitment] {_read} agreement(s) read this scan, "
+                  f"{len(_committed)} deal(s) with a commitment reading")
+            for _d in _committed:
+                _c = _d.get('commitment')
+                if not isinstance(_c, dict):
+                    continue
+                _verdicts = ", ".join(f"{_t.get('term')}: {_t.get('verdict')}"
+                                      for _t in _c.get('terms', []))
+                print(f"  [Commitment] {_d.get('ticker')}: {_c.get('summary')} — {_verdicts}")
+        except Exception as _cme:
+            print(f"[Commitment] error (non-fatal, nothing changed): {_cme}")
+
         try:
             from deal_gate import gate_deal, gate_report, GATE_ENFORCING, VERDICT_VERIFIED
             
@@ -2055,6 +2135,10 @@ def get_clean_deals():
         # only when DEAL_PRICING_ENFORCING is True; until then it rides along.
         if 'pricing' in d:
             d['pricing'] = parse_structured(d.get('pricing', {}))
+        # Same round-trip: the commitment reading is a dict on a fresh scan and
+        # a repr string once it has been through the CSV.
+        if 'commitment' in d:
+            d['commitment'] = parse_structured(d.get('commitment', {}))
     return deals
 
 @app.get("/api/deals")
