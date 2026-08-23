@@ -1376,6 +1376,18 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </div>
 
+  <!-- ============ 3.6 · DEAL COMMITMENT (merger agreement terms; hidden when unread) ============ -->
+  <div id="da-commitment-section" style="display:none;">
+    <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
+      <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Deal Commitment</span>
+      <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">what the merger agreement obliges</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+    </div>
+    <div class="da-section" style="position:relative;">
+      <div id="da-commitment" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:6px 22px;"></div>
+    </div>
+  </div>
+
   <!-- ============ 4 · V3 SCORE BREAKDOWN ============ -->
   <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
     <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">V3 Score Breakdown</span>
@@ -2252,6 +2264,16 @@ async function renderAnalysis(deal){
     structSection.style.display = 'none';
   }
 
+  // ---- deal commitment (merger agreement terms) ----
+  var commitSection = document.getElementById('da-commitment-section');
+  var commitHtml = commitmentHTML(deal.commitment);
+  if(commitHtml){
+    if(commitSection) commitSection.style.display = '';
+    _daSet('da-commitment', commitHtml);
+  } else if(commitSection){
+    commitSection.style.display = 'none';
+  }
+
   // ---- V3 score: overall + real factor bars ----
   _daSet('da-score-overall',
     '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">V3 Composite</div>'
@@ -2374,6 +2396,51 @@ function toggleSection(id){
         body.classList.add('collapsed');
         tog.classList.add('collapsed');
     }
+}
+
+// ── DEAL COMMITMENT ───────────────────────────────────────────────────────────
+// Terms read out of the merger agreement exhibit. Neutral throughout: WEAK is a
+// fact about a contract, not a warning, so it takes the same amber the structure
+// notes use and no icon.
+var COMMITMENT_COLOR = { STRONG:'#5fe0c9', WEAK:'#d4a24c' };
+
+// "Financing condition and specific performance" — sentence case, serial join.
+function commitmentUnreadSentence(terms){
+  var names = terms.filter(function(t){ return t.verdict !== 'STRONG' && t.verdict !== 'WEAK'; })
+                   .map(function(t){ return String(t.term || '').toLowerCase(); });
+  if(!names.length) return '';
+  var joined = names.length === 1 ? names[0]
+             : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  return joined.charAt(0).toUpperCase() + joined.slice(1)
+       + ' could not be read from this agreement.';
+}
+
+function commitmentHTML(commitment){
+  if(!commitment || !commitment.terms || !commitment.terms.length) return '';
+  var terms = commitment.terms;
+  var resolved = terms.filter(function(t){ return t.verdict === 'STRONG' || t.verdict === 'WEAK'; });
+  if(!resolved.length) return '';   // nothing read: the caller drops the section
+
+  var html = resolved.map(function(t){
+    var c = COMMITMENT_COLOR[t.verdict] || '#8f8772';
+    return '<div style="padding:14px 0; border-top:1px solid rgba(238,228,208,0.08);">'
+      + '<div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">'
+      +   '<span style="font-size:13px; color:#e8e0d0;">'+t.term+'</span>'
+      +   '<span style="display:inline-block; padding:3px 7px; font-family:\'DM Mono\',monospace; font-size:9px; letter-spacing:0.11em; text-transform:uppercase; color:'+c+'; background:transparent; border:1px solid '+c+'73;">'+t.verdict+'</span>'
+      + '</div>'
+      + (t.meaning ? '<div style="margin-top:8px; font-size:12.5px; line-height:1.7; color:#c9c0ad;">'+t.meaning+'</div>' : '')
+      + (t.quote ? '<blockquote style="margin:9px 0 0; padding:2px 0 2px 14px; border-left:2px solid '+c+'80; font-family:\'DM Mono\',monospace; font-size:11.5px; line-height:1.6; color:#9a9079; font-style:normal;">'+t.quote+'</blockquote>' : '')
+      + '</div>';
+  }).join('');
+
+  // Naming what went unread is the difference between a term the contract omits
+  // and a term this parser missed. Without it the section implies the agreement
+  // was read completely, which is a claim it cannot make.
+  var unread = commitmentUnreadSentence(terms);
+  if(unread){
+    html += '<div style="padding:13px 0 15px; border-top:1px solid rgba(238,228,208,0.08); font-size:11.5px; line-height:1.6; color:#6f6753; font-style:italic;">'+unread+'</div>';
+  }
+  return html;
 }
 
 // ── DEAL STRUCTURE FLAGS ──────────────────────────────────────────────────────
