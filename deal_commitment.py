@@ -135,27 +135,89 @@ SPECIFIC_PERF_LIMITED = [
 # Fee names that mean "the acquirer pays to walk".
 ACQUIRER_FEE_NAMES = (
     r'[Rr]everse\s+[Tt]ermination\s+[Ff]ee',
+    # AES splits the acquirer's fee in two: a "Parent General Termination Fee"
+    # of $587,861,060 for an ordinary walk and a "Parent Regulatory Termination
+    # Fee" of $100,000,000 for an antitrust failure, with "Parent Termination
+    # Fee" defined as the pair. The general fee is the headline number, so it is
+    # named ahead of the bare "Parent Termination Fee" it would otherwise lose to.
+    r'[Pp]arent\s+[Gg]eneral\s+[Tt]ermination\s+[Ff]ee',
     r'[Pp]arent\s+[Tt]ermination\s+[Ff]ee',
     r'[Bb]uyer\s+[Tt]ermination\s+[Ff]ee',
+    r'[Pp]urchaser\s+[Tt]ermination\s+[Ff]ee',
     r'[Rr]egulatory\s+[Tt]ermination\s+[Ff]ee',
     r'[Aa]ntitrust\s+[Tt]ermination\s+[Ff]ee',
 )
 # Fee names that mean "the target pays to walk".
+# APGE names the target's fee with no qualifier at all: a fee of $381,273,716 in
+# cash (the " Termination Fee "). The bare name is a substring of every qualified
+# one, so it is admitted under two restrictions. The lookbehind refuses a match
+# preceded by a word -- "Parent Termination Fee", "Netflix Termination Fee" --
+# which is the substring collision the first version of this module hit. And it
+# is listed in QUALIFIED_ONLY_NAMES below, which keeps it out of the loose
+# label-near-an-amount tier where that lookbehind would be the only thing
+# standing between it and the acquirer's figure.
+_BARE_FEE_NAME = r'(?<![A-Za-z]\s)[Tt]ermination\s+[Ff]ee'
+
 TARGET_FEE_NAMES = (
     r'[Cc]ompany\s+[Tt]ermination\s+[Ff]ee',
     r'[Tt]arget\s+[Tt]ermination\s+[Ff]ee',
+    _BARE_FEE_NAME,
 )
+
+# Names too generic for the loose tier: definition and parenthetical shapes only,
+# both of which anchor on a quote or a "(the" and cannot drift.
+QUALIFIED_ONLY_NAMES = frozenset({_BARE_FEE_NAME})
 
 _AMOUNT = r'\$\s*([\d,]+(?:\.\d+)?)\s*(million|billion)?'
 
 
+# Stripping HTML leaves the curly quotes around a defined term separated from the
+# term itself: SLAB, GBTG and APGE all read (the " Parent Termination Fee ") with
+# spaces inside the quotes, where WBD reads (the "Regulatory Termination Fee")
+# without them. Anchoring tight to the quote character passed the WBD fixture and
+# missed three live agreements.
+_QUOTE = r'[\u201c\u201d"\']'
+
+
 def _fee_patterns(names):
-    """Both word orders, for each name in the group."""
-    pats = []
+    """
+    Three shapes per name, most specific first.
+
+    The tiers are built separately and concatenated so precedence runs by SHAPE
+    rather than by name: a definition anywhere in the agreement outranks a loose
+    label-near-an-amount scan for any other name. That ordering is what stops
+    AES's "Parent Termination Fee" -- defined as the sum of two other fees, with
+    no amount of its own -- from sweeping up whatever figure sits within 200
+    characters of it.
+    """
+    defn, amount_first, label_first = [], [], []
     for n in names:
-        pats.append(rf'{n}[^\n]{{0,200}}?{_AMOUNT}')      # label then amount
-        pats.append(rf'{_AMOUNT}[^\n]{{0,120}}?\(\s*(?:the\s+)?[\u201c"\']?{n}')  # amount then label
-    return pats
+        # 1. The definition: " Parent General Termination Fee " means an amount
+        #    in cash equal to $587,861,060.   (AES)
+        defn.append(
+            rf'{_QUOTE}?\s*{n}\s*{_QUOTE}?\s*means\s+'
+            rf'(?:an\s+amount\s+)?(?:in\s+cash\s+)?(?:equal\s+to\s+)?{_AMOUNT}')
+        # 2. Amount, then the defined term in parentheses: a fee equal to
+        #    $499,000,000 (the " Parent Termination Fee ")   (SLAB, GBTG, APGE, WBD)
+        #    GBCS opens the parenthesis with a back-reference instead of going
+        #    straight to the article -- an amount equal to $400,000 (such amount,
+        #    the " Purchaser Termination Fee ") -- so a short lead-in is allowed,
+        #    bounded by [^)] so it cannot wander past the parenthetical it is in.
+        #    The gap may hold neither a period nor another dollar sign: an amount
+        #    and the parenthetical that names it belong to one clause. A plain
+        #    120-character window let GBCS's reverse pattern begin at the
+        #    COMPANY's $400,000, jump the sentence boundary, and finish inside
+        #    the Purchaser parenthetical -- a right number under a wrong span,
+        #    which then swallowed the company fee's own definition as an overlap.
+        amount_first.append(
+            rf'{_AMOUNT}[^\n$.]{{0,60}}?\(\s*(?:[^)$.]{{0,40}}?\s*the\s+)?'
+            rf'{_QUOTE}?\s*{n}')
+        # 3. Label, then an amount nearby: a Reverse Termination Fee of $500
+        #    million. The loosest of the three, so it runs last -- and generic
+        #    names sit it out entirely.
+        if n not in QUALIFIED_ONLY_NAMES:
+            label_first.append(rf'{n}[^\n]{{0,200}}?{_AMOUNT}')
+    return defn + amount_first + label_first
 
 
 REVERSE_FEE_PATTERNS = _fee_patterns(ACQUIRER_FEE_NAMES)
@@ -164,8 +226,48 @@ COMPANY_FEE_PATTERNS = _fee_patterns(TARGET_FEE_NAMES)
 # A fee named after neither party belongs to some other transaction.
 THIRD_PARTY_FEE = re.compile(
     r'\b([A-Z][A-Za-z]+)\s+[Tt]ermination\s+[Ff]ee')
+# 'general' belongs here for the same reason as 'regulatory': AES's "Parent
+# General Termination Fee" is this deal's own fee under a compound name, and
+# reading "General" as an outside party suppressed the entire AES fee pair.
+# The structural words are here because an agreement's table of defined terms
+# collapses into one line when the HTML is stripped, putting one row's section
+# reference immediately before the next row's label: "... Supporting Stockholders
+# Recitals Surviving Corporation Recitals Termination Fee 7.3(a)(iii)(B) ..." in
+# APGE's. "Recitals" is not a party to anything.
 KNOWN_FEE_WORDS = {'reverse', 'parent', 'buyer', 'regulatory', 'antitrust',
-                   'company', 'target', 'the', 'a', 'such', 'applicable'}
+                   'company', 'target', 'general', 'purchaser',
+                   'the', 'a', 'such', 'applicable',
+                   'recitals', 'article', 'section', 'schedule', 'exhibit', 'annex',
+                   'preamble', 'appendix'}
+
+# A bare section reference -- 7.3(a)(iii), 3.17(b) -- as it appears in an index
+# row, where nothing but numbering separates one defined term from the next.
+_SECTION_REF = re.compile(r'\b\d+\.\d+(?:\([A-Za-z0-9]+\))*')
+# Four or more capitalised words running together is a column of defined terms,
+# not a sentence.
+_TERM_RUN = re.compile(r'(?:\b[A-Z][A-Za-z]+\s+){4,}')
+# Any of these means the window is prose, whatever else it contains. The Netflix
+# fee sits in a real sentence -- "Buyer ... shall pay or cause to be paid
+# $2,800,000,000" -- and prose is what separates it from an index row.
+_PROSE = re.compile(
+    r'\b(?:shall|will|means|meaning|pay|paid|payable|terminated?|'
+    r'is|are|was|were|be|been|has|have|had|may|must|agrees?|received?|'
+    r'constitutes?|occurs?|equal|entitled|obligated)\b', re.I)
+
+
+def _looks_like_index_row(window):
+    '''
+    True when the surrounding text is a table-of-defined-terms row rather than a
+    sentence.
+
+    Both signals are required. A section reference alone proves nothing: the
+    Netflix fee's own sentence cites Section 8.1(c)(ii), and the WBD clause that
+    pays it opens "Section 6.17 Netflix Termination Fee". So the absence of any
+    verb carries the decision, and the structural evidence only confirms it.
+    '''
+    if _PROSE.search(window):
+        return False
+    return len(_SECTION_REF.findall(window)) >= 2 or bool(_TERM_RUN.search(window))
 
 
 def _to_dollars(amount, unit):
@@ -285,13 +387,64 @@ def third_party_fee_names(text):
     Fee names belonging to neither party. WBD's agreement carries a $2.8bn
     "Netflix Termination Fee" -- a payment to a company outside this deal
     entirely, and a number that would look authoritative and mean nothing.
+
+    A name is only reported out of prose. The same detector reading an
+    agreement's index of defined terms found a fee owed to "Recitals" -- the
+    kind of confident nonsense that costs trust in the readings that are right.
     """
+    text = text or ""
     out = set()
-    for m in THIRD_PARTY_FEE.finditer(text or ""):
+    for m in THIRD_PARTY_FEE.finditer(text):
         word = m.group(1)
-        if word.lower() not in KNOWN_FEE_WORDS:
-            out.add(word)
+        if word.lower() in KNOWN_FEE_WORDS:
+            continue
+        if _looks_like_index_row(text[max(0, m.start() - 160):m.end() + 160]):
+            continue
+        out.add(word)
     return out
+
+
+def _resolve_cross_reference(flat, names, foreign=()):
+    """
+    One hop, and one hop only.
+
+    ALOT's agreement never states the acquirer's fee as a figure. It says
+    "Reverse Termination Fee" means an amount equal to the Termination Fee, and
+    defines that term 6,451 characters away, in an alphabetical definitions list:
+    "Termination Fee" means $9,648,000. Both halves are unambiguous; only the
+    join is missing, so the number is read rather than inferred.
+
+    A second hop is refused. Two levels of indirection are rare enough in real
+    agreements that the shape is more likely to be a misparse than a definition,
+    and a wrong fee is worse than no fee. Because the lookup below requires a
+    dollar amount immediately after "means", a referent that is itself another
+    reference simply fails to match, and the caller gets nothing.
+    """
+    for n in names:
+        ref = re.search(
+            rf'{_QUOTE}?\s*{n}\s*{_QUOTE}?\s*means\s+(?:an\s+amount\s+)?'
+            rf'(?:in\s+cash\s+)?equal\s+to\s+the\s+{_QUOTE}?\s*'
+            rf'([A-Z][A-Za-z]*(?:\s+[A-Z][A-Za-z]*){{0,4}})', flat)
+        if not ref:
+            continue
+        term = ref.group(1).strip()
+        # A term that refers to itself is a parse artifact, not a definition.
+        if re.fullmatch(n, term):
+            continue
+        # A fee belonging to another transaction stays out, exactly as it does
+        # on the direct shapes.
+        if any(f in term for f in foreign):
+            continue
+        loose = r'\s+'.join(re.escape(w) for w in term.split())
+        defn = re.search(
+            rf'{_QUOTE}?\s*{loose}\s*{_QUOTE}?\s*means\s+(?:an\s+amount\s+)?'
+            rf'(?:in\s+cash\s+)?(?:equal\s+to\s+)?{_AMOUNT}', flat)
+        if not defn:
+            continue
+        amt = _amount_from(defn)
+        if amt and amt > 100_000:
+            return amt, f"{ref.group(0)[:110]} ... {defn.group(0)[:110]}"
+    return None, None
 
 
 def extract_termination_fees(text, deal_value=None):
@@ -311,23 +464,50 @@ def extract_termination_fees(text, deal_value=None):
     if foreign:
         out['third_party_fees_ignored'] = sorted(foreign)
 
-    def _find(patterns, exclude_amount=None):
+    def _find(patterns, exclude_span=None):
+        """
+        Rejects a second reading of the SAME sentence, not a second reading of
+        the same number.
+
+        Excluding by amount assumed the two fees always differ. APGE's do not:
+        both are $381,273,716, stated in two separate sentences, and dropping the
+        target's for matching the acquirer's threw away a real 1.0x asymmetry --
+        which is itself a finding, since a buyer and a seller who post identical
+        break fees are telling you something about who wanted the deal.
+        """
         for pat in patterns:
             for m in re.finditer(pat, flat):
                 window = flat[max(0, m.start() - 60):m.end() + 60]
                 # A fee belonging to another transaction is not this deal's.
                 if any(f in window for f in foreign):
                     continue
+                # Overlap, rather than an identical offset: the tiers start at
+                # different points within one sentence, so two patterns can read
+                # the same fee from spans that begin a few characters apart.
+                if exclude_span and not (m.end() <= exclude_span[0]
+                                         or m.start() >= exclude_span[1]):
+                    continue
                 amt = _amount_from(m)
-                if amt and amt > 100_000 and amt != exclude_amount:
-                    return amt, m.group(0)[:180]
-        return None, None
+                if amt and amt > 100_000:
+                    return amt, m.group(0)[:180], (m.start(), m.end())
+        return None, None, None
 
-    amt, txt = _find(REVERSE_FEE_PATTERNS)
+    amt, txt, span = _find(REVERSE_FEE_PATTERNS)
+    if not amt:
+        # No figure stated against the name. It may still be defined by
+        # reference to a term that does carry one.
+        amt, txt = _resolve_cross_reference(flat, ACQUIRER_FEE_NAMES, foreign)
     if amt:
         out['reverse_fee'], out['reverse_fee_text'] = amt, txt
+    reverse_span = span
 
-    amt, txt = _find(COMPANY_FEE_PATTERNS, exclude_amount=out.get('reverse_fee'))
+    amt, txt, _ = _find(COMPANY_FEE_PATTERNS, exclude_span=reverse_span)
+    if not amt:
+        amt, txt = _resolve_cross_reference(flat, TARGET_FEE_NAMES, foreign)
+        # The resolver reports no span, so a same-amount result there cannot be
+        # told apart from a re-read of the acquirer's fee. Left out.
+        if amt == out.get('reverse_fee'):
+            amt, txt = None, None
     if amt:
         out['company_fee'], out['company_fee_text'] = amt, txt
 
