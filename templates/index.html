@@ -1402,29 +1402,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div id="da-risk-factors" style="margin-top:14px;"></div>
   </div>
 
-  <!-- ============ 5 · CATALYST CALENDAR ============ -->
-  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
-    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Deal Catalyst Calendar</span>
-    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">the path to close</span>
-    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
-  </div>
-  <div class="da-section" style="position:relative;">
-    <div style="display:grid; grid-template-columns:1.28fr 1fr; gap:16px; align-items:stretch;">
-      <div id="da-catalyst" style="background:linear-gradient(180deg, #1a1812, #16140e); border:1px solid rgba(238,228,208,0.1); padding:22px 26px;"></div>
-      <div id="da-stands" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:22px 24px; display:flex; flex-direction:column;"></div>
-    </div>
-  </div>
-
-  <!-- ============ 6 · COMPS (placeholder) ============ -->
-  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
-    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Comparable Deals</span>
-    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">peer spreads</span>
-    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
-  </div>
-  <div class="da-section" style="position:relative;">
-    <div id="da-comps"></div>
-  </div>
-
   <!-- FOOTER -->
   <footer style="margin-top:44px; padding-top:24px; border-top:1px solid rgba(238,228,208,0.12);">
     <div style="display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap;">
@@ -1975,8 +1952,8 @@ function getScoreBreakdown(d){
 
 // ============================================================
 // NEW renderAnalysis — ports the redesigned deal-detail page.
-// Real fields only. Honest slots for: V3 close-probability
-// estimate (EV card / expected P&L) and "Where This Stands".
+// Real fields only. Honest slot for: V3 close-probability
+// estimate (EV card / expected P&L).
 // Preserves: six premium IDs, .da-section wrappers, the two
 // async fetches, applyPaywallToSections() at the end.
 // ============================================================
@@ -2340,28 +2317,6 @@ async function renderAnalysis(deal){
           + '</div>';
       }).join('')
     + '</div>') : '');
-
-  // ---- catalyst timeline — disabled pending filing-sourced milestone detection ----
-  _daSet('da-catalyst',
-    '<div style="display:flex; align-items:baseline; gap:9px; margin-bottom:14px;">'
-    +   '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">Milestone Path</span>'
-    + '</div>'
-    + '<div style="font-size:12.5px; line-height:1.75; color:#9a9079;">Meridian shows a milestone only when an SEC filing proves it happened. Detection of proxy filings, shareholder votes, and regulatory clearances is being built against EDGAR directly. Until every step on this timeline traces to a filing you can open, there is no timeline here.</div>'
-    + '<div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(238,228,208,0.08); font-size:11.5px; line-height:1.6; color:#7d745f;">What is confirmed for this deal: announced <span style="color:#cdc2a8;">' + (deal.filed || '\u2014') + '</span>' + (deal.close_date ? ', with the company guiding to a close in <span style="color:#cdc2a8;">' + deal.close_date + '</span>.' : '.') + '</div>');
-
-  // ---- "Where This Stands" — honest slot, pattern library in development ----
-  _daSet('da-stands',
-    '<div style="display:flex; align-items:baseline; gap:9px; margin-bottom:4px;">'
-    +   '<span style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:17px; color:#f4eee0;">Where This Stands</span>'
-    + '</div>'
-    + '<div style="font-size:10.5px; letter-spacing:0.04em; color:#8f8772; line-height:1.5;">Meridian\u2019s read on the path, not the raw calendar.</div>'
-    + '<div style="margin-top:18px; padding-top:16px; border-top:1px solid rgba(238,228,208,0.1); flex:1;">'
-    +   '<div style="font-size:12.5px; line-height:1.7; color:#9a9079;">Deal-pattern analysis is in development. Rather than generate commentary automatically, each read is being authored against verified deal characteristics so the interpretation holds up. It ships when it is right.</div>'
-    + '</div>');
-
-  // ---- comps — honest placeholder ----
-  _daSet('da-comps',
-    '<div style="padding:20px 22px; background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); font-size:12.5px; line-height:1.7; color:#9a9079;">Comparable deal analysis returns with Meridian\u2019s EDGAR-verified historical dataset.</div>');
 
   applyPaywallToSections();
 }

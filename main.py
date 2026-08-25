@@ -2483,15 +2483,6 @@ def validate_deal(ticker, acquirer, cik, company_name, announced_date_str):
 async def get_all_comps():
     return JSONResponse(content={"comps": [], "total": 0, "status": "Dataset under EDGAR re-verification"})
 
-@app.get("/api/comps/{ticker}")
-async def get_comps(ticker: str, deal_type: str = "All Cash", spread: float = 5.0):
-    return JSONResponse(content={
-        "comps": [],
-        "summary": {"total": 0, "closed": 0, "broken": 0, "close_rate": 0, "avg_days": 0},
-        "status": "Dataset under EDGAR re-verification"
-    })
-
-
 
 @app.get("/api/admin/field-completeness")
 async def field_completeness(token: str = ""):
@@ -2738,20 +2729,6 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
             time.sleep(1)
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
 
-
-@app.get("/api/catalyst/{ticker}")
-async def api_catalyst(ticker: str, filed: str = "", deal_type: str = "", tx_value: float = 0):
-    """
-    Milestone timeline — disabled.
-
-    The prior implementation derived every milestone from arithmetic on the
-    announcement date (filed + 15/45/105/135/180/365 days) and marked them
-    'completed' once the invented date passed. None of it was sourced from a
-    filing. It was presenting projections as confirmed events.
-
-    Returns empty until milestones can be detected from actual EDGAR filings.
-    """
-    return {"catalysts": [], "current_stage": None, "days_elapsed": None, "disabled": True}
 
 @app.get("/api/implied-probability/{ticker}")
 async def implied_probability(ticker: str):
