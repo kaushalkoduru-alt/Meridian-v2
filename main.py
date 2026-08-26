@@ -1071,6 +1071,44 @@ def fetch_deals_from_edgar():
                     _prior_directions[_tk] = _dv
     except Exception as _pe:
         print(f"[Direction] could not capture prior verdicts: {_pe}")
+
+    # Same capture, same reason, for the two readings taken off the merger
+    # agreement. This is the fourth time this shape has appeared: the deal dict
+    # built below carries neither field, and save_cache() writes those fresh
+    # rows to the CSV before the agreement pass runs — so a read down there
+    # found nothing and every scan re-fetched all twelve exhibits, 300-500k
+    # characters each, for data that cannot change.
+    #
+    # Keyed on ACCESSION, not ticker. An amended merger agreement is filed under
+    # a new accession and genuinely changes both readings — a new outside date
+    # is the whole point of most amendments. When the accession moves, the
+    # cached readings are stale and must be dropped rather than carried.
+    _prior_agreements = {}
+    try:
+        for _row in (load_cache() or []):
+            _tk, _acc = _row.get('ticker'), _row.get('accession')
+            if not _tk or not _acc:
+                continue
+            _entry = {'accession': _acc}
+            for _f in ('commitment', 'outside_date'):
+                _pv = parse_structured(_row.get(_f, {}))
+                if _pv:
+                    _entry[_f] = _pv
+            # Marks that this accession's exhibit was fetched and read. Without
+            # it there is no way to tell "not yet read" from "read, and the
+            # agreement states no outside date" — and the second kind would
+            # re-download a 500k exhibit every hour to find the same nothing.
+            _ra = _row.get('agreement_read')
+            if isinstance(_ra, str) and _ra:
+                _entry['agreement_read'] = _ra
+            elif _entry.get('commitment'):
+                # Rows written before this field existed. A commitment reading
+                # only exists if the exhibit was read, so the read is implied.
+                _entry['agreement_read'] = _acc
+            _prior_agreements[_tk] = _entry
+    except Exception as _pae:
+        print(f"[Commitment] could not capture prior agreement readings: {_pae}")
+
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background EDGAR scan started.")
     headers={'User-Agent':'Kaushal Koduru kaushalkoduru@gmail.com'}
     all_hits=[]
@@ -1731,19 +1769,58 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         except Exception as _pce:
             print(f"[Pricing] error (non-fatal, nothing changed): {_pce}")
 
-        # ── COMMITMENT TERMS ───────────────────────────────────────────────────
-        # How hard the buyer is contractually bound to close. These terms live in
-        # the merger agreement filed as EX-2.1, not in the 8-K body or the press
-        # release, so _filing_text is the wrong document and this pass fetches the
-        # exhibit separately off the deal's accession. Cached for good once read:
-        # a signed merger agreement does not change.
+        # ── COMMITMENT TERMS + OUTSIDE DATE ────────────────────────────────────
+        # How hard the buyer is contractually bound to close, and the deadline it
+        # is bound by. Both live in the merger agreement filed as EX-2.1, not in
+        # the 8-K body or the press release, so _filing_text is the wrong
+        # document and this pass fetches the exhibit separately off the deal's
+        # accession. One fetch feeds both readings.
+        #
+        # Cached on the accession once read: a signed merger agreement does not
+        # change, so the same document is never read twice. An AMENDED agreement
+        # does change both readings — Vacasa pushed its outside date back twice
+        # inside three weeks — and is filed under a new accession, which drops
+        # the cached readings and forces a fresh read.
         try:
             from deal_commitment import assess_commitment
+            from outside_date import extract_outside_date
+
+            # Restore the prior readings captured before the scan's first write.
+            # results dicts are built from scratch and carry neither field, so
+            # without this every deal looks unread and every exhibit is
+            # re-downloaded. Accession must match: a new accession means an
+            # amended agreement, and the old readings describe a document that
+            # is no longer operative.
+            _restored = _amended = 0
+            for _d in results:
+                _p = _prior_agreements.get(_d.get('ticker'))
+                if not _p:
+                    continue
+                if _p.get('accession') != _d.get('accession'):
+                    print(f"  [Commitment] {_d.get('ticker')}: accession moved "
+                          f"{_p.get('accession')} -> {_d.get('accession')} — "
+                          f"agreement amended, cached readings discarded")
+                    _amended += 1
+                    continue
+                for _f in ('commitment', 'outside_date', 'agreement_read'):
+                    if _p.get(_f):
+                        _d[_f] = _p[_f]
+                _restored += 1
+            print(f"[Commitment] {_restored} deal(s) restored from cache, "
+                  f"{_amended} discarded on a changed accession")
 
             _read = 0
             for _d in results:
-                if _d.get('commitment'):
+                # agreement_read holds the accession whose exhibit was read.
+                # When it matches, both readings are settled for this document
+                # — including a deal where the agreement simply states no
+                # outside date, which must not be re-read to find the same
+                # nothing. A signed agreement does not change; an amended one
+                # arrives under a new accession and was dropped above.
+                if _d.get('agreement_read') and _d.get('agreement_read') == _d.get('accession'):
                     continue
+                _need_commit = not _d.get('commitment')
+                _need_od     = not _d.get('outside_date')
                 _tk = _d.get('ticker')
                 _cik = SEC_CIK_MAP.get(_tk or '', '')
                 _acc = _d.get('accession')
@@ -1758,19 +1835,22 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     if _ix.status_code != 200:
                         print(f"  [Commitment] {_tk}: document list HTTP {_ix.status_code}")
                         continue
-                    # Filer agents name the merger agreement three ways:
-                    # d62897dex21.htm, ef20070409_ex2-1.htm, exhibit21.htm.
-                    # Documents only — '...index2.htm' would otherwise match on
-                    # the 'ex2' in 'index', and the .jpg pages of a scanned
-                    # exhibit carry the exhibit's own name.
-                    _ex2 = None
-                    for _it in _ix.json().get('directory', {}).get('item', []):
-                        _nm = (_it.get('name') or '').lower()
-                        if not _nm.endswith(('.htm', '.html', '.txt')) or 'index' in _nm:
-                            continue
-                        if 'ex2' in _nm or 'ex-2' in _nm or 'exhibit2' in _nm:
-                            _ex2 = _it.get('name')
-                            break
+                    # Naming shapes and the filter live on _EX2_NAME.
+                    _ex2 = _pick_ex2(
+                        _it.get('name') for _it in
+                        _ix.json().get('directory', {}).get('item', []))
+                    if not _ex2:
+                        # index.json is not always populated with the filing's
+                        # documents. CZR's accession lists only the index pages,
+                        # the complete-submission .txt and the XBRL zip — while
+                        # d143382dex21.htm, the merger agreement, sits in the
+                        # same directory and serves fine. The human index page
+                        # lists it. Without this fallback CZR's outside date is
+                        # unreachable: it appears in no other filing.
+                        _ex2 = _ex2_from_index_page(_cik, _accn, _acc)
+                        if _ex2:
+                            print(f"  [Commitment] {_tk}: {_ex2} found via index "
+                                  f"page — absent from index.json")
                     if not _ex2:
                         # Plenty of 8-Ks announce a deal without attaching the
                         # agreement. Nothing to read, so nothing is claimed.
@@ -1787,14 +1867,26 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     # 500,072 characters and its $592M reverse fee falls past
                     # 400,000; 600,000 reaches it.
                     _txt = _txt[:600000]
-                    # tx_value is carried in billions. assess_commitment sizes the
-                    # reverse fee against deal value in dollars.
-                    try:
-                        _dv = float(_d.get('tx_value')) * 1e9 if _d.get('tx_value') else None
-                    except (TypeError, ValueError):
-                        _dv = None
-                    _d['commitment'] = assess_commitment(_txt, deal_value=_dv)
                     _read += 1
+                    # The exhibit is in hand; whatever the two readings return
+                    # is this accession's final answer, including nothing.
+                    _d['agreement_read'] = _acc
+                    if _need_commit:
+                        # tx_value is carried in billions. assess_commitment sizes
+                        # the reverse fee against deal value in dollars.
+                        try:
+                            _dv = float(_d.get('tx_value')) * 1e9 if _d.get('tx_value') else None
+                        except (TypeError, ValueError):
+                            _dv = None
+                        _d['commitment'] = assess_commitment(_txt, deal_value=_dv)
+                    if _need_od:
+                        # filed anchors plausibility: a deadline sits after
+                        # signing. It arrives as NaN on some cached rows, and
+                        # only a string is usable as an anchor.
+                        _filed = _d.get('filed')
+                        _d['outside_date'] = extract_outside_date(
+                            _txt,
+                            announced_date=_filed if isinstance(_filed, str) else None)
                 except Exception as _ce:
                     print(f"  [Commitment] {_tk}: {_ce}")
 
@@ -1808,6 +1900,22 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                 _verdicts = ", ".join(f"{_t.get('term')}: {_t.get('verdict')}"
                                       for _t in _c.get('terms', []))
                 print(f"  [Commitment] {_d.get('ticker')}: {_c.get('summary')} — {_verdicts}")
+
+            # Outside dates read out of the same agreements. parse_structured
+            # because a cached reading arrives as a repr string off the CSV
+            # while a fresh one is still a dict.
+            _dated = []
+            for _d in results:
+                _od = parse_structured(_d.get('outside_date', {}))
+                if isinstance(_od, dict) and _od.get('date'):
+                    _dated.append((_d.get('ticker'), _od))
+            print(f"[OutsideDate] {len(_dated)} of {len(results)} deal(s) "
+                  f"carry an outside date")
+            for _tk, _od in _dated:
+                _days = _od.get('days_remaining')
+                _when = ("PASSED " + str(abs(_days)) + " days ago") if _od.get('passed')                         else (str(_days) + " days remaining")
+                print(f"  [OutsideDate] {_tk}: {_od.get('date')} — {_when}, "
+                      f"{'extendable' if _od.get('extendable') else 'fixed'}")
         except Exception as _cme:
             print(f"[Commitment] error (non-fatal, nothing changed): {_cme}")
 
@@ -2139,6 +2247,9 @@ def get_clean_deals():
         # a repr string once it has been through the CSV.
         if 'commitment' in d:
             d['commitment'] = parse_structured(d.get('commitment', {}))
+        # Same round-trip again for the outside date read off the agreement.
+        if 'outside_date' in d:
+            d['outside_date'] = parse_structured(d.get('outside_date', {}))
     return deals
 
 @app.get("/api/deals")
@@ -2199,6 +2310,58 @@ def _name_overlap_score(name_a, name_b):
     if not a or not b:
         return 0.0
     return len(a & b) / len(a | b)
+
+
+# Filer agents name the merger agreement four ways: d62897dex21.htm,
+# ef20070409_ex2-1.htm, exhibit21.htm, and ZERO-PADDED dp248400_ex0201.htm
+# (EX-2.01). The padded form matched none of the plain substrings, which cost
+# PAYO both its commitment reading and its outside date off a 662KB exhibit
+# sitting right there in the filing.
+#
+# The 0* is what admits the padding. The trailing class stops 'ex1002' and
+# similar from matching on a stray 2. Documents only -- '...index2.htm' would
+# otherwise match on the 'ex2' in 'index', and the .jpg pages of a scanned
+# exhibit carry the exhibit's own name.
+_EX2_NAME = re.compile(r'ex(?:hibit)?[\-_]?0*2(?:[.\-_]|\d|$)')
+
+
+def _pick_ex2(names):
+    """First filename in the sequence that looks like the EX-2 merger agreement."""
+    for _n in names:
+        _nm = (_n or '').lower()
+        if not _nm.endswith(('.htm', '.html', '.txt')) or 'index' in _nm:
+            continue
+        if _EX2_NAME.search(_nm):
+            return _n
+    return None
+
+
+def _ex2_from_index_page(cik, accn, acc):
+    """
+    The EX-2 exhibit as listed on the filing's human index page.
+
+    index.json is the fast path and is usually complete, but not always: CZR's
+    8-K lists only its index pages, the complete-submission .txt and the XBRL
+    zip there, while the index PAGE links d143382dex21.htm in the same
+    directory. Falling back to the page is the difference between reading that
+    agreement and reporting the deal has none.
+
+    Returns a bare filename, or None. Best-effort — a failure here is the same
+    outcome as no exhibit.
+    """
+    try:
+        r = requests.get(
+            f"https://www.sec.gov/Archives/edgar/data/{cik}/{accn}/{acc}-index.html",
+            headers=EDGAR_HEADERS, timeout=10)
+        time.sleep(0.12)  # SEC rate limit: 10 req/sec max
+        if r.status_code != 200:
+            return None
+        # Same-directory document links only. The page also carries links out to
+        # company search and to other accessions, and neither is this filing.
+        _links = re.findall(rf'/Archives/edgar/data/\d+/{accn}/([^"\'>\s]+)', r.text)
+        return _pick_ex2(_links)
+    except Exception:
+        return None
 
 
 def _get_text_for_validation(url):
@@ -2655,6 +2818,59 @@ async def reextract_acquirers(token: str = ""):
         "skipped_verified_hardcodes": skipped_verified,
         "note": "Cache updated for changed tickers. VERIFIED_ACQUIRERS entries were never touched.",
     })
+
+@app.post("/api/admin/clear-agreement-markers")
+async def clear_agreement_markers(tickers: str = "", token: str = ""):
+    """
+    Drop the cached agreement readings for the named tickers so the next scan
+    re-reads their EX-2 exhibits.
+
+    The marker caches the DOCUMENT, not the reading — agreement_read holds the
+    accession whose exhibit was read, and a signed agreement never changes, so
+    the scan is right to skip it. The cost is that every improvement to the
+    extractors is invisible on deals already read: the elective/automatic split
+    could not reach SLAB, CZR, NATH or APGE, whose readings predate it, because
+    their accessions had not moved. This is the release valve for that, and the
+    only way to apply an extractor fix without waiting for an amendment.
+
+    Takes a comma-separated ticker list. Refuses an empty one rather than
+    treating it as "all" — re-reading twelve 400KB exhibits should be something
+    you asked for on purpose.
+    """
+    if not ADMIN_TOKEN or token != ADMIN_TOKEN:
+        return JSONResponse(status_code=403, content={"error": "Forbidden"})
+
+    wanted = {t.strip().upper() for t in tickers.split(',') if t.strip()}
+    if not wanted:
+        return JSONResponse(status_code=400, content={
+            "error": "Pass ?tickers=SLAB,CZR — an empty list is not taken to mean all."})
+
+    deals = load_cache() or []
+    cleared, missing = [], sorted(wanted - {d.get('ticker') for d in deals})
+
+    for d in deals:
+        if d.get('ticker') not in wanted:
+            continue
+        # Both readings go with the marker. Clearing the marker alone leaves the
+        # stale dicts in place and the scan re-reads to no effect, because it
+        # only fills a field that is empty.
+        had = {f: d.get(f) for f in ('agreement_read', 'commitment', 'outside_date')
+               if d.get(f)}
+        for f in had:
+            d[f] = None
+        cleared.append({"ticker": d.get('ticker'), "fields_cleared": sorted(had)})
+
+    if cleared:
+        save_cache(clean_records(deals))
+
+    return JSONResponse(content={
+        "cleared": cleared,
+        "cleared_count": len(cleared),
+        "not_in_cache": missing,
+        "note": "Next scan re-fetches the EX-2 exhibit for each of these and "
+                "re-runs both the commitment and outside-date readings.",
+    })
+
 
 @app.post("/api/trigger-scan")
 async def trigger_scan():
