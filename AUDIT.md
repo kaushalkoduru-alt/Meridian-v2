@@ -745,3 +745,198 @@ its deal price (15.00). That is either a bad `dp`, a filing date that is not the
 announcement date, or an adjustment artifact — and it is the kind of thing the
 §25 pass exists to resolve deal by deal. It is flagged here because it is what
 exposed the #9 clamp.
+
+---
+
+# Results — four defects fixed
+
+Applied 2026-08-27. Four of the defects above, all independent of the
+break-price engine, so none waited on §3 or §4.
+
+**§3 and §25 both stay open.** This is partial work on each: the break price
+itself (#8) is untouched, and the per-deal QA pass has not been done.
+
+Numbering note: the request labelled the annualized-spread fix `#19`; it is `#4`
+here. `#19` is the position-size sign error, which was **not** in this batch and
+remains open — see *Still open* below.
+
+## Method
+
+Every claim below rests on the live cache, not on reading the code. A snapshot
+script captured, for all 11 deals, every value the four fixes could move —
+`tx_value`, parsed close date, days to close, `ann`, regulatory tags, regulatory
+sub-score, total score, risk band, probability — and was run once before the
+changes and once after, against **the same cached prices**, so the diff isolates
+the code change rather than mixing in market movement.
+
+The yfinance sector lookup inside `get_regulatory_risk` sits in a bare `except`
+that silently blanks the sector on failure, which would have shown up as a
+spurious diff in the regulatory cascade. It was pinned to one fetch and reused
+for both runs.
+
+The close-date parser exists twice, once in Python for the server-computed
+annualized spread and once in JavaScript for the rendered date. Both were
+rewritten and then **executed against each other** — the JS in the running app
+via the browser, the Python directly — across twelve inputs. They agree on all
+twelve.
+
+## 1 · Probability: gated, not clamped (#9)
+
+`max(0, min(99.9, prob))` deleted. `two_state_applies(cp, dp, bp)` now runs
+*before* the fraction and returns `(False, reason)` where the model cannot
+produce a probability: break price at or above current, break price at or above
+deal, or current above deal. The endpoint then publishes no number and says why.
+
+AES, from the running app:
+
+```
+BEFORE   probability 99.9   signal "Distressed"   (raw 114.4, clamped)
+AFTER    probability null   model_applies false
+         "A close-or-break probability cannot be read from these prices: the
+          modeled break price is at or above the current price, so there is no
+          downside left for the model to price. The break price is a model
+          estimate, not an observed floor."
+```
+
+No other deal changed. WBD, ALOT, GBCS and CZR still resolve and still return
+the same numbers.
+
+**Deliberately not gated:** WBD's 4.5%. Its numerator collapses to $0.10 against
+a healthy $2.20 denominator, but every price is in the right order and the model
+genuinely applies — the number is wrong because the *break price* is wrong. That
+is #8, and gating it here would hide a break-price defect behind a model-scope
+message. §3 and §4 own it.
+
+## 2 · Annualized spread reads the deal's own clock (#4)
+
+`ann = (sp_pct/180)*365` replaced with `annualized_spread(spread_pct, days)`,
+fed by `days_to_close(close_date)`. Returns `None` — not a fallback constant —
+where the close date is unknown, already passed, or beyond `ANNUALIZE_MAX_DAYS`
+(1460). `days_to_close` is now stored on the deal record.
+
+Same prices, same spreads, only the divisor changed:
+
+| Deal | Spread | Days | `ann` before | `ann` after | Effect |
+|---|---:|---:|---:|---:|---|
+| GSAT | 9.72% | 491 | 19.71% | **7.23%** | overstated 2.7x |
+| WBD | 7.27% | 34 | 14.74% | **78.05%** | understated 5.3x |
+| CZR | 4.52% | 491 | 9.17% | **3.36%** | overstated 2.7x |
+| NATH | 4.24% | 126 | 8.60% | **12.28%** | understated 1.4x |
+| PAYO | 4.08% | 307 | 8.27% | **4.85%** | overstated 1.7x |
+| AES | 1.83% | 216 | 3.71% | **3.09%** | overstated 1.2x |
+| OGN | 1.82% | 216 | 3.69% | **3.08%** | overstated 1.2x |
+| GBTG | 0.32% | 126 | 0.65% | **0.93%** | understated 1.4x |
+| ALOT | 0.03% | 34 | 0.06% | **0.32%** | understated 5.3x |
+| GBCS | 6.09% | — | 12.35% | **—** | no close date |
+| APGE | 0.19% | — | 0.39% | **—** | no close date |
+
+Every deal moved. Two now correctly show nothing.
+
+The ranking inversion is resolved: under the constant CZR (9.17%) outranked
+NATH (8.60%); NATH actually earns 3.7x more per unit of time (12.28% vs 3.36%).
+
+## 3 · Verified transaction value wins (#15)
+
+The guard `if ticker in VERIFIED_TX_VALUES and not tx_value` became
+`resolve_tx_value(ticker, extracted, source)`, lifted out of the scan loop so it
+is directly testable. A hand-verified entry now always wins, matching
+`VERIFIED_ACQUIRERS`.
+
+**The full cascade, WBD.** Five displayed values move; five do not.
+
+| Value | Before | After |
+|---|---|---|
+| `tx_value` | 77.72 | **110.0** |
+| `tx_value_source` | `equity_calc_approx` | **`verified_hardcode`** |
+| Deal value, as rendered | $77.7B | **$110.0B** |
+| Reverse fee, % of deal value | 9.01% (shown 9.0%) | **6.36% (shown 6.4%)** |
+| FTC tag reason text | "deal of $77.7B" | **"deal of $110.0B"** |
+| RTF verdict | STRONG | STRONG — unchanged |
+| Fee asymmetry | 2.33x | 2.33x — independent of `tx_value` |
+| Commitment summary | 1 of 3 favour closing | unchanged |
+| Regulatory tags | HSR low, FTC high | **unchanged** |
+| Total score / risk band | 50 / Medium | unchanged |
+
+**The audit was wrong about one thing here, and the data says so.** Entry #15
+predicted the regulatory tags "may reclassify." They do not. Every threshold —
+HSR at $0.12B, FTC-high at $5B, market concentration at $2B — is crossed at both
+$77.72B and $110.0B, so no tag, no level, and therefore no regulatory sub-score,
+total score or risk band moves. The reverse-fee percentage was the only computed
+consequence; the rest of the cascade is display text.
+
+The verdict does not flip either: 9.01% and 6.36% both clear the 3% threshold.
+The exposure remains real — a deal straddling that threshold would flip on this
+field alone — but on today's feed it is latent, not live.
+
+GSAT already read `verified_hardcode` because its extraction had failed, so it
+is unaffected. No other live deal is in `VERIFIED_TX_VALUES`.
+
+## 4 · Close-date parser (#5)
+
+Rewritten in both `main.py` (`parse_close_date`) and `templates/index.html`
+(`_daParseCloseDate`). A year is now combined only with a qualifier from **its
+own clause** — each year token sees only the text between the previous year
+token and itself — which makes the defect inexpressible rather than patched.
+Every qualifier resolves to the last day it can mean; where several periods are
+named, the latest wins; nothing between two stated periods is ever synthesised.
+
+| Raw text | Before | After | Why |
+|---|---|---|---|
+| `late 2026 or early 2027` | 2026-03-31 | **2027-03-31** | year and month came from different clauses |
+| `mid-to-late 2027` | 2027-06-30 | **2027-12-31** | compound range now takes its later bound |
+| `2027` | 2027-06-30 | **2027-12-31** | a bare year is a period; June was its midpoint |
+| `Q3 2026` | 2026-09-30 | 2026-09-30 | unchanged |
+| `H2 2026` | 2026-12-31 | 2026-12-31 | unchanged |
+| `second half 2026` | 2026-12-31 | 2026-12-31 | unchanged |
+| `early 2027` | 2027-03-31 | 2027-03-31 | unchanged |
+| `mid-2027` | 2027-06-30 | 2027-06-30 | unchanged |
+| `TBD` | null | null | unchanged |
+
+AES's `days_to_close` goes from **-149 to +216**. It was showing a live deal as
+five months overdue.
+
+## Verification
+
+`test_formulas.py`, 42 checks, all passing. Cases are live deals, not synthetic
+ones. `test_commitment.py` (54), `test_outside_date.py` and `test_flags.py` all
+still pass.
+
+A local scan then ran the full pipeline with the fixes in place and wrote a
+cache carrying the corrected values — `days_to_close` populated, `ann` empty for
+the two deals with no close date, WBD at `110.0 / verified_hardcode`. The
+browser confirms the server-side `days_to_close` and the client-side
+`_daParseCloseDate` agree for all ten deals, and that a null `ann` renders as an
+em-dash rather than a zero.
+
+That scan dropped GSAT from the local feed. It is unrelated to these changes:
+GSAT's prior row was 39.7 hours old against `ROLLING_CARRY_MAX_AGE_HOURS = 36`,
+so it aged out of the rolling carry. Nothing in these four fixes touches
+detection or carry, and the two deals whose `ann` is now null survived.
+
+## What the fixes exposed but did not fix
+
+**WBD now annualizes at 78%.** That is arithmetically correct — a 7.27% spread
+34 days from close *is* ~78% annualized — and it makes a data-quality problem
+visible that the 180-day constant had been flattening. WBD's `close_date` reads
+`Q3 2026`, which ends in 34 days, on a deal announced in February 2026 that
+faces a full FTC review and carries a $7B regulatory termination fee. That
+guidance is almost certainly stale. This is exactly what audit entry #6
+describes: the expected close is read once at announcement and never
+re-sourced. The annualized figure is now only as good as that field, which is
+the right dependency and an uncomfortable one. **§25 item.**
+
+**AES's break price still exceeds its deal price.** The gate stops it producing
+a false probability, but the underlying data is still wrong: `break_price` 16.87
+against `dp` 15.00. Still a §25 diagnosis — bad `dp`, a filing date that is not
+the announcement date, or the dividend-adjustment artifact in #8.
+
+## Still open
+
+- **#19, the position-size sign error.** Not in this batch. AES's modeled break
+  *gain* still prints as `−$3,632` while the column header above it reads
+  `+14.53%`. One hardcoded character in `templates/index.html`, and the cheapest
+  of the five defects that entry identified.
+- **#8, the break price**, and everything resting on it. §4.
+- The two parsers are now duplicated logic in two languages held in agreement by
+  a test rather than by construction. Storing `days_to_close` on the record —
+  which this change starts doing — is the path to deleting the JS copy.

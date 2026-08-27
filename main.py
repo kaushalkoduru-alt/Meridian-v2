@@ -675,6 +675,160 @@ def calculate_break_price(deal_price, premium_pct=None, current_price=None, spre
         bp = round(current_price - (deal_price - current_price) * (1/spread_pct), 2)
         return bp, 'spread_regression'
     return None, None
+# ─── TIME TO CLOSE, AND WHAT DEPENDS ON IT ───────────────────────────────────
+# Filings state the expected close as a period, not a day: "Q3 2026",
+# "second half 2026", "mid-to-late 2027". Every qualifier below resolves to the
+# LAST day it can mean, so a period never resolves earlier than the period
+# allows. A bare year is a period too, and ends in December.
+_CLOSE_PERIOD_END = {
+    'first quarter': (3, 31),  'q1': (3, 31),
+    'second quarter': (6, 30), 'q2': (6, 30),
+    'third quarter': (9, 30),  'q3': (9, 30),
+    'fourth quarter': (12, 31),'q4': (12, 31),
+    'first half': (6, 30),     'h1': (6, 30),
+    'second half': (12, 31),   'h2': (12, 31),
+    'early': (3, 31),
+    'mid': (6, 30),
+    'late': (12, 31),
+}
+
+
+def parse_close_date(close_date):
+    """
+    The expected-close text as a date, or None.
+
+    The rule that matters: a year is only ever combined with a qualifier from
+    ITS OWN clause. The previous reader took the year from the first match in
+    the string and the month from a keyword chain scanning the whole string, so
+    AES's "late 2026 or early 2027" produced the year of the first clause and
+    the month of the second — 31 March 2026, a date matching neither reading and
+    five months in the past on a live deal.
+
+    Each year token here sees only the text between the previous year token and
+    itself, which makes that combination impossible to express. Where a string
+    names several periods, the LATEST resulting date wins: "late 2026 or early
+    2027" is a range, and the later bound is what a deadline-conscious reader
+    should be shown. Nothing is ever synthesised between two stated periods.
+    """
+    if close_date is None:
+        return None
+    s = str(close_date).lower().strip()
+    if s in ('', 'tbd', 'nan', 'none', 'not yet disclosed', 'not disclosed'):
+        return None
+
+    # An exact date, where a tender-offer expiration or a hand-verified entry
+    # supplied one. No period logic applies.
+    m = re.search(r'(20\d{2})-(\d{1,2})-(\d{1,2})', s)
+    if m:
+        try:
+            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3))).date()
+        except ValueError:
+            return None
+
+    years = list(re.finditer(r'20\d{2}', s))
+    if not years:
+        return None
+
+    best, clause_start = None, 0
+    for ym in years:
+        clause = s[clause_start:ym.start()]   # this year's clause, and only this one
+        clause_start = ym.end()
+        # Within one clause a compound like "mid-to-late" names both bounds.
+        # The later one governs, for the same reason the later clause does.
+        end = None
+        for kw, md in _CLOSE_PERIOD_END.items():
+            if kw in clause and (end is None or md > end):
+                end = md
+        month, day = end if end else (12, 31)
+        try:
+            d = datetime(int(ym.group(0)), month, day).date()
+        except ValueError:
+            continue
+        if best is None or d > best:
+            best = d
+    return best
+
+
+def days_to_close(close_date, now=None):
+    """Days from today to the expected close. Negative when it has passed."""
+    d = parse_close_date(close_date)
+    if not d:
+        return None
+    return (d - (now or datetime.utcnow().date())).days
+
+
+# Beyond this the stated period is not a close estimate any more, it is a parse
+# artifact, and annualizing against it manufactures a number.
+ANNUALIZE_MAX_DAYS = 1460
+
+
+def annualized_spread(spread_pct, days):
+    """
+    The spread scaled to a year by the deal's OWN time to close, or None.
+
+    This previously divided by a hardcoded 180 for every deal, which made the
+    result the gross spread times 2.028 and carried no time information at all —
+    the one thing an annualized figure exists to carry. It inverted the ranking
+    of the live feed: NATH printed below CZR while actually earning more than
+    twice as much per unit time.
+
+    None rather than a fallback constant. A deal whose close date is unknown
+    (GBCS, APGE both carry TBD) or already passed has no honest annualization,
+    and printing one anyway is what the old constant did.
+    """
+    if spread_pct is None or days is None:
+        return None
+    if days <= 0 or days > ANNUALIZE_MAX_DAYS:
+        return None
+    return round(spread_pct * 365 / days, 2)
+
+
+def resolve_tx_value(ticker, extracted, extracted_source):
+    """
+    The transaction value to use, and where it came from.
+
+    A hand-verified entry always wins, which is how VERIFIED_ACQUIRERS already
+    behaves and what its documentation states. The previous guard read
+    `if ticker in VERIFIED_TX_VALUES and not tx_value`, applying the verified
+    number ONLY where extraction had failed — so WBD's $77.72B equity
+    approximation beat its verified $110B enterprise value. That is a 29% error
+    on a field that feeds the reverse-fee percentage and three regulatory
+    thresholds, and it inverted the intended precedence exactly.
+    """
+    if ticker in VERIFIED_TX_VALUES:
+        return VERIFIED_TX_VALUES[ticker], 'verified_hardcode'
+    return extracted, extracted_source
+
+
+def two_state_applies(cp, dp, bp):
+    """
+    Whether the close-or-break model can produce a probability at all.
+
+    Returns (True, None) or (False, reason). The model solves
+    `cp = p*dp + (1-p)*bp`, which only has a meaning in [0, 1] when the current
+    price sits between the break price and the deal price. Outside that range
+    the arithmetic still returns a number, and it is not a probability.
+
+    This replaces a `max(0, min(99.9, prob))` clamp. The clamp did not prevent
+    the error, it concealed it: AES's break price sits ABOVE both its current
+    and its deal price, both halves of the fraction go negative, the signs
+    cancel, and 114.4% was clamped to 99.9% — rendered as near-certain closing
+    beside a red "Distressed" label, from one function, on one deal.
+    """
+    if not cp or not dp or not bp:
+        return False, "a current price, deal price and break price are all needed"
+    if bp >= cp:
+        return False, ("the modeled break price is at or above the current price, "
+                       "so there is no downside left for the model to price")
+    if bp >= dp:
+        return False, ("the modeled break price is at or above the deal price, "
+                       "so closing and breaking are not distinguishable outcomes")
+    if cp > dp:
+        return False, ("the stock trades above the deal price, which prices a "
+                       "topping bid rather than this deal closing")
+    return True, None
+
+
 # ─── TARGETED SECTION PARSING (Step 2) ───────────────────────────────────────
 
 MERGER_CONSIDERATION_HEADERS = [
@@ -1358,9 +1512,8 @@ def fetch_deals_from_edgar():
                 print(f"  Rolling drop: {ticker} — deal is {days} days old, likely closed")
                 continue
             acquirer=VERIFIED_ACQUIRERS.get(ticker, acquirer)
-            if ticker in VERIFIED_TX_VALUES and not tx_value:
-                tx_value=VERIFIED_TX_VALUES[ticker]
-                tx_value_source='verified_hardcode'
+            tx_value, tx_value_source = resolve_tx_value(
+                ticker, tx_value, tx_value_source)
             if ticker in VERIFIED_CLOSE_DATES:
                 close_date=VERIFIED_CLOSE_DATES[ticker]
             if ticker in VERIFIED_DEAL_TYPES:
@@ -1395,13 +1548,17 @@ def fetch_deals_from_edgar():
             reg_tags=get_regulatory_risk(ticker,acquirer,tx_value,deal_type)
             sc=score_deal(sp_pct,days,deal_type,reg_tags,break_price,dp,financing_signal)
             risk=get_risk(sp_pct,sc)
-            ann=(sp_pct/180)*365
+            # Annualized against THIS deal's time to close, not a constant.
+            # None where the close date is unknown or has passed — see
+            # annualized_spread. The UI already renders null as an em-dash.
+            _dtc = days_to_close(close_date)
+            ann=annualized_spread(round(sp_pct,2), _dtc)
             acq_type=get_acquirer_type(deal_type,acquirer)
             seen_tickers.add(ticker)
             results.append({
                 'ticker':ticker,'acquirer':acquirer,'acquirer_type':acq_type,
                 'company':resolve_company_name(ticker),'deal_type':deal_type,
-                'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'sp_pct_at_detection':round(sp_pct,2),'ann':round(ann,2),
+                'cp':round(cp,2),'dp':dp,'sp_pct':round(sp_pct,2),'sp_pct_at_detection':round(sp_pct,2),'ann':ann,'days_to_close':_dtc,
                 'score':sc,'risk':risk,'score_at_detection':sc,'risk_at_detection':risk,'filed':src['file_date'],'days_old':days,
                 'close_date':close_date,'tx_value':tx_value,'tx_value_source':tx_value_source,'break_price':break_price,
                 'break_downside':break_downside,'break_price_method':break_price_method,
@@ -2961,19 +3118,27 @@ async def implied_probability(ticker: str):
         bp = deal.get('break_price')
         if not cp or not dp or not bp:
             return JSONResponse(content={"probability": None, "error": "Insufficient data"})
-        prob = round(((cp - bp) / (dp - bp)) * 100, 1)
-        prob = max(0, min(99.9, prob))
-        if cp < bp:
+        # Gate before computing, not clamp after. The clamp that stood here
+        # turned AES's sign error into 99.9% — printed beside a red
+        # "Distressed" label from this same function, on the same deal. Where
+        # the model does not apply there is no probability to publish, and
+        # saying why is more useful than any number would be.
+        applies, why = two_state_applies(cp, dp, bp)
+        if not applies:
             return JSONResponse(content={
-                "probability": round(prob, 1),
-                "signal": "Distressed",
-                "color": "red",
+                "probability": None,
+                "model_applies": False,
+                "signal": "Model does not apply",
+                "color": "grey",
                 "current_price": cp,
                 "deal_price": dp,
                 "break_price": bp,
                 "method": deal.get('break_price_method', 'historical'),
-                "note": "Stock trading below break price — deal may be in distress"
+                "note": ("A close-or-break probability cannot be read from these "
+                         "prices: " + why + ". The break price is a model estimate, "
+                         "not an observed floor."),
             })
+        prob = round(((cp - bp) / (dp - bp)) * 100, 1)
         if prob >= 90:
             signal = "Very High"
             color = "green"
@@ -2988,6 +3153,7 @@ async def implied_probability(ticker: str):
             color = "red"
         return JSONResponse(content={
             "probability": prob,
+            "model_applies": True,
             "signal": signal,
             "color": color,
             "current_price": cp,

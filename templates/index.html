@@ -1968,23 +1968,51 @@ function _daRiskMeta(r){
 }
 function _daUsd(n){ return (n==null||isNaN(n)) ? '\u2014' : '$'+Number(n).toFixed(2); }
 function _daSgn(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+Math.abs(Number(n)).toFixed(2)+'%'; }
+// Mirrors parse_close_date() in main.py. Both must agree: the annualized
+// spread is computed server-side off the Python one, and this renders the date
+// beside it.
+//
+// Every qualifier resolves to the LAST day it can mean, and a year is only ever
+// combined with a qualifier from its own clause. The previous version took the
+// year from the first match in the whole string and the month from a chain
+// scanning the whole string, so "late 2026 or early 2027" yielded the year of
+// one clause and the month of the other — 31 March 2026, matching neither and
+// already past.
+var _CLOSE_PERIOD_END = [
+  ['first quarter',[3,31]],  ['q1',[3,31]],
+  ['second quarter',[6,30]], ['q2',[6,30]],
+  ['third quarter',[9,30]],  ['q3',[9,30]],
+  ['fourth quarter',[12,31]],['q4',[12,31]],
+  ['first half',[6,30]],     ['h1',[6,30]],
+  ['second half',[12,31]],   ['h2',[12,31]],
+  ['early',[3,31]], ['mid',[6,30]], ['late',[12,31]]
+];
 function _daParseCloseDate(cd){
-  if(!cd) return null;
+  if(cd==null) return null;
   var s = String(cd).toLowerCase().trim();
-  if(!s || s==='tbd' || s==='nan' || s==='not yet disclosed') return null;
-  var ym = s.match(/(20\d{2})/);
-  if(!ym) return null;
-  var yr = parseInt(ym[1],10), month=6, day=30;
-  if(/q1|first quarter/.test(s))       { month=3;  day=31; }
-  else if(/q2|second quarter/.test(s)) { month=6;  day=30; }
-  else if(/q3|third quarter/.test(s))  { month=9;  day=30; }
-  else if(/q4|fourth quarter/.test(s)) { month=12; day=31; }
-  else if(/first half|h1/.test(s))     { month=6;  day=30; }
-  else if(/second half|h2/.test(s))    { month=12; day=31; }
-  else if(/early/.test(s))             { month=3;  day=31; }
-  else if(/mid/.test(s))               { month=6;  day=30; }
-  else if(/late/.test(s))              { month=11; day=30; }
-  return new Date(Date.UTC(yr, month-1, day));
+  if(!s || s==='tbd' || s==='nan' || s==='none' || s==='not yet disclosed'
+        || s==='not disclosed') return null;
+
+  var exact = s.match(/(20\d{2})-(\d{1,2})-(\d{1,2})/);
+  if(exact) return new Date(Date.UTC(+exact[1], +exact[2]-1, +exact[3]));
+
+  var re = /20\d{2}/g, m, best=null, clauseStart=0;
+  while((m = re.exec(s)) !== null){
+    var clause = s.slice(clauseStart, m.index);   // this year's clause only
+    clauseStart = m.index + m[0].length;
+    var end = null;
+    for(var i=0;i<_CLOSE_PERIOD_END.length;i++){
+      var kw=_CLOSE_PERIOD_END[i][0], md=_CLOSE_PERIOD_END[i][1];
+      if(clause.indexOf(kw)!==-1){
+        // A compound like "mid-to-late" names both bounds; the later governs.
+        if(end===null || md[0]>end[0] || (md[0]===end[0] && md[1]>end[1])) end=md;
+      }
+    }
+    if(end===null) end=[12,31];                   // a bare year ends in December
+    var d = new Date(Date.UTC(+m[0], end[0]-1, end[1]));
+    if(best===null || d>best) best=d;             // latest stated period wins
+  }
+  return best;
 }
 function _daDaysToClose(cd){
   var d = _daParseCloseDate(cd);
