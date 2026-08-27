@@ -20,3 +20,4 @@ test_sonnet_acquirer.py
 *.xlsx
 meridian_cache_backup.csv
 python
+deals.json
