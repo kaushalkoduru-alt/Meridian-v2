@@ -100,6 +100,10 @@ be detected.
 
 ### C2 · Outside dates exist for 11 of 12 but only 4 are cached — COVERAGE
 
+> **WITHDRAWN.** This was read off the local cache. Production carries 11 of 12
+> outside dates — see the Results section. The table below is still a correct
+> record of what each agreement says; the "In the feed?" column is not.
+
 Reading every deal's EX-2 exhibit directly today:
 
 | Deal | Outside date | Extension | In the feed? |
@@ -143,6 +147,9 @@ is in §9.01(b); the product can show the sentence but not the citation, so a
 reader cannot navigate from the claim to the agreement. This is §7.
 
 ### C5 · SLAB is verified but absent from the cache — COVERAGE
+
+> **WITHDRAWN.** SLAB is in production with a full reading. Same error as C2:
+> the local cache is not the product.
 
 SLAB (Silicon Laboratories / Texas Instruments, $7.5B) passes the verification
 gate and yields a full agreement reading — outside date 2028-02-04, automatic,
@@ -503,3 +510,243 @@ Ordered by value per unit of effort, not by severity.
 
 Everything else waits on §4 or on milestone detection, which the roadmap already
 sequences correctly.
+
+---
+
+# Results — EDGAR window, and three decided items
+
+Applied 2026-08-27, after the report above.
+
+## Correction to C2, from production
+
+**C2 as written is wrong.** It claimed outside dates were cached for only 4 of
+12 deals. That was read off the local cache, which had diverged. Production
+returns **12 deals with 11 outside dates** — every marker had been cleared and
+rescanned:
+
+```
+AES  2027-06-01 automatic   ALOT  none          APGE 2027-06-18 automatic
+CZR  2027-11-27 automatic   GBCS  2026-08-31 fixed      GBTG 2027-02-02 automatic
+GSAT 2028-04-13 automatic   NATH  2026-10-20 automatic  OGN  2027-01-26 elective
+PAYO 2027-06-12 automatic   SLAB  2028-02-04 automatic  WBD  2027-06-04 automatic
+```
+
+C5 is also wrong on the same evidence: SLAB **is** in production, with a full
+reading. Both findings came from checking the local cache instead of the live
+feed, which is the error the method section warned against and which I made
+anyway. The local cache is not the product.
+
+What survives: ALOT still has no outside date (**D5**), and OGN's is the only
+elective one (**C6** stands — its absent RTF is still indistinguishable from an
+unread one).
+
+One thing production *does* show: `ann` still carries the 180-day constant
+(GBCS 12.35 = 6.09 × 2.028), so the deployment predates `b798bd6`. The
+annualization fix is committed but not live.
+
+## 1 · The EDGAR search window rolls — C1 fixed
+
+`EDGAR_QUERIES` became `EDGAR_QUERY_PHRASES` plus `edgar_queries()`, which
+computes the window per scan rather than at import — so a process that stays up
+for weeks cannot drift back into the same blind spot a day at a time.
+
+**`enddt`** is now today + 1. The buffer is not cosmetic: EDGAR timestamps in
+Eastern time while the scan computes in UTC, so for several hours a day a bare
+"today" excludes filings that are already public.
+
+**`startdt` had the mirror-image problem, and it is worth naming separately.**
+It was fixed at 2024-01-01 (four queries), 2025-06-01 and 2025-10-01. Those
+never went stale in the sense of missing new filings — they went stale by
+*widening forever*, spending a fixed 300-result budget on filings that the age
+gate discards on arrival. It is now `today - 548` days, which is not an
+arbitrary number: it is the same horizon as the `days > 548` gate that drops any
+deal as "likely closed". Aligning the two is lossless, because anything outside
+it was being thrown away after being fetched.
+
+The scan now logs its window, so a future drift is visible rather than silent:
+
+```
+[Scan] EDGAR window 2025-02-25 -> 2026-08-28 (548d lookback, matching the age gate)
+```
+
+### What the blind spot was hiding
+
+A scan with the corrected window returned **19 deals against the 12 known** —
+**eight new**, and the filing dates say plainly what had been happening:
+
+| Ticker | Company | Acquirer | Filed | Spread | Inside the old window? |
+|---|---|---|---|---:|---|
+| HZO | MarineMax | Safe Harbor | 2026-08-10 | 1.55% | **no** |
+| BWMN | Bowman Consulting | Bernhard Capital | 2026-08-10 | 1.13% | **no** |
+| BZH | Beazer Homes | Dream Finders | 2026-08-07 | 0.84% | **no** |
+| ATKR | Atkore | Prysmian S.p.A | 2026-08-03 | 1.43% | **no** |
+| BOW | Bowhead Specialty | undisclosed | 2026-08-03 | 1.22% | **no** |
+| CBZ | CBIZ | undisclosed | 2026-07-29 | 0.60% | **no** |
+| DSGR | Distribution Solutions Group | undisclosed | 2026-07-16 | 0.49% | yes |
+| RAMP | LiveRamp | Publicis Groupe | 2026-05-18 | 1.99% | yes (DEFM14A path) |
+
+**Six of the eight were announced after 2026-07-24** and could not have been
+detected at all. That is the blind spot, populated: roughly one deal a week for
+five weeks, none of which reached the feed, with nothing logged and nothing
+failing.
+
+DSGR and RAMP were inside the old window and missed for other reasons — RAMP
+arrives through the DEFM14A proxy path, whose window was the one that stopped at
+2026-07-24. Their appearance is a bonus of the widened `startdt`, not of the
+`enddt` fix.
+
+Three of the eight (BOW, CBZ, DSGR) carry `Undisclosed` acquirers and no close
+date, which is the ordinary review-queue path and not a defect in this change.
+
+**These eight are candidates, not confirmed feed members.** They are subject to
+the verification gate and the direction check like anything else, and both are
+enforcing. What this scan establishes is that the deals exist, are priced, and
+were previously unreachable. A gated scan run through the server confirmed
+ATKR, BOW, BWMN and HZO reaching the cache mid-pass; the remaining four had not
+resolved when this was written.
+
+**One cost worth stating.** The 548-day `startdt` makes each scan noticeably
+slower — the wider window pulls in a long tail of already-closed deals that are
+fetched before being discarded as delisted, skipped for having no Item 1.01, or
+rejected by the spread gate. That filtering works correctly, but it is work. If
+scan duration becomes a problem, the lookback is the dial, and shortening it
+trades detection depth for time. It should not be shortened below the 548-day
+age gate without moving the gate too, or the two will disagree again in the
+other direction.
+
+## 2 · AES break price — D1 decided
+
+`get_break_price` now consults `VERIFIED_UNAFFECTED_PRICES` before its lookback,
+the way `get_break_price`'s siblings already consult `VERIFIED_ACQUIRERS` and
+`VERIFIED_TX_VALUES`. AES is set to **$13.75**, and `break_price_method` reads
+`verified_unaffected` rather than `historical`, because the provenance is
+genuinely different and mislabelling it would repeat AUDIT #8's complaint about
+the word "modeled".
+
+The series that settles it — AES daily closes, January into February 2026:
+
+```
+01-12  13.54    01-20  13.28    01-28  14.65    02-03  15.71  <- breaks the range
+01-13  13.48    01-21  13.74    01-29  14.51    02-04  15.37
+01-14  13.51    01-22  14.09    01-30  14.30    02-05  15.22
+01-15  13.93    01-23  13.75    02-02  14.38    02-06  15.67
+01-16  13.69                                    02-27  16.87  <- taken as unaffected
+                                                03-02  13.87  <- 8-K, -17.8%
+```
+
+A 13.28–14.39 range through January, a clean break above it on 2026-02-03 that
+never reverts, and a 17.8% collapse on the announcement itself. $13.75 is the
+2026-01-23 close: a real traded price, inside the quiet range, before the break.
+
+The consequence is that AES's two-state model becomes readable again — break
+$13.75 sits below both the $14.73 current and the $15.00 deal price, giving a
+probability near 78% where the gate previously (correctly) refused to publish
+one at all.
+
+### Do other deals have the same pattern? — a check that did not produce a fix
+
+Yes, and that is the problem. A 150-day scan comparing each deal's last
+pre-filing close against the median of its own earlier window flags **seven of
+twelve** as elevated into their announcement:
+
+| Deal | baseline | last close | elevation |
+|---|---:|---:|---:|
+| ALOT | 9.30 | 16.69 | +79.5% |
+| OGN | 7.42 | 11.23 | +51.3% |
+| PAYO | 5.01 | 6.75 | +34.7% |
+| WBD | 23.01 | 28.80 | +25.2% |
+| AES | 13.54 | 16.87 | +24.6% |
+| APGE | 72.69 | 90.38 | +24.3% |
+| GSAT | 61.04 | 72.89 | +19.4% |
+| CZR | 24.57 | 28.78 | +17.1% |
+
+Widening the window to 400 days made it worse, not better: GSAT then reads a
+240% "run-up" and WBD 187%, because both roughly tripled over a year on their
+own news. **Price alone cannot separate deal speculation from business
+momentum.** An automatic detector shipped against this evidence would replace
+one wrong break price with a different wrong break price on most of the feed.
+
+So `VERIFIED_UNAFFECTED_PRICES` holds exactly one entry, and the check above is
+recorded here as a list of candidates for hand verification rather than as
+logic. This is the same shape the project already uses by hand: `worksheet.csv`
+records AMPS's premium as measured "to the Oct 15 2024 unaffected close, before
+the strategic review announcement", and VOXX entered at $8.00 — a *negative*
+premium to a $7.50 deal — because four months of a public process had already
+lifted it off $2.85. What distinguishes those cases is a **filing** (a strategic
+review, a sale process), not a price shape. Detecting them properly is a §4
+problem and needs the filings, not the tape.
+
+## 3 · Expected close capped at the deadline — Decision 2 decided
+
+`cap_expected_close(close_date, outside)` bounds the expected close at the
+contractual deadline and records `close_date_capped_to` when the cap binds.
+`days_to_close` and `ann` are recomputed from the capped date.
+
+It runs inside the agreement pass rather than at deal construction, because the
+outside date is read from the EX-2 exhibit hundreds of lines later — when the
+deal dict is built there is no deadline to bound anything against.
+
+**Not applied to an elective deadline.** There the reported date is the *base*,
+and a party may push it out, so guidance landing after it is not impossible.
+
+| Deal | Guidance resolves to | Outside date | Result |
+|---|---|---|---|
+| NATH | 2026-12-31 | 2026-10-20 automatic | **capped to 2026-10-20** |
+| CZR | 2027-12-31 | 2027-11-27 automatic | **capped to 2027-11-27** |
+| PAYO | 2027-06-30 | 2027-06-12 automatic | **capped to 2027-06-12** |
+| GBCS | 2026-09-30 | 2026-08-31 fixed | **capped to 2026-08-31** |
+| OGN | 2027-03-31 | 2027-01-26 **elective** | not capped — base extends to 2027-04-26 |
+| WBD | 2026-09-30 | 2027-06-04 automatic | unchanged |
+| GSAT | 2027-12-31 | 2028-04-13 automatic | unchanged |
+| AES | 2027-03-31 | 2027-06-01 automatic | unchanged |
+| GBTG | 2026-12-31 | 2027-02-02 automatic | unchanged |
+| APGE | 2026-09-30 | 2027-06-18 automatic | unchanged |
+| ALOT | 2026-09-30 | none | unchanged |
+
+Exactly the four impossible dates are removed. No deal whose guidance already
+sat inside its deadline moves, which was the requirement: the headline number
+changes only where it was impossible.
+
+Worth restating, because it is the part most easily misread: **those four were
+never four data errors.** Every one of those deadlines falls *inside* the period
+management guided to — 20 October is in H2 2026, 27 November is in late 2027.
+The guidance and the contract agreed all along. The impossibility was
+manufactured by the end-of-period point estimate, and the cap removes it without
+touching the conservative convention that produced it.
+
+## 4 · GBCS — no fix, by decision
+
+Left as it stands: outside date 2026-08-31, four days out, no extension clause,
+scored 82 and labelled Very Low risk. The outcome will be the evidence.
+
+Recording the argument it makes, because that is the point of leaving it:
+**the risk score has no time input at all.** `score_deal` takes spread, deal
+type, days *since* announcement, regulatory tags, break premium and financing
+signal. Nothing about how long the deal has left. A deal four days from a fixed
+contractual deadline and a deal four years from one score identically on that
+axis, and GBCS is the case where that produces a visibly wrong answer: 82 is the
+second-highest score in the feed.
+
+Days-to-outside-date is the obvious missing factor, and it is now available for
+11 of 12 deals. It belongs in §9's rebuild rather than as a patch to the current
+weights, since adding a seventh unvalidated factor to six unvalidated factors
+does not make the number more trustworthy. But GBCS is the argument for it, and
+if the deal lapses on 1 September that argument gets stronger.
+
+## Finding status after this pass
+
+| | Status |
+|---|---|
+| **C1** EDGAR blind spot | **fixed** — window rolls, eight deals recovered |
+| **C2** outside dates cached for 4 of 12 | **withdrawn** — wrong, production has 11 of 12 |
+| **C5** SLAB absent | **withdrawn** — wrong, SLAB is in production |
+| **D1** AES break price | **fixed** — $13.75, hand-verified |
+| **D2** WBD stale guidance | open — capping does not reach it; its deadline is June 2027 |
+| **D3** GBCS scored Very Low | **open by decision** — see above |
+| **D5** ALOT no outside date | open — still needs a hand read of the exhibit |
+| **D7** WBD `tx_value` | open until production deploys `b798bd6` |
+| **F7** break-price lookback | open — AES patched by hand, mechanism unchanged, §4 owns it |
+| Decision 2 | **decided** — cap, not denominator switch |
+
+Two findings withdrawn on production evidence, two fixed, one closed by
+decision. Sixteen of the twenty stand.

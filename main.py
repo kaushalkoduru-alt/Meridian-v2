@@ -467,6 +467,32 @@ VERIFIED_ACQUIRERS = {
     'AVNS': 'American Industrial Partners',  # confirmed 4/14/26 8-K — $25/share all-cash PE take-private
 }
 
+# Hand-verified unaffected prices, where the automatic lookback is provably
+# reading deal speculation rather than the undisturbed price.
+#
+# get_break_price takes the last close before the filing date. For a deal that
+# leaked, or one preceded by a public sale process, that is the most
+# contaminated print available rather than the least. The pattern is already
+# recorded by hand elsewhere in this project: worksheet.csv notes AMPS's premium
+# as measured "to the Oct 15 2024 unaffected close, before the strategic review
+# announcement", and VOXX entered at $8.00 — a NEGATIVE premium to a $7.50 deal
+# — because four months of a public process had already lifted it off $2.85.
+#
+# These are overrides, not a detector. A 150-day scan across the twelve live
+# deals flags seven as elevated into their announcement, and the price series
+# alone cannot say which of those are leaks and which are ordinary business
+# momentum — GSAT and WBD both roughly tripled in a year on their own news.
+# Automating this would replace one wrong number with another in most cases, so
+# each entry here is a deal whose series was read by hand.
+VERIFIED_UNAFFECTED_PRICES = {
+    # AES traded a 13.28-14.39 range through January 2026, broke above it on
+    # 2026-02-03 and never returned, closing at 16.87 the session before the
+    # 8-K. It then fell 17.8% on the announcement itself, which is what a
+    # disappointing definitive agreement does to a speculative price. 13.75 is
+    # the 2026-01-23 close, inside the quiet range and before the break.
+    'AES': 13.75,
+}
+
 VERIFIED_TX_VALUES = {
     'WBD': 110.0,   # Paramount-WBD — $110B enterprise value
     'GSAT': 11.6,   # Amazon-Globalstar — $11.6B
@@ -515,17 +541,56 @@ SECTOR_ETF_MAP = {
     'COUP':'XLK','SAVE':'XTN','CHNG':'XLV','SGFY':'XLV','IRBT':'XLK',
     'ATVI':'XLK','ACI':'XLP',
 }
-EDGAR_QUERIES = [
-    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22merger+agreement%22+%22per+share+in+cash%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'Cash + Stock', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22cash+and+stock%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'Private Equity', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22definitive+agreement%22+%22per+share+in+cash%22+%22sponsor%22&forms=8-K&dateRange=custom&startdt=2024-01-01&enddt=2026-06-30&from={start}&size=100'},
-    {'type': 'Tender Offer', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22tender+offer%22+%22per+share%22+%22definitive+agreement%22&forms=8-K&dateRange=custom&startdt=2025-06-01&enddt=2026-06-30&from={start}&size=100'},
+# How far back a search reaches. 548 days is not arbitrary — it is the same
+# horizon as the age gate below, which drops any deal whose announcement is more
+# than 548 days old as "likely closed". A search window wider than the gate
+# spends the 300-result budget on filings that are discarded on arrival.
+DEAL_SEARCH_LOOKBACK_DAYS = 548
+
+# Tomorrow, not today. EDGAR timestamps in Eastern time while the scan computes
+# in UTC, so for several hours a day "today" excludes filings already public.
+DEAL_SEARCH_FORWARD_BUFFER_DAYS = 1
+
+# The search phrases. Dates are NOT baked in here — see edgar_queries().
+#
+# They used to be. Every one of these carried a literal enddt, the newest of
+# which was 2026-07-24, so by 2026-08-27 no deal announced in the preceding 34
+# days could be detected at all and the blind spot widened by a day per day.
+# Nothing failed and nothing logged; the feed simply stopped seeing new deals.
+# The startdt values were stale in the mirror-image way: fixed at 2024-01-01,
+# 2025-06-01 and 2025-10-01, they widened forever, filling a fixed 300-result
+# budget with filings the age gate discards.
+EDGAR_QUERY_PHRASES = [
+    {'type': 'All Cash',       'q': '%22definitive+agreement%22+%22per+share+in+cash%22',              'forms': '8-K'},
+    {'type': 'All Cash',       'q': '%22merger+agreement%22+%22per+share+in+cash%22',                   'forms': '8-K'},
+    {'type': 'Cash + Stock',   'q': '%22definitive+agreement%22+%22cash+and+stock%22',                  'forms': '8-K'},
+    {'type': 'Private Equity', 'q': '%22definitive+agreement%22+%22per+share+in+cash%22+%22sponsor%22', 'forms': '8-K'},
+    {'type': 'Tender Offer',   'q': '%22tender+offer%22+%22per+share%22+%22definitive+agreement%22',    'forms': '8-K'},
     # Merger proxies. The proxy itself is unparseable (300+ pages, terms buried),
     # so path B resolves each hit back to its announcement 8-K and parses that.
     # Catches cash deals whose announcement 8-K our phrase queries missed.
-    {'type': 'All Cash', 'url': 'https://efts.sec.gov/LATEST/search-index?q=%22per+share+in+cash%22+%22merger+agreement%22&forms=DEFM14A&dateRange=custom&startdt=2025-10-01&enddt=2026-07-24&from={start}&size=100'},
+    {'type': 'All Cash',       'q': '%22per+share+in+cash%22+%22merger+agreement%22',                   'forms': 'DEFM14A'},
 ]
+
+
+def edgar_queries(now=None):
+    """
+    The search URLs with their window computed from today.
+
+    Built per scan rather than at import, so a process that stays up for weeks
+    does not drift back into the same blind spot a shorter interval at a time.
+    """
+    now = now or datetime.utcnow().date()
+    startdt = (now - timedelta(days=DEAL_SEARCH_LOOKBACK_DAYS)).strftime('%Y-%m-%d')
+    enddt = (now + timedelta(days=DEAL_SEARCH_FORWARD_BUFFER_DAYS)).strftime('%Y-%m-%d')
+    return [
+        {'type': p['type'],
+         'url': ('https://efts.sec.gov/LATEST/search-index?q=' + p['q'] +
+                 '&forms=' + p['forms'] +
+                 '&dateRange=custom&startdt=' + startdt + '&enddt=' + enddt +
+                 '&from={start}&size=100')}
+        for p in EDGAR_QUERY_PHRASES
+    ]
 
 # FALLBACK_DEALS eliminated. No hardcoded deals. Zero real deals > fake deals.
 
@@ -652,6 +717,10 @@ def get_regulatory_risk(ticker, acquirer, tx_value, deal_type):
     return tags
 
 def get_break_price(ticker, filed_date):
+    # A hand-verified unaffected price always wins, the way VERIFIED_ACQUIRERS
+    # and VERIFIED_TX_VALUES do. The lookback below cannot see a leak.
+    if ticker in VERIFIED_UNAFFECTED_PRICES:
+        return VERIFIED_UNAFFECTED_PRICES[ticker]
     try:
         filed = datetime.strptime(filed_date,'%Y-%m-%d')
         for days_back in [7,14,21,30]:
@@ -798,6 +867,41 @@ def resolve_tx_value(ticker, extracted, extracted_source):
     if ticker in VERIFIED_TX_VALUES:
         return VERIFIED_TX_VALUES[ticker], 'verified_hardcode'
     return extracted, extracted_source
+
+
+def cap_expected_close(close_date, outside):
+    """
+    The expected close, bounded by the contractual deadline.
+
+    Returns (date, capped_to) where capped_to is the outside date if the cap
+    bound and None otherwise. A deal cannot close after a deadline it cannot
+    pass, so where management guidance resolves past one, the deadline is the
+    later of the two dates that can actually happen.
+
+    NOT applied to an ELECTIVE extension. There the reported date is the BASE
+    deadline and a party may push it out by electing, so guidance landing after
+    it is not impossible — OGN guides to early 2027 against a 2027-01-26 base
+    that can be extended to 2027-04-26, and capping would invent a constraint
+    the agreement does not impose.
+
+    Applied to AUTOMATIC extensions because the date reported for those is
+    already the outermost the extension machinery reaches, and to agreements
+    with no extension clause at all, where the date is simply fixed.
+
+    Four deals reached this state through no fault of their guidance: the
+    end-of-period convention in parse_close_date resolves "H2 2026" to 31
+    December, while NATH's deadline is 20 October, which is inside H2. The
+    guidance and the contract agree; only the point estimate disagreed.
+    """
+    expected = parse_close_date(close_date)
+    if not expected or not isinstance(outside, dict):
+        return expected, None
+    od = parse_close_date(outside.get('date'))
+    if not od or outside.get('extension_type') == 'elective':
+        return expected, None
+    if expected <= od:
+        return expected, None
+    return od, od.isoformat()
 
 
 def two_state_applies(cp, dp, bp):
@@ -1271,7 +1375,11 @@ def fetch_deals_from_edgar():
     all_hits=[]
     seen_ids=set()
 
-    for q in EDGAR_QUERIES:
+    _queries = edgar_queries()
+    print(f"[Scan] EDGAR window {_queries[0]['url'].split('startdt=')[1].split('&')[0]}"
+          f" -> {_queries[0]['url'].split('enddt=')[1].split('&')[0]}"
+          f" ({DEAL_SEARCH_LOOKBACK_DAYS}d lookback, matching the age gate)")
+    for q in _queries:
         for start in range(0,300,100):
             url=q['url'].format(start=start)
             try:
@@ -1536,7 +1644,10 @@ def fetch_deals_from_edgar():
                 })
                 print(f"  [Review] {ticker}: missing {missing_fields} — logged to /api/admin/close-date-review-queue")
             break_price=get_break_price(ticker,src['file_date'])
-            break_price_method='historical'
+            # 'historical' is the pre-filing close. A hand-verified unaffected
+            # price is a different provenance and must not be labelled as one.
+            break_price_method=('verified_unaffected'
+                                if ticker in VERIFIED_UNAFFECTED_PRICES else 'historical')
             if not break_price:
                 premium_pct=None
                 pass
@@ -2071,6 +2182,30 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     _dated.append((_d.get('ticker'), _od))
             print(f"[OutsideDate] {len(_dated)} of {len(results)} deal(s) "
                   f"carry an outside date")
+
+            # Cap the expected close at a deadline it cannot pass, and recompute
+            # what depends on it. This runs here and not at deal construction
+            # because the outside date is read from the agreement, which happens
+            # in this pass — the deal dict was built hundreds of lines earlier
+            # with no deadline to bound anything against.
+            _capped = 0
+            for _d in results:
+                _od = parse_structured(_d.get('outside_date', {}))
+                if not isinstance(_od, dict) or not _od.get('date'):
+                    continue
+                _ec, _cap_to = cap_expected_close(_d.get('close_date'), _od)
+                _d['close_date_capped_to'] = _cap_to
+                if not _cap_to:
+                    continue
+                _capped += 1
+                _dtc2 = (_ec - datetime.utcnow().date()).days
+                _d['days_to_close'] = _dtc2
+                _d['ann'] = annualized_spread(_d.get('sp_pct'), _dtc2)
+                print(f"  [CloseDate] {_d.get('ticker')}: guidance "
+                      f"'{_d.get('close_date')}' resolves past the "
+                      f"{_od.get('extension_type') or 'fixed'} outside date "
+                      f"{_cap_to} — capped, {_dtc2}d to close")
+            print(f"[CloseDate] {_capped} deal(s) capped at their outside date")
             for _tk, _od in _dated:
                 _days = _od.get('days_remaining')
                 _when = ("PASSED " + str(abs(_days)) + " days ago") if _od.get('passed')                         else (str(_days) + " days remaining")

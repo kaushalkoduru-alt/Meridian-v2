@@ -9,7 +9,9 @@ printed beside a red "Distressed" label.
 """
 from datetime import date
 from main import (parse_close_date, days_to_close, annualized_spread,
-                 two_state_applies, resolve_tx_value, VERIFIED_TX_VALUES)
+                 two_state_applies, resolve_tx_value, VERIFIED_TX_VALUES,
+                 cap_expected_close, edgar_queries, get_break_price,
+                 VERIFIED_UNAFFECTED_PRICES, DEAL_SEARCH_LOOKBACK_DAYS)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -155,6 +157,85 @@ check("every verified ticker resolves to its verified value",
       all(resolve_tx_value(t, 999.0, 'x') == (v, 'verified_hardcode')
           for t, v in VERIFIED_TX_VALUES.items()), True,
       f"{len(VERIFIED_TX_VALUES)} entries")
+
+print()
+print("EDGAR SEARCH WINDOW ROLLS FORWARD")
+print("-" * 78)
+
+# The defect: every query carried a literal enddt, newest 2026-07-24, so by
+# 2026-08-27 no deal announced in 34 days could be detected and the blind spot
+# widened daily. Nothing failed and nothing logged.
+_q = edgar_queries(now=date(2026, 8, 27))
+check("every query is built, none dropped", len(_q), 6)
+_ends = {u['url'].split('enddt=')[1].split('&')[0] for u in _q}
+_starts = {u['url'].split('startdt=')[1].split('&')[0] for u in _q}
+check("no query ends before today", _ends, {'2026-08-28'},
+      "today plus one day, for the ET/UTC gap")
+check("every query shares one rolling start", _starts, {'2025-02-25'},
+      f"{DEAL_SEARCH_LOOKBACK_DAYS} days back, matching the age gate")
+check("the window follows the clock rather than a constant",
+      edgar_queries(now=date(2027, 1, 1))[0]['url'].split('enddt=')[1].split('&')[0],
+      '2027-01-02')
+check("no literal year survives in a built URL",
+      any(y in _q[0]['url'] for y in ('2024-01-01', '2026-06-30', '2026-07-24')), False)
+
+print()
+print("EXPECTED CLOSE CAPPED AT A DEADLINE IT CANNOT PASS")
+print("-" * 78)
+
+# Four deals guided to a period whose END falls after their contractual
+# deadline. The guidance is not wrong — each deadline sits INSIDE the guided
+# period — the end-of-period point estimate is what made it look impossible.
+for tk, cd, od, want in [
+    ('NATH', 'H2 2026',          {'date': '2026-10-20', 'extension_type': 'automatic'}, date(2026, 10, 20)),
+    ('CZR',  'mid-to-late 2027', {'date': '2027-11-27', 'extension_type': 'automatic'}, date(2027, 11, 27)),
+    ('PAYO', 'mid-2027',         {'date': '2027-06-12', 'extension_type': 'automatic'}, date(2027, 6, 12)),
+    ('GBCS', 'Q3 2026',          {'date': '2026-08-31', 'extension_type': None},        date(2026, 8, 31))]:
+    got, capped = cap_expected_close(cd, od)
+    check(f"{tk}: capped at its outside date", got, want, f"guidance {cd!r}")
+    check(f"{tk}: the cap is recorded", capped, od['date'])
+
+# An ELECTIVE deadline is not a wall — a party may push it out — so guidance
+# landing past it is not impossible and must not be capped.
+_got, _cap = cap_expected_close('early 2027',
+                                {'date': '2027-01-26', 'extension_type': 'elective'})
+check("OGN: an elective deadline does not cap", _got, date(2027, 3, 31),
+      "base 2027-01-26 may be extended to 2027-04-26")
+check("OGN: nothing recorded as capped", _cap, None)
+
+# Guidance already inside the deadline is untouched — the headline number on
+# these deals must not move.
+for tk, cd, od, want in [
+    ('WBD',  'Q3 2026',                 {'date': '2027-06-04', 'extension_type': 'automatic'}, date(2026, 9, 30)),
+    ('GSAT', '2027',                    {'date': '2028-04-13', 'extension_type': 'automatic'}, date(2027, 12, 31)),
+    ('AES',  'late 2026 or early 2027', {'date': '2027-06-01', 'extension_type': 'automatic'}, date(2027, 3, 31)),
+    ('GBTG', 'second half 2026',        {'date': '2027-02-02', 'extension_type': 'automatic'}, date(2026, 12, 31))]:
+    got, capped = cap_expected_close(cd, od)
+    check(f"{tk}: guidance inside the deadline is untouched", (got, capped), (want, None))
+
+check("no outside date, no cap",
+      cap_expected_close('Q3 2026', None), (date(2026, 9, 30), None))
+check("no guidance, no cap", cap_expected_close('TBD',
+      {'date': '2026-10-20', 'extension_type': None}), (None, None))
+
+print()
+print("AES UNAFFECTED PRICE")
+print("-" * 78)
+
+# get_break_price takes the last close before the filing. AES traded a
+# 13.28-14.39 range through January 2026, broke above it on 2026-02-03, closed
+# at 16.87 the session before the 8-K, then fell 17.8% on the announcement.
+check("AES uses its hand-verified unaffected price",
+      get_break_price('AES', '2026-03-02'), 13.75,
+      "was 16.87, the peak of the pre-announcement run-up")
+check("the verified price sits below both current and deal price",
+      13.75 < 14.73 and 13.75 < 15.00, True,
+      "which is what un-gates the two-state model")
+check("AES's probability becomes readable again",
+      two_state_applies(14.73, 15.00, 13.75)[0], True)
+check("only hand-read deals are overridden",
+      list(VERIFIED_UNAFFECTED_PRICES), ['AES'],
+      "a 150-day scan flags 7 of 12 as elevated; price alone cannot say which are leaks")
 
 print()
 print("=" * 78)
