@@ -1968,6 +1968,27 @@ function _daRiskMeta(r){
 }
 function _daUsd(n){ return (n==null||isNaN(n)) ? '\u2014' : '$'+Number(n).toFixed(2); }
 function _daSgn(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+Math.abs(Number(n)).toFixed(2)+'%'; }
+// Signed dollars, with the sign taken FROM THE VALUE. Five places rendered a
+// hardcoded '+$' or '\u2212$' wrapped around an absolute value, which is right
+// only for as long as the value carries the sign that was assumed. AES's break
+// price sits ABOVE its current price, so its modeled break is a gain — and
+// every one of those places printed it as a loss, one of them directly beneath
+// a column header reading +14.53%.
+function _daSgnUsd(n){
+  if(n==null||isNaN(n)) return '\u2014';
+  var v = Number(n);
+  return (v>=0?'+':'\u2212')+'$'+Math.abs(v).toFixed(2);
+}
+function _daSgnUsd0(n){
+  if(n==null||isNaN(n)) return '\u2014';
+  var v = Math.round(Number(n));
+  return (v>=0?'+':'\u2212')+'$'+Math.abs(v).toLocaleString();
+}
+// Teal for a gain, red for a loss — derived, so a gain is never painted red.
+function _daSgnColor(n){
+  if(n==null||isNaN(n)) return '#9a9079';
+  return Number(n)>=0 ? '#5fe0c9' : '#f0735e';
+}
 // Mirrors parse_close_date() in main.py. Both must agree: the annualized
 // spread is computed server-side off the Python one, and this renders the date
 // beside it.
@@ -2094,7 +2115,9 @@ async function renderAnalysis(deal){
   // ---- break price box ----
   if(bp!=null){
     var bdTxt = (bd!=null) ? _daSgn(bd)+' from current' : '';
-    var perSh = (deal.cp!=null && bp!=null) ? ' \u00b7 \u2212$'+Math.abs(deal.cp-bp).toFixed(2)+' / share' : '';
+    // bp - cp, not abs(cp - bp): negative where the break sits below the
+    // current price, positive where it sits above. The sign is the finding.
+    var perSh = (deal.cp!=null && bp!=null) ? ' \u00b7 '+_daSgnUsd(bp-deal.cp)+' / share' : '';
     _daSet('da-break-box',
       '<div style="position:absolute; top:0; right:0; bottom:0; width:3px; background:linear-gradient(180deg, #f0735e, rgba(240,115,94,0.15));"></div>'
       + '<div style="display:flex; align-items:center; gap:8px;">'
@@ -2143,7 +2166,7 @@ async function renderAnalysis(deal){
     +   '<div style="font-size:10px; letter-spacing:0.18em; color:#6bbaa8; text-transform:uppercase;">If Deal Closes</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(deal.dp)+'</div>'
     +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+_daSgn(deal.sp_pct)+'</div>'
-    +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?'+$'+(deal.dp-deal.cp).toFixed(2)+' / share':'')+'</div>'
+    +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?_daSgnUsd(deal.dp-deal.cp)+' / share':'')+'</div>'
     +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daSgn(deal.ann)+'</div>'
     + '</div>';
   var breaksCard = bp!=null ? ''
@@ -2151,9 +2174,9 @@ async function renderAnalysis(deal){
     +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#f0735e;"></div>'
     +   '<div style="font-size:10px; letter-spacing:0.18em; color:#f0735e; text-transform:uppercase;">If Deal Breaks</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(bp)+'</div>'
-    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#f0735e;">'+(bd!=null?_daSgn(bd):'\u2014')+'</div>'
-    +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.cp!=null)?'\u2212$'+Math.abs(deal.cp-bp).toFixed(2)+' / share':'')+'</div>'
-    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Modeled downside case</div>'
+    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:'+_daSgnColor(bd)+';">'+(bd!=null?_daSgn(bd):'\u2014')+'</div>'
+    +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.cp!=null)?_daSgnUsd(bp-deal.cp)+' / share':'')+'</div>'
+    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">'+((bd!=null&&bd>0)?'Modeled break sits ABOVE the current price':'Modeled downside case')+'</div>'
     + '</div>' : '';
   _daSet('da-rr-grid', closesCard + breaksCard);
   var rrEl = document.getElementById('da-rr-grid');
@@ -2168,8 +2191,8 @@ async function renderAnalysis(deal){
     return '<div style="display:grid; grid-template-columns:1.1fr 1fr 1fr 1fr; column-gap:14px; align-items:center; padding:11px 22px; border-bottom:1px solid rgba(238,228,208,0.06);">'
       + '<div style="font-size:13px; color:#f1eadb; font-weight:500;">$'+inv.toLocaleString()+'</div>'
       + '<div style="text-align:right; font-size:12px; color:#9a9079;">'+(shares!=null?shares.toLocaleString():'\u2014')+'</div>'
-      + '<div style="text-align:right; font-size:13px; color:#5fe0c9; font-weight:500;">'+(up!=null?'+$'+Math.round(up).toLocaleString():'\u2014')+'</div>'
-      + '<div style="text-align:right; font-size:13px; color:#f0735e;">'+(dn!=null?'\u2212$'+Math.round(Math.abs(dn)).toLocaleString():'\u2014')+'</div>'
+      + '<div style="text-align:right; font-size:13px; color:'+_daSgnColor(up)+'; font-weight:500;">'+_daSgnUsd0(up)+'</div>'
+      + '<div style="text-align:right; font-size:13px; color:'+_daSgnColor(dn)+';">'+_daSgnUsd0(dn)+'</div>'
       + '</div>';
   }).join('');
   _daSet('da-position-table',
@@ -2184,7 +2207,7 @@ async function renderAnalysis(deal){
   var finBadgeColor = fin==='committed' ? '#4fe6cb' : fin==='contingent' ? '#ff9466' : '#cdbf9f';
   var rowsAcq = [
     { l:'Acquirer Type',    v:(deal.acquirer_type||'Strategic') },
-    { l:'Deal Premium',     v:(premium!==null ? '+'+premium+'% <span style="color:#8f8772; font-weight:400; font-size:10.5px;">to '+_daUsd(bp)+' unaffected</span>' : 'N/A'), c:(premium!==null&&premium>=25?'#5fe0c9':'#e2d8c0') },
+    { l:'Deal Premium',     v:(premium!==null ? (premium>=0?'+':'\u2212')+Math.abs(premium)+'% <span style="color:#8f8772; font-weight:400; font-size:10.5px;">to '+_daUsd(bp)+' unaffected</span>' : 'N/A'), c:(premium!==null&&premium>=25?'#5fe0c9':'#e2d8c0') },
     { l:'Consideration',    v:(deal.deal_type||'\u2014')+' \u00b7 '+_daUsd(deal.dp)+' / share' },
     { l:'Transaction Value',v:txVal }
   ];

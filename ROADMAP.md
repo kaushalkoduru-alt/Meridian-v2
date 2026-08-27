@@ -85,6 +85,22 @@ about a number being misleading, not about a feature being missing.
   break prices, questionable probabilities, questionable risk scores, stale
   data, missing contract terms, missing sources, wrong formulas, edge cases.
   *Same discipline as the 39-deal hand verification, pointed at production.*
+  **Report written — [QA.md](QA.md).** All twelve deals have an entry covering
+  all nine checks. 20 findings: 7 FORMULA, 6 COVERAGE, 7 DATA.
+  **Box stays open.** Three findings need a decision before anything can be
+  built on them — what replaces AES's break price, whether expected close is a
+  point or an interval (four deals now show a close after their own contractual
+  deadline, which is an artifact of the end-of-period convention rather than
+  four data errors), and whether GBCS is four days from closing or from lapsing.
+  One check could not be completed: ALOT is the only deal whose agreement yields
+  no outside date, and whether that is the agreement or the extractor needs the
+  exhibit read by hand.
+  Highest-value item found: outside dates are readable for 11 of 12 deals but
+  cached for only 4, because the production agreement markers were never
+  cleared. Second: `EDGAR_QUERIES` hardcodes `enddt=2026-07-24`, so no deal
+  announced in the last 34 days can be detected at all.
+  §2's #19 (the position-size sign error) was fixed alongside this report; it is
+  a §25 item, and §2 stays checked on its own deliverable.
 
 ---
 
