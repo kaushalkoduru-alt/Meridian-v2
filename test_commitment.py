@@ -11,7 +11,8 @@ sys.path.insert(0, '/home/claude/commit')
 from deal_commitment import (check_antitrust_efforts, check_financing,
                              third_party_fee_names,
                              check_specific_performance, extract_termination_fees,
-                             assess_commitment, STRONG, WEAK, UNKNOWN)
+                             assess_commitment, format_fee,
+                             STRONG, WEAK, UNKNOWN)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -469,6 +470,78 @@ check("GBCS: the company fee one sentence earlier survives",
       fees.get('company_fee'), 400_000,
       "the acquirer's span must not reach back across the period")
 check("GBCS: equal fees both ways", fees.get('asymmetry'), 1.0)
+
+print()
+print("FEE FORMATTING")
+print("-" * 78)
+
+# One divisor cannot span four orders of magnitude. Dividing everything by a
+# million printed GBCS's real $400,000 fee as "$0M" -- a fee that exists, shown
+# as nothing -- and WBD's $7bn as "$7000M", which reads as a typo.
+check("under $1M keeps the dollars", format_fee(400_000), "$400,000",
+      "GBCS -- rounding to millions is what produced $0M")
+check("$1M-$999M reads in millions", format_fee(499_000_000), "$499M", "SLAB")
+check("$1B and up reads in billions", format_fee(7_000_000_000), "$7.0B", "WBD")
+check("the $1M boundary is millions, not dollars", format_fee(1_000_000), "$1M")
+check("one dollar under the boundary keeps the dollars",
+      format_fee(999_999), "$999,999")
+# $999,999,999 is under a billion but rounds to 1000M, which is the $7000M
+# shape all over again. It has to cross to billions before the rounding does.
+check("the rounding edge crosses to billions", format_fee(999_999_999), "$1.0B")
+check("just below the rounding edge stays in millions",
+      format_fee(999_499_999), "$999M")
+check("None passes through", format_fee(None), None)
+
+print()
+print("REVERSE FEE: THREE STATES, NOT TWO")
+print("-" * 78)
+
+# The bug: a fee below the threshold returned UNKNOWN, and the deal page routes
+# UNKNOWN into "could not be read from this agreement". GBCS's fee WAS read --
+# $400,000, 2.0% of deal value, quoted off the agreement. Telling the reader it
+# could not be read is a false statement about a number the parser had in hand.
+def _reverse_term(text, deal_value):
+    for t in assess_commitment(text, deal_value=deal_value)['terms']:
+        if t['term'] == 'Reverse termination fee':
+            return t
+    return None
+
+t = _reverse_term(GBCS, 20_000_000)     # $400,000 on a $20M deal = 2.0%
+check("a fee under 3% is WEAK, not UNKNOWN",
+      t['verdict'] if t else None, WEAK,
+      "GBCS: $400,000 at 2.0% -- small fee, weak commitment, still a reading")
+check("the weak fee still shows its amount and size",
+      bool(t) and "$400,000" in t['meaning'] and "2.0%" in t['meaning'],
+      True, t['meaning'] if t else "no term")
+check("the weak fee still carries its quote",
+      bool(t and t.get('quote')), True)
+
+# WEAK is a reading, so it counts as resolved -- which is what keeps it out of
+# the unread sentence on the deal page.
+_a = assess_commitment(GBCS, deal_value=20_000_000)
+check("a weak fee counts as resolved",
+      any(x['term'] == 'Reverse termination fee' and x['verdict'] in (STRONG, WEAK)
+          for x in _a['terms']), True,
+      _a['summary'])
+
+t = _reverse_term(GBCS, 10_000_000)     # $400,000 on a $10M deal = 4.0%
+check("a fee at or above 3% is still STRONG",
+      t['verdict'] if t else None, STRONG, "$400,000 at 4.0%")
+
+# UNKNOWN survives only where it is true: the fee was found, but without a deal
+# value there is no percentage and so no way to call it strong or weak.
+t = _reverse_term(GBCS, None)
+check("a fee that cannot be sized is UNKNOWN",
+      t['verdict'] if t else None, UNKNOWN,
+      "no deal value, so no percentage to threshold")
+check("the unsized fee still reports its amount",
+      bool(t) and "$400,000" in t['meaning'], True, t['meaning'] if t else "no term")
+
+# No fee at all appends no term, so UNKNOWN is never manufactured for absence.
+check("no fee found appends no reverse-fee term",
+      _reverse_term("This agreement contains no termination fee of any kind.",
+                    1_000_000_000),
+      None)
 
 print("\n" + "=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

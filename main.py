@@ -23,7 +23,10 @@ from deal_direction import (check_direction, direction_report,
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
 CLERK_SECRET_KEY = os.environ.get('CLERK_SECRET_KEY', '')
-BASE_URL = 'https://meridian-v2-production-cffa.up.railway.app'
+# Stripe sends the customer back here after checkout, so a stale host is a
+# dead end on the paid path, not a cosmetic error. meridian-v2-production-cffa
+# stopped resolving — Railway's edge answers it with "Application not found".
+BASE_URL = os.environ.get('BASE_URL', 'https://meridianarb.up.railway.app')
 
 # ─── DEAL STRUCTURES (TEMPORARY, HAND-VERIFIED) ──────────────────────────────
 # Automatic extraction replaces this table later. It exists because the display

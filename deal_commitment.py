@@ -48,6 +48,28 @@ STRONG   = "STRONG"    # the term favours the deal closing
 WEAK     = "WEAK"      # the term gives the acquirer room to walk
 UNKNOWN  = "UNKNOWN"   # language not found, or too ambiguous to call
 
+# ── fee formatting ────────────────────────────────────────────────────────────
+# One divisor cannot span these fees. They run from GBCS's $400,000 to WBD's
+# $7,000,000,000 — four orders of magnitude — and dividing everything by a
+# million rendered the small one as "$0M" and the large one as "$7000M". Both
+# are wrong in the way that matters: one erases a fee that exists, the other
+# reads as a typo and costs the number its credibility.
+def format_fee(amount):
+    """A fee as a reader would write it. None passes through."""
+    if amount is None:
+        return None
+    a = float(amount)
+    # Under a million, the exact dollars. Rounding here is what produced "$0M",
+    # and a small fee is precisely the case where the digits carry the point.
+    if a < 1_000_000:
+        return f"${a:,.0f}"
+    # Millions, whole. The second test catches the boundary: $999,999,999 is
+    # under a billion but rounds to 1000M, which is the "$7000M" shape again.
+    if a < 1e9 and round(a / 1e6) < 1000:
+        return f"${a / 1e6:.0f}M"
+    return f"${a / 1e9:.1f}B"
+
+
 # ── antitrust efforts ─────────────────────────────────────────────────────────
 # Ordered strongest to weakest. The first match wins, so an agreement that
 # contains both a hell-or-high-water clause and a burdensome-condition carve-out
@@ -540,14 +562,29 @@ def assess_commitment(agreement_text, deal_value=None):
     ]
 
     if fees.get('reverse_fee'):
-        bits = [f"the acquirer pays ${fees['reverse_fee']/1e6:.0f}M to walk away"]
-        if fees.get('reverse_fee_pct'):
-            bits.append(f"{fees['reverse_fee_pct']:.1f}% of deal value")
+        bits = [f"the acquirer pays {format_fee(fees['reverse_fee'])} to walk away"]
+        _pct = fees.get('reverse_fee_pct')
+        if _pct:
+            bits.append(f"{_pct:.1f}% of deal value")
         if fees.get('asymmetry'):
             bits.append(f"{fees['asymmetry']:.1f}x what the target pays")
+        # A fee under the threshold is WEAK, not UNKNOWN. Collapsing the two
+        # sent GBCS's fee — read at $400,000 and 2.0% of deal value, quoted off
+        # the agreement — into the deal page's "could not be read from this
+        # agreement" line, which is a false statement about a number the parser
+        # had in hand. A small reverse fee is weak commitment, and that is
+        # information the reader wants, not an absence of information.
+        #
+        # UNKNOWN survives only where it is true: a fee found but impossible to
+        # size, because the deal value needed to compute the percentage is
+        # missing. No fee at all appends no term, so it never reaches here.
+        if _pct is None:
+            _verdict = UNKNOWN
+        else:
+            _verdict = STRONG if _pct >= 3 else WEAK
         terms.append({
             'term': 'Reverse termination fee',
-            'verdict': STRONG if (fees.get('reverse_fee_pct') or 0) >= 3 else UNKNOWN,
+            'verdict': _verdict,
             'meaning': ", ".join(bits),
             'quote': fees.get('reverse_fee_text'),
         })
