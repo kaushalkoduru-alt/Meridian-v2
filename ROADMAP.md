@@ -24,7 +24,7 @@ a judgment on sequence.
 These fix things that are wrong on the live site today. Every one of them is
 about a number being misleading, not about a feature being missing.
 
-- [ ] **§2 · Audit every formula**
+- [x] **§2 · Audit every formula**
   Current price, deal price, gross spread, annualized spread, days to close,
   expected close, outside date, break price, market-implied probability, risk
   score, regulatory risk, RTF, target fee, fee multiple, transaction value,
@@ -32,12 +32,40 @@ about a number being misleading, not about a feature being missing.
   For each: is it mathematically correct, is it financially meaningful, what
   does it assume, can it mislead, what should replace it.
   *Deliverable: a written audit, one entry per metric. Not code.*
+  **Done — [AUDIT.md](AUDIT.md).** All 19 metrics have an entry answering all
+  five questions. Verdicts: 6 BROKEN, 6 MISLEADING, 7 SOUND. Four of the twelve
+  defects trace to the break price being an unvalidated price lookup that
+  everything downstream treats as a modeled floor, which confirms the §3/§4
+  sequencing. Four more are independent of §4 and cost hours: the position
+  size table's hardcoded minus sign (#19), the probability clamp that turns
+  AES's sign error into 99.9% beside a red "Distressed" label (#9), the
+  `VERIFIED_TX_VALUES` override that only applies when extraction failed (#15),
+  and the close-date parser that reads "late 2026 or early 2027" as 31 March
+  2026 (#5). Extraction accuracy per deal was scoped to §25, not audited here.
 
 - [ ] **§3 · Fix the break price / probability problem**
   The current implied probability is `(current − break) / (deal − break)`.
   Every deal carries `break_price_method: "historical"`, meaning the break price
-  is just the unaffected price. WBD sits at $28.83 against a $28.80 modeled
-  break, so the denominator is near zero and the probability is meaningless.
+  is just the unaffected price. Two live deals show what that costs, and they
+  fail in different ways.
+
+  WBD trades at $28.90 against a $28.80 modeled break. The denominator,
+  deal − break, is $2.20 and perfectly healthy. It is the NUMERATOR,
+  current − break, that collapses to $0.10 — so the formula reports a 4.5%
+  chance of closing on a deal trading 7% below terms. Fixing this means
+  looking at how close the current price sits to the modeled break, not at
+  the spread between deal and break.
+
+  AES is worse, and is not a precision problem at all. Its modeled break of
+  $16.87 sits ABOVE both the current price ($14.73) and the deal price
+  ($15.00), so both halves of the fraction go negative, the signs cancel, and
+  the formula returns 114.4% — a probability over one, printed to the live
+  site. No improvement to the break-price model catches this, because a
+  better break price can still land above the current price on a deal the
+  market has marked down. It needs an explicit guard: when the current price
+  is at or below the modeled break, the two-state model does not apply and
+  there is no probability to print.
+
   Must distinguish: unaffected price, modeled break price, observed current
   price, deal consideration, downside to break, probability of close.
   Where the two-state model does not apply, say so instead of printing a number.
@@ -232,4 +260,6 @@ These need no checkbox. They govern everything above.
 
 ## Progress
 
-0 of 22 complete.
+1 of 22 complete.
+
+- §2 · Audit every formula — [AUDIT.md](AUDIT.md)
