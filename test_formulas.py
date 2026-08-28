@@ -12,7 +12,8 @@ from main import (parse_close_date, days_to_close, annualized_spread,
                  two_state_applies, resolve_tx_value, VERIFIED_TX_VALUES,
                  cap_expected_close, edgar_queries, get_break_price,
                  VERIFIED_UNAFFECTED_PRICES, DEAL_SEARCH_LOOKBACK_DAYS,
-                 pricing_integrity_failures, DEAL_STRUCTURES)
+                 pricing_integrity_failures, DEAL_STRUCTURES,
+                 blended_governs, apply_blended_to_spread)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -334,6 +335,65 @@ check("the fixed write stores the payload itself",
       _json.loads(_raw).get('ticker_map'), {'AES': 'The AES Corporation'})
 check("and the cik_map rides along with it",
       _json.loads(_raw).get('cik_map'), {'AES': '0000874761'})
+
+print()
+print("BLENDED VALUE GOVERNS THE SPREAD")
+print("-" * 78)
+
+# GSAT in production: blended 87.32, all thirteen barriers passing, and sp_pct
+# still 9.30 -- ((90.00 - 82.34) / 82.34), measured off a headline nobody
+# receives. The deal card recomputed it to 6.05% for display; the ticker, the
+# annualized figure, the position-size table and /api/deals did not, and the
+# dashboard sorted GSAT to the top of the feed on the wrong number.
+_GSAT = {'ticker': 'GSAT', 'cp': 82.34, 'dp': 90.00, 'sp_pct': 9.3, 'ann': 6.93,
+         'days_to_close': 490, 'score': 47, 'risk': 'High',
+         'pricing': {'blended': 87.32, 'all_passed': True}}
+
+_f = pricing_integrity_failures([dict(_GSAT)])
+check("a passing deal with a headline-derived spread is caught", len(_f), 1)
+check("  and the failure names the spread source",
+      'spread source' in _f[0][1] if _f else False, True)
+check("  and identifies it as the headline",
+      'headline' in _f[0][1] if _f else False, True,
+      _f[0][1][:110] if _f else '')
+
+_d = dict(_GSAT); _ch = apply_blended_to_spread(_d)
+check("sp_pct is re-derived from the blended value", _d['sp_pct'], 6.05,
+      "(87.32 - 82.34) / 82.34, not (90.00 - 82.34) / 82.34")
+check("ann follows the corrected spread", _d['ann'], 4.51, "was 6.93")
+check("the risk band follows too", _d['risk'], 'Medium',
+      "9.30 banded it High; 6.05 does not")
+check("the headline is preserved, not destroyed", _d['sp_pct_headline'], 9.3)
+check("dp is untouched — it stays 'offer in the filing'", _d['dp'], 90.00)
+check("the frozen detection anchor is not rewritten",
+      'sp_pct_at_detection' in _d, False, "history is not re-derived")
+check("the corrected record passes the integrity check",
+      pricing_integrity_failures([_d]), [])
+
+# The sort reads sp_pct, so correcting it is what moves the deal.
+_FEED = [dict(_GSAT), {'ticker': 'WBD', 'cp': 28.9, 'dp': 31.0, 'sp_pct': 7.27},
+         {'ticker': 'GBCS', 'cp': 5.42, 'dp': 5.75, 'sp_pct': 6.09}]
+check("GSAT ranks first on the headline spread",
+      sorted(_FEED, key=lambda z: z.get('sp_pct') or 0, reverse=True)[0]['ticker'],
+      'GSAT')
+for _x in _FEED: apply_blended_to_spread(_x)
+check("and third once the blended value governs",
+      [z['ticker'] for z in sorted(_FEED, key=lambda z: z.get('sp_pct') or 0,
+                                   reverse=True)], ['WBD', 'GBCS', 'GSAT'])
+
+# blended_governs is the single gate. A failing barrier set, a missing blended
+# value or an unstructured deal all mean the headline still stands.
+check("a failing barrier set does not govern",
+      blended_governs({'pricing': {'blended': 87.32, 'all_passed': False}}), None,
+      "the barriers refused the number, so it cannot drive the spread")
+check("a missing blended value does not govern",
+      blended_governs({'pricing': {'blended': None, 'all_passed': True}}), None)
+check("a deal with no pricing does not govern",
+      blended_governs({'ticker': 'WBD', 'dp': 31.0}), None)
+check("and such a deal's spread is left alone",
+      apply_blended_to_spread({'ticker': 'WBD', 'cp': 28.9, 'sp_pct': 7.27}), None)
+check("a cached repr string still governs",
+      blended_governs({'pricing': "{'blended': 87.32, 'all_passed': True}"}), 87.32)
 
 print()
 print("=" * 78)

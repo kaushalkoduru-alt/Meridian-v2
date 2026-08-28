@@ -975,6 +975,61 @@ def cap_expected_close(close_date, outside):
     return od, od.isoformat()
 
 
+def blended_governs(deal):
+    """
+    The blended value where one exists and its barriers passed, else None.
+
+    A holder of a cash-and-stock deal receives the blended value. The headline
+    in the filing is what the acquirer announced, and for GSAT that is $90.00
+    against $87.32 actually received — so a spread measured off the headline is
+    measured against a price nobody is paid.
+
+    One function decides this for sp_pct, ann, the risk band and the dashboard
+    sort, so they cannot disagree the way they did: the deal card recomputed the
+    spread off blended and showed 6.05%, while the ticker, the annualized
+    figure, the position-size table and /api/deals all still read 9.30% off the
+    headline, and the dashboard sorted GSAT to the top on it.
+    """
+    p = parse_structured((deal or {}).get('pricing', {}))
+    if not isinstance(p, dict) or not p.get('all_passed'):
+        return None
+    b = p.get('blended')
+    try:
+        b = float(b)
+    except (TypeError, ValueError):
+        return None
+    return b if b > 0 else None
+
+
+def apply_blended_to_spread(deal):
+    """
+    Rewrite sp_pct, ann and risk off the blended value. Returns what changed.
+
+    dp is left alone on purpose. The filing's offer stays visible as "offer in
+    the filing" — it is a fact about the agreement. It just stops driving any
+    computed figure.
+
+    sp_pct_at_detection is also left alone: it is the frozen forward-record
+    anchor, and re-deriving it now would rewrite history.
+    """
+    b = blended_governs(deal)
+    cp = deal.get('cp')
+    if b is None or not cp or cp <= 0:
+        return None
+    old_sp, old_ann, old_risk = deal.get('sp_pct'), deal.get('ann'), deal.get('risk')
+    new_sp = round(((b - cp) / cp) * 100, 2)
+    deal['sp_pct_headline'] = old_sp          # kept so the gap stays auditable
+    deal['sp_pct'] = new_sp
+    deal['ann'] = annualized_spread(new_sp, deal.get('days_to_close'))
+    # get_risk takes the spread as its first argument, so leaving it would band
+    # the deal on a price nobody receives -- the same defect one field over.
+    if deal.get('score') is not None:
+        deal['risk'] = get_risk(new_sp, deal['score'])
+    return {'ticker': deal.get('ticker'), 'blended': b,
+            'sp_pct': (old_sp, new_sp), 'ann': (old_ann, deal['ann']),
+            'risk': (old_risk, deal.get('risk'))}
+
+
 def pricing_integrity_failures(deals):
     """
     Deals that should carry a blended price and do not. Empty means healthy.
@@ -1010,6 +1065,18 @@ def pricing_integrity_failures(deals):
         if p.get('blended') is None and p.get('all_passed'):
             failures.append((tk, 'contradiction: every barrier passed but '
                                  'blended is None'))
+            continue
+        # The barriers passing means the blended value governs. If sp_pct is
+        # still the headline spread, the number that ranks this deal and sizes
+        # a position against it is measured off a price nobody receives.
+        b, cp, sp = blended_governs(d), d.get('cp'), d.get('sp_pct')
+        if b is not None and cp and sp is not None:
+            want = round(((b - cp) / cp) * 100, 2)
+            if abs(float(sp) - want) > 0.05:
+                failures.append((tk, f'spread source: barriers passed and the '
+                                     f'blended value is {b:.2f}, so sp_pct should '
+                                     f'be {want:.2f} but is {sp} '
+                                     f'({"headline" if d.get("dp") and abs(float(sp) - round(((float(d["dp"])-cp)/cp)*100, 2)) <= 0.05 else "neither"})'))
     return failures
 
 
@@ -2146,6 +2213,18 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     print(_hdr)
                 for _ln in _lines:
                     print(_ln)
+            # Everything downstream reads sp_pct. Rewrite it here, once, so the
+            # ticker, the annualized figure, the position-size table, the risk
+            # band, the dashboard sort and /api/deals all measure against what a
+            # holder receives rather than against the headline.
+            for _d in results:
+                _ch = apply_blended_to_spread(_d)
+                if _ch:
+                    print(f"  [Pricing] {_ch['ticker']}: spread now measured off "
+                          f"the blended ${_ch['blended']:.2f} — "
+                          f"sp_pct {_ch['sp_pct'][0]} -> {_ch['sp_pct'][1]}, "
+                          f"ann {_ch['ann'][0]} -> {_ch['ann'][1]}, "
+                          f"risk {_ch['risk'][0]} -> {_ch['risk'][1]}")
         except Exception as _pce:
             print(f"[Pricing] error (non-fatal, nothing changed): {_pce}")
 
