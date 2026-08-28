@@ -183,18 +183,51 @@ def redis_get():
         return None
 
 def redis_set(deals):
+    """
+    Write the feed to Redis. The payload goes in the request BODY.
+
+    It used to go in the URL path, percent-encoded. That works while the cache
+    is small and fails silently once it is not: the enriched feed is 100,000+
+    characters encoded, which no proxy will accept as a request line. The write
+    returned a non-200, redis_set returned False, and save_cache ignored the
+    return value and printed "Cache saved" anyway.
+
+    What that produced in production was subtle. The pre-enrichment save
+    (~47,000 chars) was small enough to land; the final save carrying pricing,
+    commitment, outside_date, direction and gate (~93,000) was not. So every
+    scan wrote a feed with correct prices and no enrichment, and the deals that
+    still had readings were the ones rolling_merge carried over from the last
+    write that fit. GSAT lost its blended pricing this way, along with 18 other
+    deals' commitment and outside-date readings.
+
+    fetch_sec_ticker_map already learned this — see the body POST there and its
+    comment about URL-path length. This is the same fix on the write that
+    matters more.
+    """
     if not REDIS_URL or not REDIS_TOKEN:
         return False
     try:
         payload = json.dumps(deals)
-        encoded = requests.utils.quote(payload, safe='')
+        # The RAW payload is the body. Upstash REST sets the key to the request
+        # body verbatim, so what lands in Redis is byte-identical to what the
+        # URL-path form used to store — redis_get needs no change and there is
+        # nothing to migrate. Wrapping it as {"value": ...} would have stored
+        # the wrapper too, and the reader would hand back the envelope.
         r = requests.post(
-            f"{REDIS_URL}/set/{CACHE_KEY}/{encoded}",
-            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
-            timeout=15
+            f"{REDIS_URL}/set/{CACHE_KEY}",
+            headers={
+                "Authorization": f"Bearer {REDIS_TOKEN}",
+                "Content-Type": "text/plain",
+            },
+            data=payload.encode('utf-8'),
+            timeout=30
         )
-        print(f"Redis set: {r.status_code} — {len(deals)} deals saved")
-        return r.status_code == 200
+        ok = r.status_code == 200
+        print(f"Redis set: {r.status_code} — {len(deals)} deals, "
+              f"{len(payload):,} bytes{'' if ok else ' — WRITE FAILED'}")
+        if not ok:
+            print(f"  Redis set body: {r.text[:300]}")
+        return ok
     except Exception as e:
         print(f"Redis set error: {e}")
         return False
@@ -316,7 +349,14 @@ def save_cache(records):
 
         if len(clean) >= 3:
             merged = rolling_merge(clean)
-            redis_set(merged)
+            # The return value is checked. Ignoring it is what let a failed
+            # Redis write print "Cache saved" for days while the enrichment
+            # silently never persisted.
+            _redis_ok = redis_set(merged)
+            if REDIS_URL and REDIS_TOKEN and not _redis_ok:
+                print(f"[Cache] REDIS WRITE FAILED — {len(merged)} deals were NOT "
+                      f"persisted. The live feed is now stale and any enrichment "
+                      f"in this scan is lost.")
             try:
                 tmp = CACHE_FILE + '.tmp'
                 # Exclude list fields from CSV — pd can't round-trip them.
@@ -327,7 +367,8 @@ def save_cache(records):
                 os.replace(tmp, CACHE_FILE)
             except:
                 pass
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache saved: {len(merged)} deals ({len(clean)} from scan, {len(merged)-len(clean)} carried over).")
+            _where = 'Redis + CSV' if _redis_ok else ('CSV only' if not (REDIS_URL and REDIS_TOKEN) else 'CSV ONLY — REDIS FAILED')
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Cache saved: {len(merged)} deals ({len(clean)} from scan, {len(merged)-len(clean)} carried over) [{_where}].")
     except Exception as e:
         print(f"save_cache error: {e}")
 
@@ -902,6 +943,44 @@ def cap_expected_close(close_date, outside):
     if expected <= od:
         return expected, None
     return od, od.isoformat()
+
+
+def pricing_integrity_failures(deals):
+    """
+    Deals that should carry a blended price and do not. Empty means healthy.
+
+    The barriers in deal_pricing protect against a WRONG blended number. Nothing
+    protected against NO blended number, and that is the failure that actually
+    shipped: GSAT's pricing object vanished from production for days while every
+    barrier passed on every scan, because the write that carried it was rejected
+    and the failure was never checked.
+
+    Two shapes, and the second is the one that bit:
+
+      contradiction -- all_passed is true but blended is None. Internally
+      inconsistent: the barriers cannot certify a number that is not there.
+
+      dropped -- a DEAL_STRUCTURES deal is in the feed with no pricing object at
+      all. From inside the scan this looks like nothing; from outside it is
+      indistinguishable from the pricing pass never having run.
+
+    Takes the feed as the frontend receives it, so a cached repr string counts
+    the same as a live dict.
+    """
+    failures = []
+    for d in deals or []:
+        tk = d.get('ticker')
+        if tk not in DEAL_STRUCTURES:
+            continue
+        p = parse_structured(d.get('pricing', {}))
+        if not isinstance(p, dict) or not p:
+            failures.append((tk, 'dropped: in DEAL_STRUCTURES but carries no '
+                                 'pricing object'))
+            continue
+        if p.get('blended') is None and p.get('all_passed'):
+            failures.append((tk, 'contradiction: every barrier passed but '
+                                 'blended is None'))
+    return failures
 
 
 def two_state_applies(cp, dp, bp):
@@ -2238,6 +2317,24 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     print(f"[Gate] blocked {_before - len(results)} unverified deal(s)")
             _clean = [{k: v for k, v in r.items() if k != '_filing_text'} for r in results]
             save_cache(_clean)
+
+            # Read the feed back and check the blended prices survived the write.
+            # This is the check that did not exist when GSAT's pricing silently
+            # stopped reaching production: the barriers all passed, the scan
+            # logged success, and the number was gone.
+            try:
+                _pf = pricing_integrity_failures(load_cache() or [])
+                if _pf:
+                    for _tk, _why in _pf:
+                        print(f"[PricingIntegrity] {_tk}: {_why}")
+                    print(f"[PricingIntegrity] {len(_pf)} deal(s) lost their "
+                          f"blended price between computing it and reading it "
+                          f"back — the cache write did not carry it")
+                else:
+                    print(f"[PricingIntegrity] all {len(DEAL_STRUCTURES)} "
+                          f"structured deal(s) round-tripped with a blended price")
+            except Exception as _pie:
+                print(f"[PricingIntegrity] check failed (non-fatal): {_pie}")
         except Exception as _ge:
             print(f"[Gate] error (non-fatal, nothing blocked): {_ge}")
     else:

@@ -11,7 +11,8 @@ from datetime import date
 from main import (parse_close_date, days_to_close, annualized_spread,
                  two_state_applies, resolve_tx_value, VERIFIED_TX_VALUES,
                  cap_expected_close, edgar_queries, get_break_price,
-                 VERIFIED_UNAFFECTED_PRICES, DEAL_SEARCH_LOOKBACK_DAYS)
+                 VERIFIED_UNAFFECTED_PRICES, DEAL_SEARCH_LOOKBACK_DAYS,
+                 pricing_integrity_failures, DEAL_STRUCTURES)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -236,6 +237,76 @@ check("AES's probability becomes readable again",
 check("only hand-read deals are overridden",
       list(VERIFIED_UNAFFECTED_PRICES), ['AES'],
       "a 150-day scan flags 7 of 12 as elevated; price alone cannot say which are leaks")
+
+print()
+print("BLENDED PRICE SURVIVES THE ROUND TRIP")
+print("-" * 78)
+
+# The barriers in deal_pricing protect against a WRONG blended number. Nothing
+# protected against NO blended number. GSAT's pricing object vanished from the
+# production feed for days while all thirteen barriers passed on every scan,
+# because the cache write that carried it was rejected and nobody checked.
+_GOOD = {'ticker': 'GSAT', 'pricing': {'blended': 85.36, 'all_passed': True}}
+
+check("a healthy structured deal raises nothing",
+      pricing_integrity_failures([_GOOD]), [])
+
+# Shape 1: internally inconsistent. The barriers cannot certify a number that
+# is not there.
+_f = pricing_integrity_failures(
+    [{'ticker': 'GSAT', 'pricing': {'blended': None, 'all_passed': True}}])
+check("barriers passing with no blended number is caught", len(_f), 1)
+check("and it is named a contradiction",
+      'contradiction' in _f[0][1] if _f else False, True,
+      _f[0][1] if _f else 'nothing raised')
+
+# Shape 2: the one that actually shipped. No pricing object at all, which from
+# outside the scan is indistinguishable from the pass never having run.
+for label, deal in [
+        ('no pricing key',   {'ticker': 'GSAT'}),
+        ('pricing is None',  {'ticker': 'GSAT', 'pricing': None}),
+        ('pricing is empty', {'ticker': 'GSAT', 'pricing': {}})]:
+    _f = pricing_integrity_failures([deal])
+    check(f"a structured deal with {label} is caught", len(_f), 1)
+    check(f"  and it is named dropped ({label})",
+          'dropped' in _f[0][1] if _f else False, True)
+
+# The exact production feed that prompted this: GSAT present, priced, spreading
+# off the $90 headline, with the pricing object gone.
+_PROD = [{'ticker': 'GSAT', 'dp': 90.0, 'cp': 82.05, 'sp_pct': 9.69,
+          'pricing': None, 'commitment': None, 'outside_date': None},
+         {'ticker': 'WBD', 'dp': 31.0, 'cp': 28.9}]
+_f = pricing_integrity_failures(_PROD)
+check("the production feed that broke reproduces the failure",
+      [t for t, _ in _f], ['GSAT'],
+      "20 deals, 19 without enrichment, only GSAT is structured")
+
+# Deals with no hand-verified structure are not this check's business — most of
+# the feed is all-cash and has no blended price by design.
+check("an unstructured deal with no pricing is not a failure",
+      pricing_integrity_failures([{'ticker': 'WBD', 'dp': 31.0}]), [])
+check("every ticker checked is one with a hand-verified structure",
+      all(t in DEAL_STRUCTURES for t, _ in pricing_integrity_failures(
+          [{'ticker': k} for k in list(DEAL_STRUCTURES) + ['WBD', 'AES']])), True)
+
+# A barrier legitimately failing is the system working. Only the pairing of a
+# passing verdict with a missing number is a defect.
+check("blended None with barriers FAILING is allowed through",
+      pricing_integrity_failures(
+          [{'ticker': 'GSAT', 'pricing': {'blended': None, 'all_passed': False}}]), [],
+      "the barriers refused the number, which is what they are for")
+
+# The feed reaches this check as repr strings off the CSV whenever Redis is
+# down, so the parse has to be the same on both paths.
+check("a cached repr string is read like a live dict",
+      pricing_integrity_failures(
+          [{'ticker': 'GSAT', 'pricing': "{'blended': 85.36, 'all_passed': True}"}]), [])
+check("a cached repr string still catches the contradiction",
+      len(pricing_integrity_failures(
+          [{'ticker': 'GSAT', 'pricing': "{'blended': None, 'all_passed': True}"}])), 1)
+
+check("an empty feed raises nothing", pricing_integrity_failures([]), [])
+check("a null feed raises nothing", pricing_integrity_failures(None), [])
 
 print()
 print("=" * 78)
