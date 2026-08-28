@@ -14,6 +14,10 @@ Fourth instance: commitment and outside_date readings were re-fetched every scan
 
 The flip side: caching on the document rather than on the reading means every extractor improvement is blocked by the cache until the marker is invalidated. Worth knowing before adding the next cached field.
 
+Any write whose failure is invisible must check its return value and name which store it reached. redis_set silently dropped every enriched write for days while save_cache printed "Cache saved" regardless, because it ignored the return. A log line that prints on success and failure alike is worse than no log line.
+
+Fifth and sixth instances, both of that shape: redis_set percent-encoded the whole feed into the URL path, so the enriched payload (106,794 chars) was rejected while the pre-enrichment one (54,082) fit — every scan wrote correct prices and no pricing, commitment or outside_date. And fetch_sec_ticker_map wrote {"value": ..., "ex": ...} as a JSON body, which Upstash stores verbatim, while the reader json.loads()'d it and looked for ticker_map at the top level — so the cache never hit and all 10,391 tickers were re-fetched on every start. Both fixed by putting the raw payload in the body. When a read looks like it never hits, compare the exact bytes the writer stores against the shape the reader expects.
+
 ## Gotchas
 - worksheet.csv is four days of hand verification and is NOT in git. Back it up.
 - Close Excel before any script touches a CSV.

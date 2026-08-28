@@ -81,24 +81,42 @@ def fetch_sec_ticker_map():
     cache_key = 'sec_ticker_map_v1'
 
     # ── Try Redis cache first ──────────────────────────────────────────────────
-    try:
-        r = requests.get(
-            f"{REDIS_URL}/get/{cache_key}",
-            headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
-            timeout=10
-        )
-        result = r.json().get('result')
-        if result:
-            raw = result if isinstance(result, str) else result.get('value', '')
-            if raw:
-                data = json.loads(raw)
-                if data.get('ticker_map'):
+    # The read and the write disagreed, and the disagreement was invisible: the
+    # write posted {"value": ..., "ex": ...} as a JSON body, Upstash stored that
+    # envelope verbatim, and the read did json.loads() on it and looked for
+    # 'ticker_map' at the top level. It found the envelope's keys instead, so
+    # every start fell through and re-fetched all 10,391 tickers from SEC while
+    # the write went on reporting nothing at all.
+    #
+    # Same shape as redis_set: an operation that looks like it works, with no
+    # check that it did. HIT and MISS are both logged now, so a silent
+    # regression here has to say so.
+    if not REDIS_URL or not REDIS_TOKEN:
+        print("[SEC] Ticker map cache MISS — no Redis configured")
+    else:
+        try:
+            r = requests.get(
+                f"{REDIS_URL}/get/{cache_key}",
+                headers={"Authorization": f"Bearer {REDIS_TOKEN}"},
+                timeout=10
+            )
+            result = r.json().get('result')
+            if not result:
+                print(f"[SEC] Ticker map cache MISS — key {cache_key} empty or expired")
+            else:
+                # Upstash returns the stored string. It is the payload itself,
+                # not a wrapper around it.
+                data = json.loads(result) if isinstance(result, str) else result
+                if isinstance(data, dict) and data.get('ticker_map'):
                     SEC_TICKER_MAP = data['ticker_map']
                     SEC_CIK_MAP    = data.get('cik_map', {})
-                    print(f"[SEC] Ticker map loaded from Redis: {len(SEC_TICKER_MAP)} tickers")
+                    print(f"[SEC] Ticker map cache HIT: {len(SEC_TICKER_MAP)} tickers "
+                          f"from Redis, SEC not called")
                     return
-    except Exception as e:
-        print(f"[SEC] Redis read error: {e}")
+                print(f"[SEC] Ticker map cache MISS — stored value has no "
+                      f"ticker_map (keys: {list(data)[:5] if isinstance(data, dict) else type(data).__name__})")
+        except Exception as e:
+            print(f"[SEC] Ticker map cache MISS — read error: {e}")
 
     # ── Fetch from SEC ─────────────────────────────────────────────────────────
     try:
@@ -124,20 +142,32 @@ def fetch_sec_ticker_map():
         SEC_CIK_MAP    = cik_map
         print(f"[SEC] Ticker map fetched fresh: {len(SEC_TICKER_MAP)} tickers")
 
-        # ── Write to Redis using body POST (URL-path would exceed length limits) ─
-        try:
-            payload = json.dumps({'ticker_map': ticker_map, 'cik_map': cik_map})
-            requests.post(
-                f"{REDIS_URL}/set/{cache_key}",
-                headers={
-                    "Authorization": f"Bearer {REDIS_TOKEN}",
-                    "Content-Type": "application/json"
-                },
-                json={"value": payload, "ex": 86400},
-                timeout=20
-            )
-        except Exception as e:
-            print(f"[SEC] Redis write error (non-fatal): {e}")
+        # ── Write to Redis: RAW payload in the body ────────────────────────
+        # The URL path cannot carry this — that part was always right. What was
+        # wrong is the shape: json={"value": ..., "ex": ...} makes Upstash store
+        # the envelope, which the reader above then cannot see through. The
+        # payload goes in the body as-is, and the TTL is a query parameter,
+        # which is where Upstash REST actually reads it from.
+        if REDIS_URL and REDIS_TOKEN:
+            try:
+                payload = json.dumps({'ticker_map': ticker_map, 'cik_map': cik_map})
+                w = requests.post(
+                    f"{REDIS_URL}/set/{cache_key}?EX=86400",
+                    headers={
+                        "Authorization": f"Bearer {REDIS_TOKEN}",
+                        "Content-Type": "text/plain",
+                    },
+                    data=payload.encode('utf-8'),
+                    timeout=20
+                )
+                if w.status_code == 200:
+                    print(f"[SEC] Ticker map cached: {len(payload):,} bytes, 24h TTL")
+                else:
+                    print(f"[SEC] Ticker map cache WRITE FAILED: HTTP "
+                          f"{w.status_code} — {w.text[:200]}. Next start will "
+                          f"re-fetch from SEC.")
+            except Exception as e:
+                print(f"[SEC] Ticker map cache WRITE FAILED (non-fatal): {e}")
 
     except Exception as e:
         print(f"[SEC] Ticker map fetch error: {e}")

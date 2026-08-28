@@ -309,5 +309,32 @@ check("an empty feed raises nothing", pricing_integrity_failures([]), [])
 check("a null feed raises nothing", pricing_integrity_failures(None), [])
 
 print()
+print("TICKER MAP CACHE ROUND-TRIPS")
+print("-" * 78)
+
+# The write posted {"value": ..., "ex": ...} as a JSON body. Upstash stores a
+# request body verbatim, so what landed in Redis was the ENVELOPE -- and the
+# reader json.loads()'d it and looked for 'ticker_map' at the top level, where
+# it found 'value' and 'ex' instead. Every start missed and re-fetched all
+# 10,391 tickers, and neither end reported anything.
+import json as _json
+_MAP = {'ticker_map': {'AES': 'The AES Corporation'}, 'cik_map': {'AES': '0000874761'}}
+
+# What the old write stored, and why the reader could not see through it.
+_envelope = _json.dumps({'value': _json.dumps(_MAP), 'ex': 86400})
+check("the old write stored an envelope, not the payload",
+      sorted(_json.loads(_envelope)), ['ex', 'value'],
+      "the reader looked for 'ticker_map' among these")
+check("so the old read found no ticker_map",
+      _json.loads(_envelope).get('ticker_map'), None)
+
+# What the fixed write stores: the payload itself, readable in one hop.
+_raw = _json.dumps(_MAP)
+check("the fixed write stores the payload itself",
+      _json.loads(_raw).get('ticker_map'), {'AES': 'The AES Corporation'})
+check("and the cik_map rides along with it",
+      _json.loads(_raw).get('cik_map'), {'AES': '0000874761'})
+
+print()
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")
