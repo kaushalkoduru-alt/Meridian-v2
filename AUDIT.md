@@ -1624,3 +1624,143 @@ merger agreement at EX-2.1 (359,662 characters) and two press releases. The
 `accession` on the record is correct.
 
 `test_formulas.py` is at 161 checks.
+
+---
+
+# Extending the close-date search to the agreement and the proxy
+
+2026-08-28. Six deals with no close date — BOW, BZH, CBZ, DSGR, RAMP, BWMN —
+searched across their merger agreement and any 2026 proxy, in addition to the
+8-K and press release already checked.
+
+**One of the six states a close date. Five state none anywhere.** And the one
+that does cannot currently be read, for reasons that are not about where we
+looked.
+
+## What each source yielded
+
+| Deal | EX-2.1 | Proxy | Verdict |
+|---|---|---|---|
+| BOW | 268,130 chars — nothing | DEF 14A (annual) — nothing | no date stated |
+| BZH | 380,919 chars — nothing | none filed since 2026-01-01 | no date stated |
+| **CBZ** | 397,141 chars — nothing | **PREM14A 2026-08-27 — states it** | **date found** |
+| DSGR | 334,448 chars — nothing | none filed since 2026-01-01 | no date stated |
+| RAMP | 336,132 chars — nothing | DEFM14A + PREM14A, 1.18M chars each — nothing | no date stated |
+| BWMN | 356,095 chars — nothing | DEF 14A (annual) — nothing | no date stated |
+
+The merger agreements are unanimous: **none of the six states expected timing**.
+That is the expected result and worth recording rather than re-testing later.
+Agreements define closing mechanically — "the Closing shall occur on the second
+Business Day following satisfaction of the conditions" — and a mechanical
+definition names no quarter. Roughly 1.7 million characters of agreement text
+across the six produced no dated guidance at all.
+
+RAMP is the strongest negative. Its DEFM14A and PREM14A run 1.18 million
+characters each and still contain no expected-close phrase near close, complete
+or consummate language. A proxy that size not stating timing is a real absence,
+not a search that came up short.
+
+## CBZ · the one date, and why it still does not resolve
+
+CBZ's PREM14A, filed 2026-08-27, states it twice:
+
+> "**Effective Time of the Merger; Closing.** Assuming timely satisfaction of
+> necessary closing conditions set forth in the Merger Agreement, including the
+> adoption of the Merger Agreement by the Company's stockholders, we antic…"
+> — offset 27,140
+
+> "…completing the Merger as quickly as possible. We currently anticipate that
+> the Merger will be **completed during the fourth quarter of 2026**, but we
+> cannot be certain when or if the conditions to the Merger will be satisfied…"
+> — offset 102,755
+
+That is unambiguous guidance from the target itself, dated three weeks ago.
+Against a 2026-07-29 announcement it would pass `validate_close_date` without
+difficulty — Q4 2026 resolves to 2026-12-31, comfortably after.
+
+**It does not resolve, and extending the search is not sufficient to make it.**
+Two independent blockers, neither of which is about which documents we read:
+
+**The phrasing.** `extract_close_date` cannot read "fourth quarter of 2026" even
+handed the sentence alone:
+
+```
+extract_close_date('We currently anticipate that the Merger will be completed
+                    during the fourth quarter of 2026, ...')   ->  'TBD'
+parse_close_date('fourth quarter of 2026')                     ->  2026-12-31
+```
+
+The resolver handles it. The extractor does not. Its patterns carry an explicit
+accommodation for the half-year form — `(?:half[-\s]+of[-\s]+)?` — and no
+equivalent for the quarter form, so "second half of 2026" is read and "fourth
+quarter of 2026" is not. That looks like an omission in a pattern that already
+intended to cover written-out periods, rather than a deliberate exclusion.
+
+**The cap.** The phrase sits at offset 102,755 of an 884,167-character proxy.
+`CLOSE_DATE_SCAN_CHARS` is 25,000, which is right-sized for an 8-K and is
+nothing against a proxy.
+
+**I have not changed either.** The instruction was to extend the search rather
+than widen a pattern, and both of these are pattern-and-cap changes. They are
+put here as a decision:
+
+- Adding `(?:quarter[-\s]+of[-\s]+)?` alongside the existing `half of` form is
+  narrow — `(?:first|second|third|fourth)\s+quarter\s+of\s+20\d{2}` can only
+  mean a calendar quarter, and the value still passes `validate_close_date`. It
+  is the smallest change that recovers CBZ.
+- The cap would need a per-document-type value: 25,000 for an 8-K, something far
+  larger for a proxy. Raising it globally reintroduces the exposure the audit
+  already noted, since a proxy contains hundreds of dates that are not guidance.
+
+Both are needed together. Either alone leaves CBZ at TBD.
+
+## Two corrections to the earlier diagnosis
+
+**BOW and DSGR were read from the wrong CIK, so the earlier "no dated close
+guidance" for those two rested on nothing.** My diagnostic scripts hardcoded
+CIK `0002006986` for BOW and `0000703351` for DSGR. Those are **Adagio Medical
+Holdings** and **Brinker International** — unrelated companies. Every fetch
+returned EDGAR's `NoSuchKey` error XML, which BeautifulSoup rendered as a couple
+of hundred characters of text, and the searches then found nothing in it. The
+"213-char 8-K body" and "210-char 8-K body" reported earlier as evidence of
+incorporation-by-reference filings were error pages.
+
+The product was never affected: `SEC_CIK_MAP` holds the correct values
+(BOW → 0002002473, DSGR → 0000703604). This was my error, not the pipeline's.
+Both have now been read at the correct paths — 268,130 and 334,448 characters of
+merger agreement, plus both press releases — and the conclusion survives: neither
+states a close date. But it needed redoing before it could be relied on.
+
+That is the second time this session a diagnostic of mine produced a wrong
+reading by looking at the wrong source; the first was reading the local cache
+instead of production for C2 and C5. Both were caught by checking the data
+again rather than by the code.
+
+**BOW's merger agreement is invisible to the exhibit finder.** It is filed as
+`triplecrown-mergeragreemen.htm` — the deal's project name, with no `ex2` token
+anywhere in it:
+
+```
+_pick_ex2(['triplecrown-mergeragreemen.htm'])  ->  None
+_pick_ex2(['d131211dex21.htm'])                ->  'd131211dex21.htm'
+```
+
+`_EX2_NAME` matches on the filename, and the index-page fallback added for CZR
+applies the same test, so neither path reaches it. This explains BOW carrying no
+commitment reading and no outside date while every sibling deal has both — the
+268,130-character agreement is sitting in the accession, fetchable, and named in
+a way the finder cannot see. It is a different failure from CZR's (whose
+`index.json` omitted a correctly-named document); here the document is listed and
+the name is the obstacle. Worth fixing by falling back to the EDGAR **document
+type** column on the index page, which reads `EX-2.1` regardless of filename.
+
+## Answer
+
+**One of six resolves as a source finding: CBZ, from its PREM14A.** It does not
+yet resolve in the product, and closing that gap needs a pattern form and a
+per-document cap rather than a wider search.
+
+**Five state no expected close date in any of the four document types.** For
+BOW, BZH, DSGR, RAMP and BWMN, `TBD` is the correct answer and stays. RAMP's two
+proxies at 1.18 million characters each are the clearest case: the absence is
+real, not unreached.
