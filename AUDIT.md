@@ -940,3 +940,130 @@ the announcement date, or the dividend-adjustment artifact in #8.
 - The two parsers are now duplicated logic in two languages held in agreement by
   a test rather than by construction. Storing `days_to_close` on the record —
   which this change starts doing — is the path to deleting the JS copy.
+
+---
+
+# Diagnosis — the deals showing no annualized figure
+
+2026-08-28, against the production feed. No code changed; the parser is not
+widened here, because two of the three causes would not be helped by widening it
+and one of them would be made worse.
+
+The feed read 19 deals with 8 missing `ann` when this ran, against the 20/9
+reported. Deals enter and leave between scans; the split below is unaffected.
+
+## The split
+
+| | Cause | Count | Deals |
+|---|---|---:|---|
+| **(a)** | No close date in the filing — the em-dash is correct | **5** | BOW, BZH, CBZ, DSGR, RAMP |
+| **(b)** | Stated in the filing, not read | **1** | SLAB |
+| **(c)** | Parsed or present, dropped downstream | **2** | APGE, BWMN |
+
+**The single (b) is not a missing phrasing.** That matters, because widening the
+patterns was the obvious response and it would have fixed nothing.
+
+## (a) · Five deals genuinely state no close date
+
+BOW, BZH, CBZ, DSGR and RAMP were each searched across their 8-K body and their
+press release for any quarter/half/early-mid-late token within 150 characters of
+close, complete or consummate language. Nothing in any of them.
+
+Three of the five (BOW, CBZ, DSGR) also carry `Undisclosed` acquirers, and two
+have 8-K bodies of 213 and 210 characters — these are incorporation-by-reference
+filings whose substance is entirely in exhibits. For these the em-dash is the
+honest output and there is nothing to fix.
+
+## (b) · SLAB states it twice and the reader never sees it — the 5,000-char cap
+
+`extract_close_date` searches `clean_text[:5000]`. SLAB's guidance appears in
+both documents, and both times past that boundary:
+
+```
+d62897d8k.htm      offset 12,483 / 29,531
+  "...The parties anticipate the Merger to close in the first half of 2027,
+   subject to, among other conditions, approval by the Company's stockholders..."
+
+d62897dex991.htm   offset  5,517 / 18,890
+  "...The transaction is expected to close in the first half of 2027, subject
+   to receipt of regulatory approvals and other customary..."
+```
+
+The press release misses the window by 517 characters.
+
+**The patterns handle this phrasing perfectly.** Given the sentence directly,
+`extract_close_date` returns `'first half of 2027'` and `parse_close_date`
+resolves it to 2027-06-30. Given the same text at offset 4,900 it still works;
+at 6,000 it returns `TBD`. The boundary is the whole defect:
+
+```
+extract_close_date(sentence)                -> 'first half of 2027'
+extract_close_date('x'*4900 + sentence)     -> 'first half of 2027'
+extract_close_date('x'*6000 + sentence)     -> 'TBD'
+```
+
+So this is a **window** problem, not a **vocabulary** problem. Widening the
+phrase patterns would not have moved SLAB by one character, and the fix — if one
+is wanted — is to raise or remove the cap, which is a different change with a
+different risk: the cap is what stops the reader wandering into the merger
+agreement, where dozens of dates appear in contexts that are not guidance.
+
+The related check the rewrite raised: this week's parser refuses `2027` on its
+own ("The parties expect the transaction to close in 2027") because a bare year
+with no qualifier trips the abstention guard. That is deliberate and it is not
+what is happening to any of these nine — every (a) deal states no date at all,
+and SLAB states a fully qualified one.
+
+## (c) · Two deals whose close date never reaches the calculation
+
+Neither APGE's nor BWMN's close date comes from the filing. `extract_close_date`
+returns `TBD` for both 8-Ks, and neither document contains a quarter token inside
+the 5,000-char window at all. Both values came from the **LLM enrichment pass**,
+and that pass has two problems.
+
+**It writes `close_date` without recomputing what depends on it.** At
+[main.py:2003](main.py:2003):
+
+```python
+if deal.get('close_date') == 'TBD':
+    deal['close_date'] = cd.strip()
+    enriched = True
+```
+
+`days_to_close` and `ann` were computed hundreds of lines earlier, at deal
+construction, from the `TBD` that was there at the time — so both are `None` and
+stay `None`. APGE therefore shows `close_date: Q3 2026`, which `parse_close_date`
+resolves to 2026-09-30 without complaint, beside `days_to_close: None` and no
+annualized figure. The date is present, parseable, and never used. This is the
+same shape as the enrichment-ordering bug already recorded in CLAUDE.md: a field
+set after the thing that consumes it has already run.
+
+**Its output is not checked against the filing.** BWMN carries `close_date:
+Q2 2026` on a deal announced **2026-08-10**. Q2 2026 ended six weeks before the
+announcement. `days_to_close` is **-61** and `annualized_spread` correctly
+refuses a passed date — so BWMN's em-dash is right by accident, arrived at
+through a fabricated date rather than an absent one. Nothing in the pipeline
+compares an enriched close date against the announcement date it must follow.
+
+## What this implies for the response
+
+The three causes need three different things, which is why they were worth
+separating before touching the parser.
+
+- **(a), five deals** — nothing. The em-dash is the correct output and the
+  feed is being honest. §8's freshness work would let it say *"not disclosed"*
+  rather than showing a blank, which is a display improvement, not a parser one.
+- **(b), one deal** — a decision about the 5,000-character cap, not a
+  vocabulary change. Raising it recovers SLAB and any other deal whose guidance
+  sits deep in an 8-K; it also exposes the reader to the merger agreement's
+  dates, which is what the cap exists to prevent. Scoping the search to the
+  press release exhibit and the 8-K body while raising the cap within them would
+  get both, and is the option I would put first.
+- **(c), two deals** — a real bug and independent of the parser. The enrichment
+  pass must recompute `days_to_close` and `ann` after it writes `close_date`,
+  and it must reject a close date that precedes the announcement. BWMN's Q2 2026
+  would have been caught by the second check alone.
+
+**Nine deals do not lack a stated close date.** Five genuinely do, one states it
+clearly and is not read for a reason unrelated to phrasing, and two have dates
+that are either unused or wrong. Widening the parser addresses none of them.
