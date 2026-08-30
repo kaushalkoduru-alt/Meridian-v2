@@ -1504,3 +1504,123 @@ net-cash target below parity, an order-of-magnitude-low value being caught, the
 three unknowable-input cases passing, GSAT reading Strategic under either
 `deal_type`, both real PE buyers still caught by name, and the four ways an
 absent acquirer yields `Unknown`.
+
+---
+
+# BWMN's close date — cause (c), and why the validator never saw it
+
+2026-08-28. The validator added in `1429e54` works. It was wired to one path,
+and BWMN's value takes a different one.
+
+## Ruling out (a) and (b)
+
+**(b) is out.** `parse_close_date('Q2 2026')` resolves to 2026-06-30 against a
+2026-08-10 announcement, and the validator refuses it correctly when asked:
+
+```
+validate_close_date('Q2 2026', '2026-08-10')
+  -> (None, "backwards: 'Q2 2026' resolves to 2026-06-30,
+             before the 2026-08-10 announcement")
+```
+
+**(a) is out.** The fix is deployed — `close_date_source` and `acquirer_source`
+appear on other deals — and nothing is cached. Every deal in the feed carries a
+`fetched` timestamp from the same three-minute window (22:01–22:03), so all 19
+were freshly scanned and none was carried by `rolling_merge`. BWMN's "Q2 2026"
+is produced fresh on every scan.
+
+## (c) · The value comes from the filing, not the model
+
+`close_date_source` is `None` on BWMN, and that field is only set on the
+enrichment path. The value comes from `extract_close_date(full_ct)` at deal
+construction, which has no validation at all.
+
+Reading every document in the accession as the scan does:
+
+| Document | chars | `extract_close_date` |
+|---|---:|---|
+| `d69901d8k.htm` | 41,774 | `TBD` |
+| `d69901dex101.htm` | 40,691 | `TBD` |
+| `d69901dex21.htm` | 359,662 | `TBD` |
+| `d69901dex991.htm` | 42,328 | `'2026'` |
+| **`d69901dex992.htm`** | **16,180** | **`'Q2 2026'`** |
+
+EX-99.2 is the **merger** press release — *"Bowman Consulting Group Enters into
+Definitive Agreement to be Acquired by Bernhard Capital Partners for $43.00 Per
+Share in Cash"*. The Q-token it yields is at offset 4,803, in a cross-reference
+to that same morning's **separate earnings release**:
+
+> "…Bowman's **Q2 2026** Earnings Results — In a separate press release today,
+> Bowman announced…"
+
+Bowman filed one 8-K covering both its quarterly results and its acquisition.
+The standalone pattern `\b(Q[1-4]\s+20\d{2})\b` requires no close, complete or
+consummate language nearby, so it matched a heading about earnings and returned
+it as merger close guidance.
+
+**And a bad value here suppresses the guarded path.** The enrichment pass only
+runs when `close_date == 'TBD'`:
+
+```python
+needs_cd = deal.get('close_date') == 'TBD'
+```
+
+Because the regex produced something, `needs_cd` was False, the enrichment pass
+skipped BWMN entirely, and the validator that would have caught the date was
+never asked. An unvalidated path did not merely bypass the check — it prevented
+the checked path from running.
+
+## The fix, and the exposure it exposes
+
+`validate_enriched_close_date` is renamed `validate_close_date` — it was never
+enrichment-specific, only enrichment-wired — and is now applied on **every path
+that writes the field**: the construction regex, the tender-offer expiry lookup,
+and the enrichment pass. A rejected value returns the field to `TBD`, which also
+re-opens the enrichment path that the bad value had been blocking.
+
+**Across the feed it rejects one value: BWMN's.** The other thirteen dated deals
+pass, including SLAB's newly recovered "first half of 2027" and HZO's bare
+"2026" on an 2026-08-10 announcement.
+
+### Which other fields have this exposure
+
+The question was whether a validator guarding only new writes leaves the feed
+uncorrected. The real shape here is narrower and more useful: **a validator
+guarding only one of several paths that write the same field.**
+
+| Field | Paths that write it | Guarded |
+|---|---|---|
+| `close_date` | regex · tender expiry · hardcode · LLM | **all four** (was: LLM only) |
+| `tx_value` | regex · equity calc · hardcode · LLM | **all four** — `52ec1d5` wired both ends |
+| `acquirer` | regex · hardcode · LLM | **LLM only** |
+
+`acquirer` is the remaining gap, and it is milder: `extract_acquirer` takes its
+answer from the filing by construction, so the filing-presence check that makes
+the LLM guard useful is trivially satisfied. What it does not get is the
+target-name subset test, which is worth adding when §7 touches this field.
+
+Hardcodes are hand-verified by definition and are the intended override, so they
+are correctly unguarded in all three rows.
+
+## BWMN's acquirer type — checked against the filing, and correct
+
+Unlike GSAT, this one did not inherit. EX-99.2's headline reads *"…to be
+Acquired by **Bernhard Capital Partners** for $43.00 Per Share in Cash"*, and
+Bernhard Capital Partners is a private equity firm. `deal_type` is `All Cash`,
+so there was nothing for the old short-circuit to propagate even before it was
+removed:
+
+```
+get_acquirer_type('All Cash', 'Bernhard Capital Partners') -> Private Equity
+```
+
+That verdict comes from the acquirer's own name via the `capital` and `partners`
+keywords. **BWMN's `acquirer_type: Private Equity` is right, and right for the
+right reason.**
+
+One thing the same reading corrects: the earlier diagnosis called this accession
+an earnings 8-K. It is both — Item 2.02 and the merger in one filing, with the
+merger agreement at EX-2.1 (359,662 characters) and two press releases. The
+`accession` on the record is correct.
+
+`test_formulas.py` is at 161 checks.

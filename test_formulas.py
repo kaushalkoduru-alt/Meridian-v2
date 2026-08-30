@@ -14,7 +14,7 @@ from main import (parse_close_date, days_to_close, annualized_spread,
                  VERIFIED_UNAFFECTED_PRICES, DEAL_SEARCH_LOOKBACK_DAYS,
                  pricing_integrity_failures, DEAL_STRUCTURES,
                  blended_governs, apply_blended_to_spread,
-                 validate_enriched_close_date, validate_enriched_acquirer,
+                 validate_close_date, validate_enriched_acquirer,
                  ANNUALIZE_MIN_DAYS, CLOSE_DATE_SCAN_CHARS, extract_close_date,
                  tx_value_plausible, get_acquirer_type,
                  TX_VALUE_MIN_RATIO, TX_VALUE_MAX_RATIO)
@@ -406,21 +406,21 @@ print("-" * 78)
 # BWMN carried close_date "Q2 2026" on a deal announced 2026-08-10 -- six weeks
 # after that quarter ended. It did not come from the filing; extract_close_date
 # returns TBD for that 8-K. A model produced it and nothing objected.
-_v, _why = validate_enriched_close_date('Q2 2026', '2026-08-10')
+_v, _why = validate_close_date('Q2 2026', '2026-08-10')
 check("BWMN: a close date before the announcement is refused", _v, None)
 check("  and the refusal says why",
       'backwards' in (_why or ''), True, _why)
 check("APGE: a plausible one is kept",
-      validate_enriched_close_date('Q3 2026', '2026-06-22'), ('Q3 2026', None))
+      validate_close_date('Q3 2026', '2026-06-22'), ('Q3 2026', None))
 check("a date beyond any merger horizon is refused",
-      validate_enriched_close_date('2035', '2026-01-01')[0], None,
+      validate_close_date('2035', '2026-01-01')[0], None,
       "3,651 days past announcement")
 check("an unreadable phrase is refused",
-      validate_enriched_close_date('sometime soon', '2026-01-01')[0], None)
+      validate_close_date('sometime soon', '2026-01-01')[0], None)
 for _empty in (None, '', 'null', 'TBD', 'unknown'):
-    check(f"{_empty!r} is refused", validate_enriched_close_date(_empty, '2026-01-01')[0], None)
+    check(f"{_empty!r} is refused", validate_close_date(_empty, '2026-01-01')[0], None)
 check("with no announcement date to judge against, it stands",
-      validate_enriched_close_date('Q3 2026', None), ('Q3 2026', None),
+      validate_close_date('Q3 2026', None), ('Q3 2026', None),
       "nothing to compare to is not grounds to discard")
 
 # The acquirer had a guard, but it only compared against the TARGET's name. It
@@ -547,6 +547,32 @@ check("a strategic buyer stays strategic",
 for _none in ('Undisclosed', '', None, 'none'):
     check(f"{_none!r} yields Unknown, not a default",
           get_acquirer_type('Private Equity', _none), 'Unknown')
+
+print()
+print("CLOSE DATE IS VALIDATED ON EVERY PATH, NOT JUST THE MODEL'S")
+print("-" * 78)
+
+# BWMN's "Q2 2026" never went near the model. extract_close_date found it in
+# EX-99.2, in a cross-reference to that morning's separate earnings release --
+# "Bowman's Q2 2026 Earnings Results" -- because the standalone Q-pattern needs
+# no close language nearby. The validator existed and guarded only the
+# enrichment path, so it never saw the value.
+check("BWMN: the construction path is now checked too",
+      validate_close_date('Q2 2026', '2026-08-10')[0], None,
+      "regex-sourced, six weeks before the announcement")
+
+# A bad regex hit also SUPPRESSED the guarded path: enrichment only runs when
+# close_date == 'TBD'. Rejecting to TBD is what lets the validated reader run.
+check("rejection returns the field to TBD so enrichment can try",
+      validate_close_date('Q2 2026', '2026-08-10')[0] is None, True)
+
+check("SLAB's recovered date is unaffected",
+      validate_close_date('first half of 2027', '2026-02-04'),
+      ('first half of 2027', None))
+check("a tender expiry after announcement passes",
+      validate_close_date('2026-10-20', '2026-06-24')[0], '2026-10-20')
+check("a tender expiry before announcement is refused",
+      validate_close_date('2026-05-01', '2026-06-24')[0], None)
 
 print()
 print("=" * 78)

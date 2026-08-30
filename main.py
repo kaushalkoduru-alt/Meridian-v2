@@ -1024,7 +1024,7 @@ def cap_expected_close(close_date, outside):
 ENRICHED_CLOSE_MAX_DAYS = 1260          # ~3.5 years past announcement
 
 
-def validate_enriched_close_date(cd, announced, now=None):
+def validate_close_date(cd, announced, now=None):
     """
     A model-produced close date, or None with the reason it was refused.
 
@@ -1940,11 +1940,33 @@ def fetch_deals_from_edgar():
                     if not dp: continue
                     # Regex extraction only — no Groq calls
                     close_date=extract_close_date(full_ct)
+                    # Validated HERE too, not only after enrichment. BWMN's
+                    # "Q2 2026" never went near the model: the regex found it in
+                    # EX-99.2, in a cross-reference to that morning's separate
+                    # earnings release — "Bowman's Q2 2026 Earnings Results" —
+                    # because the standalone Q-pattern requires no close
+                    # language nearby. The deal was announced 2026-08-10, six
+                    # weeks after that quarter ended.
+                    #
+                    # Worse, a bad value here SUPPRESSES the guarded path: the
+                    # enrichment pass only runs when close_date == 'TBD', so an
+                    # unvalidated regex hit stops the validated reader from ever
+                    # being asked.
+                    if close_date and close_date != 'TBD':
+                        _cdok, _cdwhy = validate_close_date(close_date, src['file_date'])
+                        if not _cdok:
+                            print(f"  [CloseDate] {ticker}: REJECTED — {_cdwhy}")
+                            close_date = 'TBD'
                     # For tender offers, try to get actual expiration date from SC TO-T filing
                     if deal_type == 'Tender Offer' and close_date == 'TBD':
                         to_date = get_tender_offer_expiration(ticker, cik)
                         if to_date:
-                            close_date = to_date
+                            _tok, _twhy = validate_close_date(to_date, src['file_date'])
+                            if _tok:
+                                close_date = to_date
+                            else:
+                                print(f"  [CloseDate] {ticker}: tender expiry "
+                                      f"REJECTED — {_twhy}")
                             print(f"  [TO] {ticker} expiration: {to_date}")
                     tx_value, tx_value_source = extract_transaction_value(full_ct)
                     # Checked against this company before anything downstream
@@ -2211,7 +2233,7 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                                 print(f"  [Enrich] {ticker} tx_value: {deal['tx_value']}B "
                                       f"(model estimate, not filing-extracted)")
                         if deal.get('close_date') == 'TBD':
-                            _cd, _why = validate_enriched_close_date(cd, deal.get('filed'))
+                            _cd, _why = validate_close_date(cd, deal.get('filed'))
                             if _cd:
                                 deal['close_date'] = _cd
                                 deal['close_date_source'] = 'llm_enriched'
