@@ -1394,3 +1394,113 @@ The four fields already carrying real provenance are the model to copy.
 own timestamp, and a hand-verified structure that records the accession it was
 read from. Nothing else in the record approaches it, and it is worth noting that
 it is also the only field where a bad value has ever been caught before display.
+
+---
+
+# Results — the two live errors from the provenance inventory
+
+2026-08-28. Both are DATA errors with a FORMULA cause, so both fixes are to the
+mechanism. Neither value is hardcoded.
+
+## 1 · A transaction value is now checked against its own company
+
+`tx_value_plausible()` compares the extracted value to `shares_outstanding ×
+deal_price` and rejects anything wildly inconsistent with it. On rejection the
+value is nulled at the point of extraction, which lets the existing equity-calc
+fallback produce a defensible number in its place rather than leaving a blank.
+The same check runs on the enrichment path, so a model cannot route around it.
+
+**The band came from the feed, not from intuition.** Ratio of stored `tx_value`
+to computed equity value, all 19 production deals:
+
+```
+0.97  0.99  1.00  1.00  1.00  1.07  1.08  1.09  1.13  1.18
+1.19  1.20  1.27  1.28  1.30  1.34          <- sixteen deals, near parity
+2.46  BZH                                   <- genuinely leveraged
+2.79  CZR                                   <- genuinely leveraged
+20.10 CBZ                                   <- 7x beyond the next-highest
+```
+
+The ratio is enterprise-to-equity in all but name: legitimately above 1 for a
+target carrying debt, legitimately below 1 for one carrying net cash. The
+ceiling is **5.0x** — clear of Caesars at 2.79x with room for an LBO target more
+leveraged than anything in the feed — and the floor **0.4x**, which still
+catches a value an order of magnitude too small. CBZ is rejected with four times
+the margin of the nearest real value.
+
+### What the check rejects across the feed
+
+**CBZ, and nothing else.**
+
+```
+CBZ   $60.0B is 20.1x this deal's equity value
+      ($2.98B = 54,263,879 shares x $55.00), above the 5.0x ceiling
+```
+
+The other eighteen pass, including both leveraged targets. So CBZ is alone —
+which is the answer to whether this was one bad extraction or a systemic one,
+and it is the better of the two answers.
+
+Unknowable inputs pass rather than reject: no share count, no deal price, no
+`tx_value`. Refusing on absence would discard good values every time yfinance is
+unavailable, which trades a rare wrong number for a frequent missing one.
+
+## 2 · Acquirer type is read from the acquirer
+
+`get_acquirer_type` opened with `if deal_type == 'Private Equity': return
+'Private Equity'`, short-circuiting before it ever looked at the buyer. GSAT
+reached production as `acquirer_type: Private Equity` with **Amazon** as the
+acquirer, because its `deal_type` had been set to Private Equity by whichever
+EDGAR query matched first. The second field looked like an independent
+judgement and was a copy of the first.
+
+That branch is gone. The verdict now comes from the acquirer's own name, and a
+deal with no named buyer returns **`Unknown`** rather than defaulting to
+`Strategic` — the old default was a claim, not an absence.
+
+The `deal_type` parameter is kept and deliberately unused, so call sites do not
+move and so the removed dependency stays visible in the signature.
+
+**Change across the feed: GSAT only.**
+
+```
+GSAT   Private Equity -> Strategic     (acquirer Amazon, deal_type Private Equity)
+```
+
+Every other deal's type was already derived from its acquirer's name and is
+unchanged, including both genuine PE buyers — Arcline and Bernhard Capital
+Partners — which are now caught by their own names rather than by a `deal_type`
+that may itself be wrong.
+
+## The same inheritance shape elsewhere
+
+`deal_type` is the common parent, and it is the field the inventory flagged as
+having no provenance label and no validation. Three more things read it:
+
+| Consumer | What it inherits | Live effect |
+|---|---|---|
+| `score_deal` | +10 All Cash / +8 Tender Offer / **+5 Private Equity** | GSAT scores **5 points low** on a misclassification |
+| equity-calc fallback | only fires for `All Cash` / `Tender Offer` | a misclassified deal gets no `tx_value` fallback |
+| tender-offer expiry lookup | only fires for `Tender Offer` | a misclassified deal loses a real close date |
+
+**The score one is live now.** GSAT is typed Private Equity, so it takes the +5
+band instead of the +10 its all-cash structure earns — a 5-point deficit on a
+153-point scale, on a deal whose acquirer is Amazon. I have not changed it:
+altering the score weights is §9 work, and adding a correction on top of six
+unvalidated weights would make the number harder to reason about, not easier.
+Fixing `deal_type` itself is what resolves all three, and that is a validation
+problem rather than an arithmetic one.
+
+One smaller finding from the same sweep: `get_regulatory_risk(ticker, acquirer,
+tx_value, deal_type)` takes `deal_type` and never reads it. Harmless, but it
+reads as though regulatory exposure depends on deal structure when it does not —
+the tags come from size and sector alone.
+
+## Coverage
+
+`test_formulas.py` is at 156 checks. The new ones cover CBZ at 20.1x, the same
+deal's true value passing, both leveraged targets surviving the ceiling, a
+net-cash target below parity, an order-of-magnitude-low value being caught, the
+three unknowable-input cases passing, GSAT reading Strategic under either
+`deal_type`, both real PE buyers still caught by name, and the four ways an
+absent acquirer yields `Unknown`.

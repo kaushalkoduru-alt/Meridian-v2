@@ -742,9 +742,27 @@ def get_risk(spread_pct, score):
     return 'Medium'
 
 def get_acquirer_type(deal_type, acquirer):
-    if deal_type == 'Private Equity': return 'Private Equity'
+    """
+    What kind of buyer this is, read from the BUYER.
+
+    `deal_type` is accepted and deliberately not consulted. It used to short
+    -circuit the whole function -- `if deal_type == 'Private Equity': return
+    'Private Equity'` -- which made this field inherit a verdict from a field
+    that is itself unvalidated and unlabelled. GSAT reached production as
+    `acquirer_type: Private Equity` with **Amazon** as the acquirer, because its
+    deal_type had been set to Private Equity by whichever EDGAR query matched
+    first. One unchecked field propagated into a second, and the second looked
+    like an independent judgement.
+
+    The parameter stays so call sites do not move, and because removing it would
+    hide that this dependency was once here.
+    """
+    if not acquirer or str(acquirer).strip().lower() in ('', 'undisclosed', 'none'):
+        # No buyer named, so no honest verdict. 'Strategic' was the old default
+        # and it is a claim, not an absence.
+        return 'Unknown'
     pe_kw = ['capital','partners','equity','ventures','holdings','fund','blackstone','kkr','apollo','carlyle','vista','thoma','francisco','advent','permira','clearlake','general atlantic','arcline']
-    if acquirer and any(kw in acquirer.lower() for kw in pe_kw): return 'Private Equity'
+    if any(kw in acquirer.lower() for kw in pe_kw): return 'Private Equity'
     return 'Strategic'
 
 # VERIFIED_DEAL_TYPES — manual override for deals where the scanner's stale-filing
@@ -1528,6 +1546,62 @@ def extract_transaction_value(clean_text):
             if unit=='million' and 50<=value<=500000: return round(value/1000,2), 'regex_enterprise'
     return None, None
 
+# A transaction value is checked against the company it belongs to, not against
+# a range of numbers that are large in the abstract.
+#
+# CBZ reached production carrying tx_value 60.0 — sixty billion dollars — on a
+# company with 54,263,879 shares at $55.00, an implied equity value of $2.98B.
+# A 20x overstatement. The only guard was `0.01 <= tx <= 500`, and 60 sits
+# comfortably inside it, because that range asks whether the number could belong
+# to SOME deal rather than to THIS one.
+#
+# The band comes from the live feed rather than from intuition. Nineteen deals:
+#
+#     0.97 0.99 1.00 1.00 1.00 1.07 1.08 1.09 1.13 1.18
+#     1.19 1.20 1.27 1.28 1.30 1.34        <- sixteen deals, all near parity
+#     2.46 (BZH)  2.79 (CZR)               <- genuinely leveraged targets
+#     20.10 (CBZ)                          <- 7x beyond the next-highest
+#
+# The ratio is enterprise-to-equity in all but name, so it is legitimately above
+# 1 for a target carrying debt (Caesars at 2.79x) and legitimately below 1 for
+# one carrying net cash. 5.0 leaves room for an LBO target more leveraged than
+# anything in the feed today; 0.4 leaves room for a cash-rich one. CBZ is
+# rejected with four times the margin of the nearest real value.
+TX_VALUE_MIN_RATIO = 0.4
+TX_VALUE_MAX_RATIO = 5.0
+
+
+def tx_value_plausible(tx_value, dp, ticker, shares=None):
+    """
+    Whether a transaction value is consistent with this deal's own equity value.
+
+    Returns (True, None) or (False, reason). Unknowable inputs pass: a missing
+    share count is not evidence against the number, and refusing on absence
+    would discard good values whenever yfinance is down.
+    """
+    if tx_value is None or not dp or dp <= 0:
+        return True, None
+    if shares is None:
+        try:
+            shares = yf.Ticker(ticker).info.get('sharesOutstanding')
+        except Exception:
+            return True, None
+    if not shares or shares <= 0:
+        return True, None
+    equity_b = dp * shares / 1e9
+    if equity_b <= 0:
+        return True, None
+    ratio = float(tx_value) / equity_b
+    if ratio > TX_VALUE_MAX_RATIO:
+        return False, (f'${tx_value}B is {ratio:.1f}x this deal\'s equity value '
+                       f'(${equity_b:.2f}B = {shares:,} shares x ${dp}), above the '
+                       f'{TX_VALUE_MAX_RATIO}x ceiling')
+    if ratio < TX_VALUE_MIN_RATIO:
+        return False, (f'${tx_value}B is {ratio:.2f}x this deal\'s equity value '
+                       f'(${equity_b:.2f}B), below the {TX_VALUE_MIN_RATIO}x floor')
+    return True, None
+
+
 def compute_equity_tx_fallback(dp, ticker):
     """
     Fallback only: equity value = deal_price x shares_outstanding from yfinance.
@@ -1873,6 +1947,14 @@ def fetch_deals_from_edgar():
                             close_date = to_date
                             print(f"  [TO] {ticker} expiration: {to_date}")
                     tx_value, tx_value_source = extract_transaction_value(full_ct)
+                    # Checked against this company before anything downstream
+                    # sees it. Nulling it here rather than later lets the equity
+                    # fallback below produce a defensible number in its place.
+                    if tx_value is not None:
+                        _txok, _txwhy = tx_value_plausible(tx_value, dp, ticker)
+                        if not _txok:
+                            print(f"  [TxValue] {ticker}: REJECTED — {_txwhy}")
+                            tx_value, tx_value_source = None, None
                     # Equity calc fallback — only for cash deals when regex failed
                     if tx_value is None and deal_type in ('All Cash', 'Tender Offer') and dp:
                         tx_value, tx_value_source = compute_equity_tx_fallback(dp, ticker)
@@ -2111,7 +2193,13 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                         data = json.loads(content)
                         tx = data.get('tx_value')
                         cd = data.get('close_date')
-                        if tx and isinstance(tx, (int, float)) and 0.01 <= float(tx) <= 500:
+                        _txok, _txwhy = (tx_value_plausible(
+                            float(tx), deal.get('dp'), ticker)
+                            if isinstance(tx, (int, float)) else (False, 'not a number'))
+                        if not _txok and tx is not None:
+                            print(f"  [Enrich] {ticker} tx_value REFUSED — {_txwhy}")
+                        if (_txok and tx and isinstance(tx, (int, float))
+                                and 0.01 <= float(tx) <= 500):
                             if not deal.get('tx_value'):
                                 deal['tx_value'] = round(float(tx), 2)
                                 # 'regex_enterprise' was a lie: this number came

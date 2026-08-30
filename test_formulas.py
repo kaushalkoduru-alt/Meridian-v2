@@ -15,7 +15,9 @@ from main import (parse_close_date, days_to_close, annualized_spread,
                  pricing_integrity_failures, DEAL_STRUCTURES,
                  blended_governs, apply_blended_to_spread,
                  validate_enriched_close_date, validate_enriched_acquirer,
-                 ANNUALIZE_MIN_DAYS, CLOSE_DATE_SCAN_CHARS, extract_close_date)
+                 ANNUALIZE_MIN_DAYS, CLOSE_DATE_SCAN_CHARS, extract_close_date,
+                 tx_value_plausible, get_acquirer_type,
+                 TX_VALUE_MIN_RATIO, TX_VALUE_MAX_RATIO)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -478,6 +480,73 @@ check("and at the press release offset",
       "missed the old 5,000 window by 517 characters")
 check("beyond the new cap it still abstains rather than guessing",
       extract_close_date(('x' * 26000) + ' ' + _SENT), 'TBD')
+
+print()
+print("A TRANSACTION VALUE IS CHECKED AGAINST ITS OWN COMPANY")
+print("-" * 78)
+
+# CBZ reached production with tx_value 60.0 -- sixty billion -- on a company
+# with 54,263,879 shares at $55.00, an implied equity value of $2.98B. The only
+# guard was 0.01 <= tx <= 500, which asks whether the number could belong to
+# SOME deal rather than to THIS one.
+_ok, _why = tx_value_plausible(60.0, 55.00, 'CBZ', shares=54_263_879)
+check("CBZ: a 20x overstatement is rejected", _ok, False)
+check("  and the reason names the comparison",
+      ('20.1x' in (_why or '') and 'equity value' in (_why or '')), True, _why)
+check("the true value for the same deal passes",
+      tx_value_plausible(2.98, 55.00, 'CBZ', shares=54_263_879)[0], True)
+
+# The band was set from the live feed, not from intuition. Both genuinely
+# leveraged targets have to survive it.
+check("CZR at 2.79x survives — a leveraged target's EV exceeds its equity",
+      tx_value_plausible(17.6, 31.00, 'CZR', shares=203_777_357)[0], True)
+check("BZH at 2.46x survives",
+      tx_value_plausible(2.2, 33.50, 'BZH', shares=26_679_623)[0], True)
+check("the ceiling leaves room beyond the feed's worst real case",
+      TX_VALUE_MAX_RATIO > 2.79, True, f"ceiling {TX_VALUE_MAX_RATIO}x vs CZR 2.79x")
+
+# A net-cash target's enterprise value sits BELOW its equity, so the floor has
+# to be under 1 -- but not so far under that a decimal slip survives.
+check("a net-cash target below parity survives",
+      tx_value_plausible(0.9, 10.00, 'X', shares=100_000_000)[0], True, "0.90x")
+check("a value an order of magnitude too small is rejected",
+      tx_value_plausible(0.1, 10.00, 'X', shares=100_000_000)[0], False, "0.10x")
+
+# Unknowable inputs pass. Refusing on absence would discard good values every
+# time yfinance is down.
+for _lbl, _args in [('no share count', (60.0, 55.0, 'CBZ', 0)),
+                    ('no deal price',  (60.0, None, 'CBZ', 54_263_879)),
+                    ('no tx_value',    (None, 55.0, 'CBZ', 54_263_879))]:
+    check(f"{_lbl} passes rather than rejecting", tx_value_plausible(*_args)[0], True)
+
+print()
+print("ACQUIRER TYPE IS READ FROM THE ACQUIRER")
+print("-" * 78)
+
+# GSAT reached production as acquirer_type 'Private Equity' with AMAZON as the
+# acquirer, because get_acquirer_type returned PE unconditionally whenever
+# deal_type already said so. One unvalidated field propagating into a second.
+check("GSAT: Amazon is not private equity, whatever deal_type says",
+      get_acquirer_type('Private Equity', 'Amazon'), 'Strategic',
+      "was 'Private Equity', inherited from deal_type")
+check("the same acquirer reads the same under any deal_type",
+      get_acquirer_type('All Cash', 'Amazon'), get_acquirer_type('Private Equity', 'Amazon'),
+      "deal_type no longer changes the answer")
+
+# A real PE buyer is still caught, and now by its own name rather than by a
+# deal_type that may itself be wrong.
+check("a PE firm is still typed PE on an All Cash deal",
+      get_acquirer_type('All Cash', 'Bernhard Capital Partners'), 'Private Equity')
+check("and on a Private Equity deal", 
+      get_acquirer_type('Private Equity', 'Arcline Investment Management'), 'Private Equity')
+check("a strategic buyer stays strategic",
+      get_acquirer_type('All Cash', 'Smithfield Foods'), 'Strategic')
+
+# No buyer named is not grounds to claim one type over the other. 'Strategic'
+# was the old default and it is a claim, not an absence.
+for _none in ('Undisclosed', '', None, 'none'):
+    check(f"{_none!r} yields Unknown, not a default",
+          get_acquirer_type('Private Equity', _none), 'Unknown')
 
 print()
 print("=" * 78)
