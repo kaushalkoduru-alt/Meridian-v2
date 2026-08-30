@@ -1236,3 +1236,161 @@ BWMN  past close date    -> —
 the acquirer-absent-from-filing case the old guard accepted, the single-word
 target that slipped its two-word overlap rule, the floor at 29/30/31 days, the
 explicit not-clamped case, and SLAB's phrase at both of its real offsets.
+
+---
+
+# Provenance inventory — every field on a deal record
+
+2026-08-28. Groundwork for §7; **§7 is not implemented here**. A provenance
+system built on labels that already misdescribe their sources would be worse
+than none, so this establishes what each label currently means before anything
+is built on it.
+
+38 fields on the production record. For each: where the value actually comes
+from, whether the stored label matches, and whether anything checks it before it
+reaches the cache.
+
+**Legend** — `LIES`: the stored label misdescribes the source. `NO LABEL`:
+multiple possible sources collapse into one field with nothing recording which
+ran. `PARTIAL`: a label exists for some sources and not others, so its absence
+is ambiguous.
+
+## The inventory
+
+| Field | Actual source | Label | Label honest? | Validated before cache |
+|---|---|---|---|---|
+| `accession` | EDGAR metadata | — | n/a | yes — the gate resolves it to a real filing |
+| `acquirer` | filing regex **or** hardcode **or** LLM | none | **NO LABEL** | own-name overlap; LLM path now checks the filing |
+| `acquirer_type` | keyword list over `acquirer` | — | n/a | **none** — see GSAT below |
+| `agreement_read` | internal marker (accession) | — | honest | n/a |
+| `ann` | computed from `sp_pct` ÷ `days_to_close` | — | n/a | floor + ceiling on days |
+| `break_downside` | computed from `cp`, `break_price` | — | n/a | none |
+| `break_price` | yfinance close **or** hardcode **or** inert formula | `break_price_method` | **MISLEADING** | none — AUDIT #8 |
+| `break_price_method` | the label itself | — | see below | n/a |
+| `close_date` | filing regex **or** SC TO-T **or** hardcode **or** LLM | `close_date_source` | **PARTIAL** | LLM path only (new) |
+| `close_date_capped_to` | computed from outside date | — | honest | n/a |
+| `commitment` | EX-2 filing extraction | quote | honest | quote present; no section (C4) |
+| `company` | SEC ticker map **or** yfinance **or** literal placeholder | none | **NO LABEL** | none |
+| `cp` | yfinance daily close | none | **NO LABEL** | > $1, non-empty. No as-of date — AUDIT #1 |
+| `days_old` | computed from `filed` | — | honest | n/a |
+| `days_to_close` | computed from `close_date` | — | n/a | inherits `close_date`'s gap |
+| `deal_type` | EDGAR query **or** keyword reclass **or** hardcode | none | **NO LABEL** | **none** — see GSAT below |
+| `direction` | computed verdict | verdict + reason | honest | enforcing gate |
+| `dp` | filing regex | none | **NO LABEL** | spread range only, never against the filing |
+| `fetched` | system clock | — | honest | n/a |
+| `filed` | EDGAR metadata | — | honest | n/a |
+| `financing_signal` | press-release keyword scan | none | **NO LABEL** | none — AUDIT #16 |
+| `flags` | filing extraction | quote (`context`) | honest | quote present |
+| `gate` | computed verdict | verdict + accession | honest | is itself the validator |
+| `outside_date` | EX-2 filing extraction | quote + pattern tier | honest | plausibility window, quote |
+| `pricing` | hardcoded structure + yfinance quote | 13 barriers + `acquirer_price_at` | honest | **the strongest in the record** |
+| `reg_tags` | computed from `tx_value` + yfinance sector | none | **NO LABEL** | none — silent blanking, AUDIT #11 |
+| `risk` | computed from `sp_pct`, `score` | — | n/a | none |
+| `risk_at_detection` | frozen snapshot | — | honest | write-once |
+| `score` | computed, six factors | — | n/a | bounds correct, weights unvalidated |
+| `score_at_detection` | frozen snapshot | — | honest | write-once |
+| `score_history` | accumulated snapshots | timestamps | honest | FIFO cap |
+| `sp_pct` | computed from `dp` **or** blended | `sp_pct_headline` present ⇒ blended | **PARTIAL** | integrity check (new) |
+| `sp_pct_at_detection` | frozen snapshot | — | honest | write-once |
+| `sp_pct_headline` | computed, pre-blended | — | honest | n/a |
+| `spread_history` | accumulated snapshots | timestamps | honest | FIFO cap |
+| `ticker` | EDGAR metadata | — | honest | resolves against SEC map |
+| `tx_value` | filing regex **or** yfinance calc **or** hardcode **or** LLM | `tx_value_source` | **WAS LYING** — fixed, undeployed | range only |
+| `tx_value_source` | the label itself | — | see below | n/a |
+
+## Fields whose label does not match the source
+
+**`tx_value_source` — the one already found, and it is live right now.** The fix
+labelling model output `llm_enriched` is committed but **not deployed**, so
+production shows 15 of 19 deals as `regex_enterprise` and that label currently
+cannot distinguish a filing regex from a model guess.
+
+It has a live casualty. **CBZ carries `tx_value: 60.0` — sixty billion dollars —
+labelled `regex_enterprise`:**
+
+```
+CBZ shares outstanding   54,263,879
+deal price               $55.00
+implied equity value     $2.98B
+stored tx_value          $60.0B      20x overstatement
+```
+
+CBIZ, Inc. is a ~$3B accounting and benefits firm. No filing states a $60
+billion transaction. The range guard (`0.01 <= tx <= 500`) passed it because 60
+is a plausible number in the abstract — nothing compared it to the company. It
+flips the deal's DOJ Antitrust tag from `medium` to `high` (the $5B threshold)
+and would set its reverse-fee percentage 20x too low.
+
+**The label cannot even tell you which failure occurred.** Either the regex
+matched a wrong figure or the model supplied one; `regex_enterprise` is stamped
+on both paths today. That ambiguity is itself the finding — a provenance label
+that cannot distinguish its own two sources is not provenance.
+
+**`break_price_method: 'historical'`** is not false but it is misleading in the
+way §7 exists to prevent. It names a *method* for what is a bare price lookup —
+the last close before the filing date — and the deal page renders the result
+under "Modeled downside case". 18 of 19 deals carry it. AUDIT #8 and QA F7 cover
+the substance; the point here is that the label reads as though a model ran.
+
+**`close_date_source` is PARTIAL, which is a trap.** It is set only on the LLM
+path. Its *absence* therefore means "filing regex, or tender-offer lookup, or
+hardcode" — three different provenances sharing one empty value. A reader
+checking for the label would conclude an unlabelled date is filing-sourced. Same
+shape as `equity_calc_approx`, which says "approximate" but not that the share
+count behind it came from **yfinance, not the filing** — so a value the label
+presents as calculated is half external API.
+
+## Fields that reach the feed unvalidated
+
+**`deal_type` and `acquirer_type`, with a live error.** GSAT — **Amazon**
+acquiring Globalstar — is stored as `deal_type: Private Equity` and
+`acquirer_type: Private Equity`. Amazon is not a private equity firm.
+`get_acquirer_type` returns `'Private Equity'` unconditionally when `deal_type`
+already says so, so one unvalidated field propagates into a second. `deal_type`
+itself comes from whichever EDGAR query matched, then keyword reclassification —
+and the code's own comment records that reclassification "only fires on fresh
+EDGAR hits, not on deals carried forward", so a stale classification can persist
+indefinitely. `acquirer_type` also matches on `holdings`, `partners` and
+`capital`, which appear in plenty of strategic acquirers' names.
+
+**`dp`, the most important extracted number in the product, carries no
+provenance at all.** It is validated only by the spread falling in a plausible
+range — never against the filing text that produced it. A wrong `dp` inside the
+range is invisible, and it drives spread, probability, position sizing and the
+sort.
+
+**`financing_signal`** — press-release keyword scan, no label, and a
+*contractual* reading of the same question already exists in `deal_commitment`
+and is not consulted (AUDIT #16). 10 of 19 read `unknown`.
+
+**`reg_tags`** — computed from `tx_value` (see CBZ) and a yfinance sector fetch
+inside a bare `except` that silently blanks on failure, which drops tags and
+makes the deal score *better*.
+
+**`company`** — falls back to yfinance, then to a literal `"{ticker} (name
+pending)"` string that would render as a company name. No deal carries it today.
+
+**`cp`** — a daily close with no as-of date attached (AUDIT #1).
+
+## What this means for §7
+
+Three things have to happen in order, and the order matters.
+
+1. **Correct the labels that misdescribe their source** — deploy the
+   `tx_value_source` fix, and split `break_price_method`'s `'historical'` into
+   something that says "last close before announcement" rather than implying a
+   method.
+2. **Give every multi-source field a label at all.** `acquirer`, `close_date`,
+   `deal_type`, `company` and `dp` each have two to four possible origins and
+   between them one partial label. Until each says which path ran, a "view
+   evidence" interaction has nothing to point at.
+3. **Only then build the interaction.** §7 wants a reader to go from a
+   classification to the agreement language behind it. Today that chain is
+   complete for `commitment`, `outside_date`, `flags` and `pricing` — all
+   quote-backed or barrier-backed — and broken for everything else.
+
+The four fields already carrying real provenance are the model to copy.
+`pricing` is the strongest: thirteen named barriers, an acquirer price with its
+own timestamp, and a hand-verified structure that records the accession it was
+read from. Nothing else in the record approaches it, and it is worth noting that
+it is also the only field where a bad value has ever been caught before display.
