@@ -1974,6 +1974,15 @@ function _daSgn(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+
 // price sits ABOVE its current price, so its modeled break is a gain — and
 // every one of those places printed it as a loss, one of them directly beneath
 // a column header reading +14.53%.
+// The annualized figure, or what is actually known when it is suppressed.
+// Below ANNUALIZE_MIN_DAYS the server sends null rather than a 2,222% headline
+// off a one-day window, and the honest substitute is the days themselves.
+function _daAnn(deal){
+  if(deal && deal.ann != null && !isNaN(deal.ann)) return _daSgn(deal.ann);
+  var d = deal && deal.days_to_close;
+  if(d != null && !isNaN(d) && d > 0) return '\u2014 \u00b7 ' + Math.round(d) + 'd to close';
+  return '\u2014';
+}
 function _daSgnUsd(n){
   if(n==null||isNaN(n)) return '\u2014';
   var v = Number(n);
@@ -2101,7 +2110,7 @@ async function renderAnalysis(deal){
     { l:'Current Price', v:_daUsd(deal.cp),  c:'#f4eee0' },
     { l:'Deal Value',    v:_daUsd(deal.dp),  c:'#f7f1e4' },
     { l:'Gross Spread',  v:_daSgn(deal.sp_pct), c:m.fg },
-    { l:'Annualized',    v:_daSgn(deal.ann),    c:m.fg },
+    { l:'Annualized',    v:_daAnn(deal),        c:m.fg },
     { l:'Days to Close', v:(dtc!=null ? '~'+dtc : '\u2014'), c:'#efe7d6', sub:(closeEst ? 'est. '+closeEst : 'not yet disclosed') }
   ];
   _daSet('da-metrics', cells.map(function(c,i){
@@ -2167,7 +2176,7 @@ async function renderAnalysis(deal){
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(deal.dp)+'</div>'
     +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+_daSgn(deal.sp_pct)+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?_daSgnUsd(deal.dp-deal.cp)+' / share':'')+'</div>'
-    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daSgn(deal.ann)+'</div>'
+    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daAnn(deal)+'</div>'
     + '</div>';
   var breaksCard = bp!=null ? ''
     + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(240,115,94,0.4); padding:18px 20px; overflow:hidden;">'
@@ -2664,6 +2673,14 @@ function renderDeals(deals){
   var usd  = function(n){ return (n==null||isNaN(n)) ? '\u2014' : '$'+Number(n).toFixed(2); };
   var sgn  = function(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+Math.abs(Number(n)).toFixed(2)+'%'; };
   var sgn1 = function(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+Math.abs(Number(n)).toFixed(1)+'%'; };
+  // Same substitution on the dashboard: days remaining where annualizing would
+  // describe a return nobody can compound.
+  var annCell = function(d){
+    if(d && d.ann != null && !isNaN(d.ann)) return sgn1(d.ann);
+    if(d && d.days_to_close != null && !isNaN(d.days_to_close) && d.days_to_close > 0)
+      return '\u2014 \u00b7 ' + Math.round(d.days_to_close) + 'd';
+    return '\u2014';
+  };
   function tagHTML(r){
     var m = riskMeta(r);
     return '<span style="display:inline-block; padding:3px 9px; font-size:10px; letter-spacing:0.12em; font-weight:600; color:'+m.fg+'; background:'+m.bg+'; border:1px solid '+m.bd+'; white-space:nowrap;">'+(r||'').toUpperCase()+'</span>';
@@ -2767,7 +2784,7 @@ function renderDeals(deals){
                     ? '<div>'+priceBlockHTML(d, pv, {big:13, small:11.5, gap:6, mono:true, align:'left'})+'</div>'
                     : '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Deal</div><div style="margin-top:2px; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div></div>')
             +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Spread</div><div style="margin-top:2px; font-size:15px; font-weight:600; color:'+m2.fg+';">'+sgn(pv.spread)+'</div></div>'
-            +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Annualized</div><div style="margin-top:2px; font-size:13px; color:#9a9079;">'+sgn1(d.ann)+'</div></div>'
+            +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Annualized</div><div style="margin-top:2px; font-size:13px; color:#9a9079;">'+annCell(d)+'</div></div>'
             +   '</div>'
             + '</div>';
       html += '<div class="deal-row-desktop" onclick="showAnalysis(\''+d.ticker+'\')" onmouseover="this.style.background=\'rgba(92,192,173,0.05)\'" onmouseout="this.style.background=\'transparent\'" style="cursor:pointer; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; border-bottom:1px solid rgba(238,228,208,0.07); transition:background 0.12s ease; background:transparent;">'
@@ -2780,7 +2797,7 @@ function renderDeals(deals){
                   ? rowBlock
                   : '<div style="text-align:right; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div>')
             +   '<div style="text-align:right; font-size:14px; font-weight:600; color:'+m2.fg+';">'+sgn(pv.spread)+'</div>'
-            +   '<div style="text-align:right; font-size:12.5px; color:#9a9079;">'+sgn1(d.ann)+'</div>'
+            +   '<div style="text-align:right; font-size:12.5px; color:#9a9079;">'+annCell(d)+'</div>'
             +   '<div style="text-align:right;">'+tagHTML(d.risk)+'</div>'
             + '</div>';
     });

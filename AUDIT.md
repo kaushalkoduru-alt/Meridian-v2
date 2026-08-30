@@ -1067,3 +1067,172 @@ separating before touching the parser.
 **Nine deals do not lack a stated close date.** Five genuinely do, one states it
 clearly and is not read for a reason unrelated to phrasing, and two have dates
 that are either unused or wrong. Widening the parser addresses none of them.
+
+---
+
+# Results — four fixes from the close-date diagnosis
+
+Applied 2026-08-28.
+
+## 1 · Nothing the enrichment pass produced was checked against the filing
+
+The audit of that pass is worse than the BWMN case suggested. It produces three
+fields, and **not one of them was validated against the document it claims to
+come from**:
+
+| Field | Guard before | Against the filing? |
+|---|---|---|
+| `close_date` | non-empty, not the literal `"TBD"` | **no** |
+| `tx_value` | numeric, between 0.01 and 500 | **no** |
+| `acquirer` | two-or-more word overlap with the target's name | **no** |
+
+`close_date` had effectively nothing, which is how BWMN came to carry `Q2 2026`
+on a deal announced 2026-08-10 — six weeks after that quarter ended.
+
+`tx_value` was worse than unvalidated: it was **mislabelled**. A model-supplied
+number was stored with `tx_value_source = 'regex_enterprise'`, which claims the
+value was pulled out of the filing by pattern match. The provenance field is the
+entire audit trail for that number, and it was saying the wrong thing. It now
+reads `llm_enriched`, and the log line says "model estimate, not
+filing-extracted".
+
+`acquirer` had a guard that only ever compared the answer against the *target's*
+name. It never asked whether the name appears in the filing at all, so a
+plausible company the model supplied from its own knowledge would have been
+stored with nothing behind it. Feeding it "Berkshire Hathaway" against Atkore's
+8-K, the old guard accepted it.
+
+That guard also had a hole of its own: it required a **two-word** overlap, so a
+single-word target passed straight through. `Atkore Inc.` offered as the
+acquirer of Atkore Inc. reduces to `{atkore}` on both sides — an overlap of one
+— and was accepted. Now refused, along with any name whose words are a subset of
+the target's.
+
+**What each field now requires**
+
+- `close_date` — must resolve to a date, must fall **after** the announcement,
+  and must be within `ENRICHED_CLOSE_MAX_DAYS` (1,260, about three and a half
+  years). Failing any of those it is **discarded, not stored**. A blank is
+  honest; a fabricated date is not.
+- `acquirer` — must not be the target, must not be a subset of the target's
+  name, and **must appear in the filing text**. Matched on significant words
+  rather than the whole string, because filings write "Prysmian S.p.A." where
+  the model returns "Prysmian" and an exact match would refuse correct answers.
+- `tx_value` — range check unchanged, provenance corrected. Cross-checking the
+  magnitude against the filing is left alone deliberately: AUDIT #15 shows the
+  field already conflates enterprise and equity value, and a check written
+  before that is settled would encode the confusion.
+
+Both refusals log their reason, so a discarded value is visible rather than
+silently absent:
+
+```
+[Enrich] BWMN close_date REFUSED — backwards: 'Q2 2026' resolves to 2026-06-30,
+         before the 2026-08-10 announcement
+[Enrich] ATKR acquirer REFUSED — 'Berkshire Hathaway' does not appear anywhere
+         in the filing text
+```
+
+## 2 · A changed close date now recomputes what depends on it
+
+The pass set `deal['close_date']` and stopped. `days_to_close` and `ann` had
+been computed hundreds of lines earlier from the `TBD` that was there at the
+time, so both stayed `None` — which is how APGE came to show a perfectly
+parseable `Q3 2026` beside a null `days_to_close` and no annualized figure. The
+date was present, readable, and never used.
+
+Both are now recomputed at the point of assignment, and the log line shows all
+three together so the next instance is visible in the scan output:
+
+```
+[Enrich] APGE close_date: Q3 2026 (days_to_close 33, ann 1.11)
+```
+
+This is the fourth appearance of the enrichment-ordering shape already recorded
+in CLAUDE.md — a field written after the thing that consumes it has run.
+
+## 3 · The close-date reader was the tightest cap in the file by 5x
+
+`extract_close_date` read `clean_text[:5000]`. Every sibling reading the same
+`full_ct` reads more:
+
+| Reader | Cap |
+|---|---:|
+| `extract_transaction_value` | 25,000 |
+| `extract_acquirer` | 15,000 |
+| `get_tender_offer_expiration` | 10,000 |
+| `extract_close_date` | **5,000** |
+
+Nothing justified close_date being the outlier. Raised to **25,000**, matched to
+`extract_transaction_value` rather than to a newly invented number, on the
+grounds that both read the same text and have no reason to disagree about how
+much of it is worth reading.
+
+SLAB is recovered from both of its documents:
+
+```
+d62897d8k.htm     (29,531 chars)  ->  'first half of 2027'   (offset 12,483)
+d62897dex991.htm  (18,890 chars)  ->  'first half of 2027'   (offset  5,517)
+```
+
+**Correcting the diagnosis above:** it said the cap "exists to stop the reader
+wandering into the merger agreement". That was wrong. `full_ct` is one filing
+document at a time, and `extract_transaction_value` already reads 25,000
+characters of exactly the same text — so whatever exposure exists, this change
+does not add it. The 5,000 was not a considered trade-off, it was an outlier.
+
+What else the cap was truncating is now answerable: only `close_date` used it,
+so nothing else was affected. The three other readers were already past it.
+
+## 4 · Windows under a month are not annualized
+
+`ANNUALIZE_MIN_DAYS = 30`. Below it `annualized_spread` returns `None` and the
+display shows the raw spread with the days remaining instead.
+
+**Why 30.** Annualizing assumes the capital can be redeployed into a comparable
+position at that rate when the deal closes. Inside a month that assumption stops
+holding — there is no reliable supply of merger-arb positions to roll into on a
+weekly cadence, so the figure describes a return nobody can compound. The
+arithmetic turns brittle at the same point: the multiplier is 12x at 30 days,
+73x at 5, and 365x at 1, so a spread that is mostly bid-ask noise becomes the
+largest number on the page. 30 rather than 20 because one month is where the
+redeployment story stops being arguable, and a round boundary is easier to
+explain than a threshold tuned to make one deal look sensible.
+
+**A floor, not a cap.** Nothing is clamped to a maximum. A genuine 78%
+annualized on a 34-day close is real and still prints. Clamping is what the
+probability endpoint did before it was deleted, and it converted a sign error
+into a confident-looking 99.9% — the lesson was to refuse the number, not to
+bend it.
+
+**What the floor suppresses across the feed: one deal.**
+
+| Deal | days | spread | `ann` before | `ann` now |
+|---|---:|---:|---:|---|
+| GBCS | 1 | 6.09% | **2,222.85%** | suppressed — shows "— · 1d to close" |
+| ALOT | 31 | 0.03% | 0.35% | 0.35% — one day above the floor, unaffected |
+| NATH | 51 | 3.58% | 25.62% | 25.62% |
+
+Every other deal either sits well above the floor or already had no annualized
+figure for the reasons in the diagnosis above. GBCS is the only deal the floor
+touches, and it is the deal that prompted it — four days from a fixed outside
+date with no extension clause, now showing the days rather than a four-digit
+percentage.
+
+The display substitution is in both places the figure appears: `_daAnn` on the
+deal page and `annCell` on the dashboard. Verified in the browser:
+
+```
+GBCS  suppressed, 1d     -> — · 1d to close
+ALOT  just above floor   -> +0.35%
+NATH  normal             -> +25.62%
+SLAB  no close date      -> —
+BWMN  past close date    -> —
+```
+
+## Coverage
+
+`test_formulas.py` is at 136 checks. The new ones cover the BWMN backwards date,
+the acquirer-absent-from-filing case the old guard accepted, the single-word
+target that slipped its two-word overlap rule, the floor at 29/30/31 days, the
+explicit not-clamped case, and SLAB's phrase at both of its real offsets.

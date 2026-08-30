@@ -901,6 +901,27 @@ def days_to_close(close_date, now=None):
 # artifact, and annualizing against it manufactures a number.
 ANNUALIZE_MAX_DAYS = 1460
 
+# Below this, do not annualize at all.
+#
+# Annualizing assumes the capital can be redeployed into a comparable position
+# when the deal closes and keep earning at that rate. Inside a month that
+# assumption stops holding: there is no reliable supply of merger-arb positions
+# to roll into on a weekly cadence, so the figure describes a return nobody can
+# actually compound. The arithmetic also turns brittle — at 30 days the
+# multiplier is 12x, at 5 days it is 73x, and at 1 day it is 365x, so a spread
+# that is mostly bid-ask noise becomes the largest number on the page. GBCS,
+# one day from its outside date on a 6.09% spread, annualized to 2,222%.
+#
+# 30 rather than 20: one month is where the redeployment story stops being
+# arguable, and the round boundary is easier to explain to a reader than a
+# threshold tuned to make a particular deal look sensible.
+#
+# This is a FLOOR, not a cap. Nothing is clamped to a maximum — a genuine 80%
+# annualized return on a 34-day close is real and gets printed. Clamping is what
+# the probability endpoint used to do, and it converted a sign error into a
+# confident-looking 99.9%; the lesson was to refuse the number, not to bend it.
+ANNUALIZE_MIN_DAYS = 30
+
 
 def annualized_spread(spread_pct, days):
     """
@@ -919,6 +940,10 @@ def annualized_spread(spread_pct, days):
     if spread_pct is None or days is None:
         return None
     if days <= 0 or days > ANNUALIZE_MAX_DAYS:
+        return None
+    if days < ANNUALIZE_MIN_DAYS:
+        # Too close to annualize honestly. The caller shows the raw spread and
+        # the days remaining, which is the whole of what is known.
         return None
     return round(spread_pct * 365 / days, 2)
 
@@ -973,6 +998,85 @@ def cap_expected_close(close_date, outside):
     if expected <= od:
         return expected, None
     return od, od.isoformat()
+
+
+# A close date the model produced must still be a possible close date. BWMN
+# carried "Q2 2026" on a deal announced 2026-08-10 — six weeks after that
+# quarter ended — and nothing in the pipeline objected.
+ENRICHED_CLOSE_MAX_DAYS = 1260          # ~3.5 years past announcement
+
+
+def validate_enriched_close_date(cd, announced, now=None):
+    """
+    A model-produced close date, or None with the reason it was refused.
+
+    Three ways to fail, and all three were reachable:
+      unreadable  -- the phrase does not resolve to a date at all
+      backwards   -- it resolves BEFORE the deal was announced
+      implausible -- it resolves further out than any merger horizon
+
+    A blank close date is honest. A fabricated one is not, and the whole
+    positioning of this project rests on that difference — "nothing ships unless
+    a real EDGAR filing proves it" cannot coexist with an unchecked model output
+    written straight to the cache.
+    """
+    if not cd or not isinstance(cd, str):
+        return None, 'empty'
+    cd = cd.strip()
+    if cd.lower() in ('null', 'none', 'tbd', 'unknown', 'not disclosed'):
+        return None, 'no date offered'
+    resolved = parse_close_date(cd)
+    if not resolved:
+        return None, f'unreadable: {cd!r} resolves to no date'
+    try:
+        ann = datetime.strptime(str(announced)[:10], '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return cd, None                  # no anchor to judge against; let it stand
+    if resolved < ann:
+        return None, (f'backwards: {cd!r} resolves to {resolved}, before the '
+                      f'{ann} announcement')
+    if (resolved - ann).days > ENRICHED_CLOSE_MAX_DAYS:
+        return None, (f'implausible: {cd!r} resolves to {resolved}, '
+                      f'{(resolved - ann).days} days past announcement')
+    return cd, None
+
+
+def validate_enriched_acquirer(name, filing_text, target_name):
+    """
+    A model-produced acquirer name, or None with the reason it was refused.
+
+    The existing guard only compared the name against the TARGET's name, which
+    catches the model returning the target and nothing else. It never asked
+    whether the name appears in the filing at all — so a plausible-sounding
+    company the model supplied from its own knowledge would have been stored
+    with no filing behind it.
+
+    Matching on the first significant word rather than the whole string: filings
+    write "Prysmian S.p.A." where the model returns "Prysmian", and demanding an
+    exact match would refuse correct answers.
+    """
+    if not name or not isinstance(name, str) or len(name.strip()) < 3:
+        return None, 'empty'
+    name = name.strip()
+    if name.lower() in ('null', 'none', 'unknown'):
+        return None, 'no acquirer offered'
+    stop = {'inc', 'corp', 'ltd', 'llc', 'the', 'and', 'of', 'co', 'group',
+            'holdings', 'company', 'plc', 'sa', 'nv', 'ag'}
+    tgt = set((target_name or '').lower().split()) - stop
+    got = set(re.sub(r'[^a-z0-9 ]', ' ', name.lower()).split()) - stop
+    if not got:
+        return None, 'name is all stop words'
+    # Two guards, because the inherited one only fired on a two-word overlap and
+    # a single-word target slipped straight through: "Atkore Inc." offered as the
+    # acquirer of Atkore Inc. reduces to {'atkore'} on both sides, an overlap of
+    # one, and was accepted.
+    if got <= tgt or len(tgt & got) >= 2:
+        return None, f'{name!r} matches the target company name'
+    # The decisive check: does it appear in the document?
+    hay = (filing_text or '').lower()
+    if hay and not any(w in hay for w in got if len(w) > 3):
+        return None, f'{name!r} does not appear anywhere in the filing text'
+    return name, None
 
 
 def blended_governs(deal):
@@ -1301,6 +1405,19 @@ def extract_acquirer(clean_text, target_name=''):
     return min(candidates, key=len)
 
 
+# How far into the filing the close-date reader looks. It was 5,000, which was
+# the tightest cap in the file by a factor of five: extract_acquirer reads
+# 15,000 of the same text, get_tender_offer_expiration 10,000, and
+# extract_transaction_value 25,000. Nothing justified close_date being the
+# outlier, and SLAB's guidance sits at offset 12,483 in its 8-K and 5,517 in its
+# press release -- the second missing the old window by 517 characters.
+#
+# Matched to extract_transaction_value rather than to a new number, because both
+# read the same full_ct and there is no reason for them to disagree about how
+# much of it is worth reading.
+CLOSE_DATE_SCAN_CHARS = 25000
+
+
 def extract_close_date(clean_text):
     # Patterns ordered specific-to-general: qualified phrases first, greedy catch-alls last.
     # [-\s]+ allows hyphenated forms like "mid-2027" as well as spaced "mid 2027".
@@ -1328,7 +1445,7 @@ def extract_close_date(clean_text):
     }
 
     for pat in patterns:
-        m=re.search(pat, clean_text[:5000], re.IGNORECASE)
+        m=re.search(pat, clean_text[:CLOSE_DATE_SCAN_CHARS], re.IGNORECASE)
         if m:
             result = m.group(1).strip()
             if not any(yr in result for yr in ['2025','2026','2027','2028']):
@@ -1948,15 +2065,15 @@ If you cannot identify the acquirer with confidence, return: {{"acquirer": null}
                             content = content.replace('```json','').replace('```','').strip()
                             data = json.loads(content)
                             acq = data.get('acquirer')
-                            if acq and isinstance(acq, str) and len(acq) > 2 and acq.lower() not in ['null','none','unknown']:
-                                # Reject if acquirer matches target company name
-                                stop_words = {'inc','corp','ltd','llc','the','and','of','co','group','holdings'}
-                                ticker_words = set(deal.get('company','').lower().split()) - stop_words
-                                acq_words = set(acq.lower().split()) - stop_words
-                                if len(ticker_words & acq_words) < 2:
-                                    deal['acquirer'] = acq
-                                    enriched = True
-                                    print(f"  [Enrich] {ticker} acquirer: {acq}")
+                            _ok, _why = validate_enriched_acquirer(
+                                acq, filing_text, deal.get('company', ''))
+                            if _ok:
+                                deal['acquirer'] = _ok
+                                deal['acquirer_source'] = 'llm_enriched'
+                                enriched = True
+                                print(f"  [Enrich] {ticker} acquirer: {_ok}")
+                            else:
+                                print(f"  [Enrich] {ticker} acquirer REFUSED — {_why}")
                         elif resp.status_code == 429:
                             print(f"  [Enrich] Rate limited on acquirer, stopping")
                             break
@@ -1997,14 +2114,33 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                         if tx and isinstance(tx, (int, float)) and 0.01 <= float(tx) <= 500:
                             if not deal.get('tx_value'):
                                 deal['tx_value'] = round(float(tx), 2)
-                                deal['tx_value_source'] = 'regex_enterprise'
+                                # 'regex_enterprise' was a lie: this number came
+                                # from a model, not from a regex over the filing.
+                                # The provenance field is the whole audit trail,
+                                # so it has to say which one produced the value.
+                                deal['tx_value_source'] = 'llm_enriched'
                                 enriched = True
-                                print(f"  [Enrich] {ticker} tx_value: {deal['tx_value']}B")
-                        if cd and isinstance(cd, str) and len(cd) > 2 and cd.lower() not in ['null','none','tbd','unknown']:
-                            if deal.get('close_date') == 'TBD':
-                                deal['close_date'] = cd.strip()
+                                print(f"  [Enrich] {ticker} tx_value: {deal['tx_value']}B "
+                                      f"(model estimate, not filing-extracted)")
+                        if deal.get('close_date') == 'TBD':
+                            _cd, _why = validate_enriched_close_date(cd, deal.get('filed'))
+                            if _cd:
+                                deal['close_date'] = _cd
+                                deal['close_date_source'] = 'llm_enriched'
+                                # Everything measured from the close date was
+                                # computed hundreds of lines ago, off the 'TBD'
+                                # that was here then. Recompute, or the date sits
+                                # in the record parseable and unused -- which is
+                                # what left APGE showing Q3 2026 beside a null
+                                # days_to_close and no annualized figure.
+                                _d2 = days_to_close(_cd)
+                                deal['days_to_close'] = _d2
+                                deal['ann'] = annualized_spread(deal.get('sp_pct'), _d2)
                                 enriched = True
-                                print(f"  [Enrich] {ticker} close_date: {cd}")
+                                print(f"  [Enrich] {ticker} close_date: {_cd} "
+                                      f"(days_to_close {_d2}, ann {deal['ann']})")
+                            elif _why not in ('empty', 'no date offered'):
+                                print(f"  [Enrich] {ticker} close_date REFUSED — {_why}")
                     elif resp.status_code == 429:
                         print(f"  [Enrich] Rate limited, stopping enrichment")
                         break

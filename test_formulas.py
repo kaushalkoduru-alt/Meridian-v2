@@ -13,7 +13,9 @@ from main import (parse_close_date, days_to_close, annualized_spread,
                  cap_expected_close, edgar_queries, get_break_price,
                  VERIFIED_UNAFFECTED_PRICES, DEAL_SEARCH_LOOKBACK_DAYS,
                  pricing_integrity_failures, DEAL_STRUCTURES,
-                 blended_governs, apply_blended_to_spread)
+                 blended_governs, apply_blended_to_spread,
+                 validate_enriched_close_date, validate_enriched_acquirer,
+                 ANNUALIZE_MIN_DAYS, CLOSE_DATE_SCAN_CHARS, extract_close_date)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -394,6 +396,88 @@ check("and such a deal's spread is left alone",
       apply_blended_to_spread({'ticker': 'WBD', 'cp': 28.9, 'sp_pct': 7.27}), None)
 check("a cached repr string still governs",
       blended_governs({'pricing': "{'blended': 87.32, 'all_passed': True}"}), 87.32)
+
+print()
+print("THE ENRICHMENT PASS IS NO LONGER TAKEN ON TRUST")
+print("-" * 78)
+
+# BWMN carried close_date "Q2 2026" on a deal announced 2026-08-10 -- six weeks
+# after that quarter ended. It did not come from the filing; extract_close_date
+# returns TBD for that 8-K. A model produced it and nothing objected.
+_v, _why = validate_enriched_close_date('Q2 2026', '2026-08-10')
+check("BWMN: a close date before the announcement is refused", _v, None)
+check("  and the refusal says why",
+      'backwards' in (_why or ''), True, _why)
+check("APGE: a plausible one is kept",
+      validate_enriched_close_date('Q3 2026', '2026-06-22'), ('Q3 2026', None))
+check("a date beyond any merger horizon is refused",
+      validate_enriched_close_date('2035', '2026-01-01')[0], None,
+      "3,651 days past announcement")
+check("an unreadable phrase is refused",
+      validate_enriched_close_date('sometime soon', '2026-01-01')[0], None)
+for _empty in (None, '', 'null', 'TBD', 'unknown'):
+    check(f"{_empty!r} is refused", validate_enriched_close_date(_empty, '2026-01-01')[0], None)
+check("with no announcement date to judge against, it stands",
+      validate_enriched_close_date('Q3 2026', None), ('Q3 2026', None),
+      "nothing to compare to is not grounds to discard")
+
+# The acquirer had a guard, but it only compared against the TARGET's name. It
+# never asked whether the name appears in the filing at all.
+_FILING = ('Atkore Inc. today announced a definitive agreement under which '
+           'Prysmian S.p.A. will acquire all outstanding shares for $95.00 per '
+           'share in cash.')
+check("an acquirer named in the filing is kept",
+      validate_enriched_acquirer('Prysmian', _FILING, 'Atkore Inc.')[0], 'Prysmian')
+check("a full legal name still matches the filing's short form",
+      validate_enriched_acquirer('Prysmian S.p.A.', _FILING, 'Atkore Inc.')[0],
+      'Prysmian S.p.A.')
+_a, _w = validate_enriched_acquirer('Berkshire Hathaway', _FILING, 'Atkore Inc.')
+check("an acquirer absent from the filing is refused", _a, None,
+      "the check the old guard never made")
+check("  and the refusal says why",
+      'does not appear' in (_w or ''), True, _w)
+check("the target's own name is still refused",
+      validate_enriched_acquirer('Atkore Inc.', _FILING, 'Atkore Inc.')[0], None)
+for _bad in (None, '', 'null', 'x'):
+    check(f"{_bad!r} is refused",
+          validate_enriched_acquirer(_bad, _FILING, 'Atkore Inc.')[0], None)
+
+print()
+print("SHORT WINDOWS ARE NOT ANNUALIZED")
+print("-" * 78)
+
+# GBCS, one day from its outside date on a 6.09% spread, annualized to 2,222%.
+check("GBCS: a one-day window yields no annualized figure",
+      annualized_spread(6.09, 1), None, "was 2222.85")
+check("the floor is one month", ANNUALIZE_MIN_DAYS, 30)
+check("one day below the floor is suppressed", annualized_spread(6.09, 29), None)
+check("the floor itself annualizes", annualized_spread(6.09, 30), 74.09)
+check("ALOT at 31 days is unaffected", annualized_spread(0.03, 31), 0.35)
+
+# A floor, not a cap. A real 78% on a 34-day close is a real number.
+check("a large but genuine figure is NOT clamped",
+      annualized_spread(7.27, 34), 78.05,
+      "clamping is what the probability endpoint did before it was deleted")
+check("nothing above the floor is altered", annualized_spread(4.24, 126), 12.28)
+
+print()
+print("THE CLOSE-DATE READER SEES THE WHOLE FILING")
+print("-" * 78)
+
+# SLAB states its close date twice, at offsets 12,483 and 5,517. The old cap
+# was 5,000, so the press release missed by 517 characters.
+_SENT = ('The transaction is expected to close in the first half of 2027, '
+         'subject to receipt of regulatory approvals.')
+check("the cap matches extract_transaction_value's", CLOSE_DATE_SCAN_CHARS, 25000,
+      "was 5,000 — the tightest in the file by 5x, on the same text")
+check("SLAB's phrase at its real offset is now read",
+      extract_close_date(('x' * 12483) + ' ' + _SENT), 'first half of 2027',
+      "the 8-K offset; returned TBD under the old cap")
+check("and at the press release offset",
+      extract_close_date(('x' * 5517) + ' ' + _SENT), 'first half of 2027',
+      "missed the old 5,000 window by 517 characters")
+check("beyond the new cap it still abstains rather than guessing",
+      extract_close_date(('x' * 26000) + ' ' + _SENT), 'TBD')
 
 print()
 print("=" * 78)
