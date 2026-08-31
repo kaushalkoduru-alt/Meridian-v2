@@ -1764,3 +1764,124 @@ per-document cap rather than a wider search.
 BOW, BZH, DSGR, RAMP and BWMN, `TBD` is the correct answer and stays. RAMP's two
 proxies at 1.18 million characters each are the clearest case: the absence is
 real, not unreached.
+
+---
+
+# The exhibit is found by its type, and the quarter form is read
+
+2026-08-31.
+
+## 1 · Document type is the primary test; filename is the fallback
+
+`_ex2_by_document_type` reads the **Type** column from the filing index page,
+which EDGAR fills regardless of what the filer agent named the file:
+
+```
+<td>2</td> <td>EX-2.1</td>
+<td><a href="...triplecrown-mergeragreemen.htm">...</a></td>
+<td>EX-2.1</td> <td>677278</td>
+```
+
+Type is tried first; `_pick_ex2`'s filename matching is now the fallback for
+filings whose index page cannot be read. Rows are parsed whole — link and type
+taken from the same `<tr>` — so a type from one row can never attach to a
+document from another. That is the mistake the close-date parser made across
+clauses, and it is cheap to not repeat.
+
+### The sweep: two deals, and the filename test explains both
+
+**Two of nineteen deals have no agreement reading: ATKR and BOW. Both have an
+EX-2 that filename matching cannot see, and type-based discovery finds both.**
+
+| Deal | EX-2 by type | By filename |
+|---|---|---|
+| **ATKR** | `atkr_mergerk.htm` | **None** |
+| **BOW** | `triplecrown-mergeragreemen.htm` | **None** |
+| the other 17 | found | found — identical |
+
+The correspondence is exact: every deal missing a reading is a deal whose
+exhibit the filename test missed, and no deal with a reading was affected. There
+is no residual population — the two failures and the two gaps are the same two
+deals.
+
+BOW's file is the deal's project codename ("Triple Crown"). ATKR's is
+`atkr_mergerk.htm` — the ticker plus an abbreviation, no `ex2` token either.
+Codenames and house abbreviations are ordinary in M&A, so a reader keyed on
+filenames will keep missing them at roughly this rate: 2 in 19, about 10%.
+
+The seventeen conventional names still match both ways, so the fallback keeps
+carrying them if an index page is ever unreadable.
+
+This also subsumes the CZR case from earlier. CZR's `index.json` omitted its
+documents entirely while the index page listed them; the type reader uses the
+index page, so it now handles both the missing-listing failure and the
+unrecognisable-name failure through one path.
+
+## 2 · "fourth quarter of 2026", and a cap sized to the document
+
+**The phrasing.** Four patterns carried `(?:half[-\s]+of[-\s]+)?` and no quarter
+twin, so `second half of 2026` read and `fourth quarter of 2026` did not — while
+`parse_close_date` resolved either without complaint. All four now carry
+`(?:(?:half|quarter)[-\s]+of[-\s]+)?`. This completes an accommodation that was
+already there rather than loosening one: the form is still anchored to close,
+complete or consummate language, and the result still passes
+`validate_close_date`.
+
+**The cap.** `PROXY_CLOSE_DATE_SCAN_CHARS = 400000`, against 25,000 for an 8-K.
+CBZ's PREM14A is 884,167 characters and states its expected close at offset
+102,755 — under 3% of the way in. Proxies restate the transaction at length
+before reaching the section that discusses timing, so a cap sized for a press
+release sees almost none of one.
+
+It is bounded rather than removed. A proxy contains hundreds of dates that are
+not close guidance — record dates, fiscal year ends, option expiries — and the
+400,000 ceiling plus the requirement for close language nearby are what keep the
+reader from wandering into them.
+
+**CBZ, end to end on the real document:**
+
+```
+CBZ PREM14A  884,167 chars
+  8-K cap    25,000  -> 'TBD'
+  proxy cap 400,000  -> 'fourth quarter of 2026'
+  validate vs 2026-07-29 announcement -> accepted
+  resolves to 2026-12-31
+```
+
+## Settled: five deals state no expected close date anywhere
+
+**Do not re-test these.** BOW, BZH, DSGR, RAMP and BWMN were searched across all
+four document types — 8-K body, press release, merger agreement, and any 2026
+proxy — totalling roughly 1.7 million characters of agreement text plus RAMP's
+two 1.18-million-character proxies. None contains an expected-close phrase near
+close, complete or consummate language.
+
+| Deal | 8-K | Press release | EX-2.1 | Proxy |
+|---|---|---|---|---|
+| BOW | — | — | 268,130 chars, nothing | DEF 14A (annual), nothing |
+| BZH | — | — | 380,919 chars, nothing | none filed since 2026-01-01 |
+| DSGR | — | — | 334,448 chars, nothing | none filed since 2026-01-01 |
+| RAMP | — | — | 336,132 chars, nothing | DEFM14A + PREM14A, 1.18M each, nothing |
+| BWMN | — | — | 356,095 chars, nothing | DEF 14A (annual), nothing |
+
+`TBD` is the correct value for all five and it is not a coverage gap. The
+merger agreements are unanimous and that is structural, not incidental:
+agreements define closing mechanically — "the Closing shall occur on the second
+Business Day following satisfaction of the conditions" — and a mechanical
+definition names no quarter. A future pass looking for close dates in EX-2.1
+should expect to find none there for any deal.
+
+Two of the five are worth re-checking **only** on a new filing. BZH and DSGR have
+filed no proxy at all yet; when their DEFM14A appears it will very likely state
+timing, as CBZ's did. BOW and BWMN have only annual DEF 14As, which are not
+merger proxies. RAMP is the settled case — its merger proxies exist, run to 1.18
+million characters each, and state nothing.
+
+## Coverage
+
+`test_formulas.py` is at 176 checks. New: both codenamed exhibits defeating the
+filename test, the seventeen conventional names still matching, the near-miss
+rejections still holding, CBZ's phrasing extracting and resolving, the three
+other written-out quarter forms, the half form and Q-abbreviation unchanged, the
+proxy cap reading CBZ's real offset where the 8-K cap cannot, and the proxy cap
+remaining bounded.

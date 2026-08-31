@@ -17,7 +17,8 @@ from main import (parse_close_date, days_to_close, annualized_spread,
                  validate_close_date, validate_enriched_acquirer,
                  ANNUALIZE_MIN_DAYS, CLOSE_DATE_SCAN_CHARS, extract_close_date,
                  tx_value_plausible, get_acquirer_type,
-                 TX_VALUE_MIN_RATIO, TX_VALUE_MAX_RATIO)
+                 TX_VALUE_MIN_RATIO, TX_VALUE_MAX_RATIO,
+                 PROXY_CLOSE_DATE_SCAN_CHARS, _pick_ex2, _EX2_NAME)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -573,6 +574,69 @@ check("a tender expiry after announcement passes",
       validate_close_date('2026-10-20', '2026-06-24')[0], '2026-10-20')
 check("a tender expiry before announcement is refused",
       validate_close_date('2026-05-01', '2026-06-24')[0], None)
+
+print()
+print("THE QUARTER FORM, AND A CAP SIZED TO THE DOCUMENT")
+print("-" * 78)
+
+# CBZ's PREM14A states "the Merger will be completed during the fourth quarter
+# of 2026". The patterns carried an explicit (?:half of)? accommodation and no
+# quarter twin, so "second half of 2026" read and "fourth quarter of 2026" did
+# not -- while parse_close_date resolved it fine either way.
+_CBZ = ('We currently anticipate that the Merger will be completed during the '
+        'fourth quarter of 2026, but we cannot be certain when.')
+check("CBZ's phrasing is now extracted",
+      extract_close_date(_CBZ), 'fourth quarter of 2026', "returned 'TBD'")
+check("and resolves to the quarter's end",
+      parse_close_date('fourth quarter of 2026'), date(2026, 12, 31))
+for _q, _want in [('first quarter of 2027', 'first quarter of 2027'),
+                  ('third quarter of 2026', 'third quarter of 2026')]:
+    check(f"'{_q}' reads", extract_close_date(f'expected to close in the {_q}'), _want)
+check("the half form still reads",
+      extract_close_date('expected to close in the second half of 2026'),
+      'second half of 2026', "the accommodation this was modelled on")
+check("the Q-abbreviation still reads",
+      extract_close_date('expected to close in Q4 2026'), 'Q4 2026')
+
+# A proxy is an order of magnitude longer than an 8-K. CBZ's is 884,167 chars
+# and states its close at offset 102,755 -- under 3% of the way in.
+check("a proxy cap exists and is far larger than the 8-K one",
+      PROXY_CLOSE_DATE_SCAN_CHARS > CLOSE_DATE_SCAN_CHARS * 10, True,
+      f"{PROXY_CLOSE_DATE_SCAN_CHARS:,} vs {CLOSE_DATE_SCAN_CHARS:,}")
+check("at CBZ's real offset the 8-K cap sees nothing",
+      extract_close_date(('x' * 102755) + ' ' + _CBZ), 'TBD')
+check("and the proxy cap reads it",
+      extract_close_date(('x' * 102755) + ' ' + _CBZ,
+                         scan_chars=PROXY_CLOSE_DATE_SCAN_CHARS),
+      'fourth quarter of 2026')
+check("it validates against CBZ's announcement",
+      validate_close_date('fourth quarter of 2026', '2026-07-29')[0],
+      'fourth quarter of 2026')
+check("the proxy cap is bounded, not unlimited",
+      extract_close_date(('x' * 500000) + ' ' + _CBZ,
+                         scan_chars=PROXY_CLOSE_DATE_SCAN_CHARS), 'TBD',
+      "a proxy holds hundreds of dates that are not guidance")
+
+print()
+print("THE EXHIBIT IS FOUND BY ITS TYPE, NOT ITS FILENAME")
+print("-" * 78)
+
+# BOW filed its merger agreement as triplecrown-mergeragreemen.htm -- the deal's
+# project codename. ATKR filed atkr_mergerk.htm. Neither carries an ex2 token,
+# so _pick_ex2 returned None on both and two 8-Ks went unread while every
+# sibling deal had a commitment reading and an outside date.
+for _nm in ('triplecrown-mergeragreemen.htm', 'atkr_mergerk.htm'):
+    check(f"filename matching cannot see {_nm}", _pick_ex2([_nm]), None,
+          "which is why document TYPE is now the primary test")
+check("conventionally named exhibits still match by filename",
+      [_pick_ex2([n]) for n in ('d143382dex21.htm', 'tm2622398d1_ex2-1.htm',
+                                'dp248400_ex0201.htm', 'ex2-1.htm')],
+      ['d143382dex21.htm', 'tm2622398d1_ex2-1.htm',
+       'dp248400_ex0201.htm', 'ex2-1.htm'],
+      "the fallback still carries 17 of 19 deals")
+check("the filename filter still rejects near-misses",
+      [_pick_ex2([n]) for n in ('index2.htm', 'ex1002.htm', 'd1ex21.jpg')],
+      [None, None, None])
 
 print()
 print("=" * 78)

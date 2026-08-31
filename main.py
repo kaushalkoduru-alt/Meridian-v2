@@ -1435,25 +1435,36 @@ def extract_acquirer(clean_text, target_name=''):
 # much of it is worth reading.
 CLOSE_DATE_SCAN_CHARS = 25000
 
+# A proxy is a different document. CBZ's PREM14A is 884,167 characters and
+# states its expected close at offset 102,755 — a cap sized for an 8-K sees
+# under 3% of it. Proxies restate the transaction at length before reaching the
+# section that discusses timing, so the number has to be an order of magnitude
+# larger to reach it at all.
+#
+# Deliberately not unbounded: a proxy contains hundreds of dates that are not
+# close guidance — record dates, fiscal year ends, option expiries — and the
+# patterns still require close, complete or consummate language nearby.
+PROXY_CLOSE_DATE_SCAN_CHARS = 400000
 
-def extract_close_date(clean_text):
+
+def extract_close_date(clean_text, scan_chars=None):
     # Patterns ordered specific-to-general: qualified phrases first, greedy catch-alls last.
     # [-\s]+ allows hyphenated forms like "mid-2027" as well as spaced "mid 2027".
     patterns=[
         # Specific: qualifier words anchored to close/complete/anticipated language
-        r'(?:expected|anticipated|projected)\s+to\s+close.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:half[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
-        r'(?:expected|anticipated|projected)\s+to\s+be\s+completed.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:half[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
+        r'(?:expected|anticipated|projected)\s+to\s+close.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
+        r'(?:expected|anticipated|projected)\s+to\s+be\s+completed.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
         r'transaction.*?(?:expected|anticipated|projected).*?(?:close|complete|consummat).*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late|second half|first half)[-\s]+(?:of\s+)?20\d{2})',
         r'(?:close|complete|consummat).*?(?:by|in|during)\s+((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
         r'anticipated\s+to\s+close.*?(?:in\s+)?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
         r'close.*?(?:by|in)\s+((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
         # Standalone qualifier patterns (no surrounding close language required)
         r'\b(Q[1-4]\s+20\d{2})\b',
-        r'\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:half[-\s]+of[-\s]+)?20\d{2})\b',
+        r'\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b',
         r'calendar\s+year\s+(20\d{2})',
         r'(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})',
         # Greedy catch-alls last — only fire if nothing above matched
-        r'(?:expected|anticipated)\s+to\s+(?:close|complete).*?(?:in\s+(?:the\s+)?)?((?:first|second|third|fourth|early|mid-?|late)[-\s]+(?:half[-\s]+of[-\s]+)?20\d{2})',
+        r'(?:expected|anticipated)\s+to\s+(?:close|complete).*?(?:in\s+(?:the\s+)?)?((?:first|second|third|fourth|early|mid-?|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})',
         r'(?:expected|anticipated)\s+to\s+(?:close|complete).*?(\w+[-\s]+20\d{2})',
     ]
 
@@ -1463,7 +1474,7 @@ def extract_close_date(clean_text):
     }
 
     for pat in patterns:
-        m=re.search(pat, clean_text[:CLOSE_DATE_SCAN_CHARS], re.IGNORECASE)
+        m=re.search(pat, clean_text[:(scan_chars or CLOSE_DATE_SCAN_CHARS)], re.IGNORECASE)
         if m:
             result = m.group(1).strip()
             if not any(yr in result for yr in ['2025','2026','2027','2028']):
@@ -2540,10 +2551,19 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     if _ix.status_code != 200:
                         print(f"  [Commitment] {_tk}: document list HTTP {_ix.status_code}")
                         continue
-                    # Naming shapes and the filter live on _EX2_NAME.
-                    _ex2 = _pick_ex2(
-                        _it.get('name') for _it in
-                        _ix.json().get('directory', {}).get('item', []))
+                    # EDGAR's own document type first — it does not depend on
+                    # what the filer agent chose to call the file. Naming shapes
+                    # and the filename filter live on _EX2_NAME, and are the
+                    # fallback for filings whose index page cannot be read.
+                    _ex2 = _ex2_by_document_type(_cik, _accn, _acc)
+                    if _ex2:
+                        print(f"  [Commitment] {_tk}: {_ex2} found by document "
+                              f"type EX-2 (filename carries no ex2 token)"
+                              if not _EX2_NAME.search(_ex2.lower()) else "", end='')
+                    if not _ex2:
+                        _ex2 = _pick_ex2(
+                            _it.get('name') for _it in
+                            _ix.json().get('directory', {}).get('item', []))
                     if not _ex2:
                         # index.json is not always populated with the filing's
                         # documents. CZR's accession lists only the index pages,
@@ -3080,6 +3100,57 @@ def _pick_ex2(names):
             continue
         if _EX2_NAME.search(_nm):
             return _n
+    return None
+
+
+def _ex2_by_document_type(cik, accn, acc):
+    """
+    The EX-2 exhibit as EDGAR itself types it on the filing index page.
+
+    This is the primary test now, and filename matching is the fallback, because
+    a filename is chosen by the filer agent and a document type is not.
+
+    BOW filed its merger agreement as `triplecrown-mergeragreemen.htm` — the
+    deal's project codename, with no `ex2` token anywhere in it — so `_pick_ex2`
+    returned None, the index-page fallback applied the same filename test and
+    also returned None, and a 677KB merger agreement sat unread in the
+    accession. The deal carried no commitment terms and no outside date while
+    every sibling had both. Project codenames are ordinary in M&A, so a reader
+    keyed on filenames will keep missing them.
+
+    The index page states it plainly:
+
+        <td>2</td> <td>EX-2.1</td>
+        <td><a href="...triplecrown-mergeragreemen.htm">...</a></td>
+        <td>EX-2.1</td> <td>677278</td>
+
+    Returns a bare filename to match what the callers expect, or None.
+    """
+    try:
+        r = requests.get(
+            f"https://www.sec.gov/Archives/edgar/data/{cik}/{accn}/{acc}-index.html",
+            headers=EDGAR_HEADERS, timeout=10)
+        time.sleep(0.12)  # SEC rate limit: 10 req/sec max
+        if r.status_code != 200:
+            return None
+        # Each row carries its document link and its type. Pair them by row so a
+        # type from one row can never be attached to a document from another --
+        # the close-date parser already had that bug once, across clauses.
+        for row in re.findall(r'<tr[^>]*>(.*?)</tr>', r.text, re.S | re.I):
+            cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.S | re.I)
+            if len(cells) < 4:
+                continue
+            dtype = re.sub(r'<[^>]+>', '', cells[3]).strip().upper()
+            if not re.match(r'^EX-?2(\.|$)', dtype):
+                continue
+            href = re.search(r'href="([^"]+)"', cells[2])
+            if not href:
+                continue
+            name = href.group(1).split('/')[-1].split('?')[-1]
+            if name.lower().endswith(('.htm', '.html', '.txt')):
+                return name
+    except Exception:
+        return None
     return None
 
 
