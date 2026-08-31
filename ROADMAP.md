@@ -276,8 +276,6 @@ These need no checkbox. They govern everything above.
 
 ## Progress
 
-1 of 22 complete.
-
 - §2 · Audit every formula — [AUDIT.md](AUDIT.md)
 
 ---
@@ -461,4 +459,4 @@ deliberately.
 
 ## Progress
 
-0 of 34 complete.
+1 of 34 complete.
