@@ -1578,11 +1578,30 @@ def extract_close_date(clean_text, scan_chars=None):
         r'(?:close|complete|consummat).*?(?:by|in|during)\s+((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
         r'anticipated\s+to\s+close.*?(?:in\s+)?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
         r'close.*?(?:by|in)\s+((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:of\s+)?20\d{2})',
-        # Standalone qualifier patterns (no surrounding close language required)
-        r'\b(Q[1-4]\s+20\d{2})\b',
-        r'\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b',
-        r'calendar\s+year\s+(20\d{2})',
-        r'(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})',
+        # Qualifier patterns, each anchored to close language in the SAME
+        # sentence. They used to be labelled "standalone (no surrounding close
+        # language required)", and that is how three wrong dates reached the
+        # feed:
+        #
+        #   BWMN  "Q2 2026"     from a cross-reference to that morning's
+        #                       separate earnings release
+        #   ATKR  "fiscal 2026" from Atkore's fiscal-year mention, in a press
+        #                       release containing no close guidance at all
+        #   HZO   "2026"        same shape
+        #
+        # Each was caught downstream — by the announcement-order check, then by
+        # the bare-year granularity rule — which made them harmless by accident
+        # rather than by design. A pattern that fires on unrelated text and
+        # relies on a later guard is one guard away from shipping.
+        #
+        # Two forms per token because the date can sit either side of the verb:
+        # "expected to close in Q3 2026" and "Q3 2026 closing expected".
+        r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?\b(Q[1-4]\s+20\d{2})\b',
+        r'\b(Q[1-4]\s+20\d{2})\b[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
+        r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b',
+        r'\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
+        r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})',
+        r'(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
         # Greedy catch-alls last — only fire if nothing above matched
         r'(?:expected|anticipated)\s+to\s+(?:close|complete).*?(?:in\s+(?:the\s+)?)?((?:first|second|third|fourth|early|mid-?|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})',
         r'(?:expected|anticipated)\s+to\s+(?:close|complete).*?(\w+[-\s]+20\d{2})',

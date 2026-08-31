@@ -8,7 +8,8 @@ the gap. Every fixture here keeps the real distance where distance matters.
 import sys
 from datetime import datetime, timedelta
 sys.path.insert(0, '/home/claude/commit')
-from outside_date import extract_outside_date
+from outside_date import (extract_outside_date, extract_agreement_date,
+                          _relative_deadline)
 
 ok = True
 def check(label, cond, detail=""):
@@ -248,6 +249,70 @@ r = extract_outside_date(NATH_STAY, announced_date=datetime(2026, 1, 21), now=NO
 check("an uncomputable litigation stay does not fabricate a period",
       r is not None and r['date'] == '2026-04-20',
       f"{r['date']} via {r['source']}" if r else "nothing found")
+
+print()
+print("DEADLINES DEFINED AS A PERIOD FROM SIGNING")
+print("=" * 78)
+
+# Four live agreements never state a calendar date. Every PATTERNS entry ends in
+# one, so the module read nothing -- correctly, but four deals short.
+_ATKR = ('the Effective Time shall not have occurred on or before the first '
+         'Business Day that is twelve (12) months after the date of this Agreement')
+_ALOT = ('if the Merger has not been consummated on or before the date that is '
+         'one hundred and fifty (150) days after the date of this Agreement')
+_RAMP = ('the Effective Time has not occurred on or before the date that is '
+         'twelve (12) months after the date hereof')
+_HZO = ('the Effective Time shall not have occurred on or prior to the date '
+        'which is nine months following the date of this Agreement')
+
+for _lbl, _txt, _agd, _want, _why in [
+    ("ATKR: twelve (12) months, past a 'first Business Day that is'",
+     _ATKR, datetime(2026, 8, 2), datetime(2027, 8, 2), ''),
+    ("ALOT: one hundred and fifty (150) DAYS, not months",
+     _ALOT, datetime(2026, 6, 16), datetime(2026, 11, 13),
+     'the 120 bound was written for months and refused this'),
+    ("RAMP: 'the date hereof' reads like 'of this Agreement'",
+     _RAMP, datetime(2026, 5, 16), datetime(2027, 5, 16), ''),
+    ("HZO: 'nine months' spelled out, with no numeral at all",
+     _HZO, datetime(2026, 8, 9), datetime(2027, 5, 9), '')]:
+    _r = _relative_deadline(_txt, _agd)
+    check(_lbl, bool(_r) and _r[0] == _want,
+          _why or f"{_agd.date()} -> {_r[0].date() if _r else 'nothing'}")
+
+# The anchor is the agreement's own date. All four differ from their filing
+# date, so falling back to it would move every one of these deadlines.
+check("the agreement's stated date is read off the cover",
+      extract_agreement_date('AGREEMENT AND PLAN OF MERGER By and Among X, Y '
+                             'and Z Dated as of August 2, 2026 TABLE OF CONTENTS')
+      == datetime(2026, 8, 2))
+check("no agreement date means no deadline, not a guessed one",
+      _relative_deadline(_ATKR, None) is None,
+      'an anchor off by two days is a deadline off by two days')
+check("the filing date would have moved ATKR by a day",
+      _relative_deadline(_ATKR, datetime(2026, 8, 3))[0] == datetime(2027, 8, 3),
+      'which is why the filing date is not the anchor')
+
+# The bound is per unit now, or 150 days is refused while 150 months would pass.
+check("an implausible month count is still refused",
+      _relative_deadline('the Effective Time shall not have occurred on or '
+                         'before the date that is (900) months after the date '
+                         'of this Agreement', datetime(2026, 1, 1)) is None)
+check("a plausible day count is allowed",
+      _relative_deadline('the Merger has not been consummated on or before the '
+                         'date that is (180) days after the date of this '
+                         'Agreement', datetime(2026, 1, 1))[0] == datetime(2026, 6, 30))
+
+# End to end: a relative base still runs through the extension classifier.
+_FULL = _ALOT + (' (the "Outside Date"); provided that either party may elect to '
+                 'extend the Outside Date by three (3) months.')
+_r = extract_outside_date(_FULL, announced_date=datetime(2026, 6, 17),
+                          agreement_date=datetime(2026, 6, 16), now=NOW)
+check("a period-defined base is still classified for extensions",
+      _r is not None and _r['source'] == 'period from the agreement date',
+      _r['source'] if _r else 'nothing found')
+check("and an elective extension leaves the base as the deadline",
+      bool(_r) and _r['date'] == '2026-11-13',
+      'elective moves nothing without someone acting')
 
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

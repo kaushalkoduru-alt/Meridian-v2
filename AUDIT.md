@@ -2172,3 +2172,126 @@ extension provisos that follow each of these clauses, which `_classify_extension
 would need to read, change the answer.
 
 `test_formulas.py` is at 210 checks.
+
+---
+
+# Anchored patterns, and deadlines defined as a period from signing
+
+2026-08-31.
+
+## 1 · It was not one unanchored pattern, it was four
+
+The group carried its own admission in a comment — *"Standalone qualifier
+patterns (no surrounding close language required)"*:
+
+```
+\b(Q[1-4]\s+20\d{2})\b
+\b((?:first|second|third|fourth|early|mid|late)[-\s]+…20\d{2})\b
+calendar\s+year\s+(20\d{2})
+(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})
+```
+
+All four now require close, complete or consummate language in the **same
+sentence**, in either order, because a date can sit on either side of the verb —
+"expected to close in Q3 2026" and "a Q4 2026 closing is anticipated".
+
+This is the third time a pattern matched unrelated text and was caught
+downstream. The other two came from this same group: BWMN's `Q2 2026` from an
+earnings cross-reference, and ATKR's `fiscal 2026`. Both were stopped later — by
+the announcement-order check and by the bare-year rule — which made them
+harmless by accident. A pattern that fires on unrelated text and relies on a
+later guard is one guard away from shipping.
+
+### What anchoring changed, measured on the real documents
+
+Re-extracting every deal's close date from its own filing, before and after:
+
+| Deal | before | after | |
+|---|---|---|---|
+| ATKR | `2026` | `TBD` | spurious — from "fiscal 2026" |
+| BOW | `second quarter of 2026` | `TBD` | spurious — from its **earnings** release |
+| OGN | `2026` | `early 2027` | **improved** — the bare year was masking the real guidance |
+| RAMP | `2025` | `2026` | **improved** — it was returning a year in the **past** |
+
+Four changed, and **no real guidance was lost**. Two spurious values removed and
+two improved: in both improvement cases an unanchored pattern was firing earlier
+in the list and shadowing a correct, more specific reading further down. RAMP
+returning `2025` is the clearest illustration — a date before the deal was
+announced, produced by a pattern that never checked what it was reading.
+
+## 2 · Deadlines defined as a period from signing
+
+`_relative_deadline` reads the four clauses, `extract_agreement_date` supplies
+the anchor, and `extract_outside_date` falls through to them when no dated base
+exists. Both number conventions are handled — the numeral in parentheses when
+present, the spelled-out word when not.
+
+One bound had to change. `_period` capped every count at 120 regardless of
+unit, which was written for months and silently refused ALOT's *"one hundred and
+fifty (150) days"*. It is now per unit: 1,100 days, 120 months, 10 years.
+
+### The anchor — all four differ from the filing date
+
+Every one of the four states its own execution date on its cover, and **not one
+matches the filing date**:
+
+| Deal | agreement dated | filed | gap | period | outside date |
+|---|---|---|---:|---|---|
+| ATKR | 2026-08-02 | 2026-08-03 | 1 day | 12 months | **2027-08-02** |
+| ALOT | 2026-06-16 | 2026-06-17 | 1 day | 150 days | **2026-11-13** |
+| HZO | 2026-08-09 | 2026-08-10 | 1 day | 9 months | **2027-08-09** |
+| RAMP | 2026-05-16 | 2026-05-18 | **2 days** | 12 months | **2027-05-16** |
+
+Using the filing date would have moved every one of these deadlines. That is a
+small error in days and a real one in kind: the module's whole claim is that the
+date comes from the agreement, and a deadline computed off the wrong day is the
+invented number it exists to avoid. Where no agreement date can be read,
+`_relative_deadline` returns nothing rather than falling back — tested.
+
+### The extension provisos
+
+| Deal | classification | what the agreement says |
+|---|---|---|
+| ATKR | automatic | proviso extends on failure of the regulatory conditions; names no further date, so the base stands and the deal is marked extendable |
+| ALOT | **elective** | a party must act, so the base date governs — the conservative reading the module already applies to dated elective clauses |
+| RAMP | automatic | same shape as ATKR |
+| HZO | automatic | *"the Outside Date shall automatically be extended by an additional three months"* — and the reported 2027-08-09 already includes it |
+
+**HZO is understated and I want to flag it rather than bury it.** Its proviso
+continues: *"the Outside Date may be so extended on no more than two occasions
+… (for a maximum Outside Date that is fifteen months …)"*. Two automatic
+three-month extensions off a nine-month base gives a true outer deadline of
+**2027-11-09**, three months later than what is reported. The module compounds
+consecutive automatic periods but found only one occurrence here, because the
+count lives in a separate proviso clause rather than in a second extension
+sentence.
+
+The error is in the safe direction — the module's stated preference is that
+overstating time remaining is the more dangerous mistake — but it is an error.
+Reading *"no more than two occasions"* and the stated *"maximum … fifteen
+months"* is the fix, and it is a further pattern, so it is recorded here rather
+than made.
+
+## The feed reaches 19 of 19
+
+Every live deal now carries an outside date:
+
+```
+AES  2027-06-01  ALOT 2026-11-13  APGE 2027-06-18  ATKR 2027-08-02
+BOW  2027-04-02  BWMN 2027-05-10  BZH  2027-05-06  CBZ  2027-07-28
+CZR  2027-11-27  DSGR 2026-12-31  GBCS 2026-08-31  GBTG 2027-02-02
+GSAT 2028-04-13  HZO  2027-08-09  NATH 2026-10-20  OGN  2027-01-26
+PAYO 2027-06-12  RAMP 2027-05-16  SLAB 2028-02-04
+```
+
+Three of the four new ones come from the period reading; BOW's came free with
+the document-type fix, since its agreement was unreadable before that and states
+a dated deadline. Four sources are now in use: dated clauses, dated automatic
+extensions, period-stated extensions off a dated base (APGE, HZO), and periods
+from the agreement date (ATKR, ALOT, RAMP).
+
+ALOT is the one to watch: **2026-11-13, 73 days out**, on a deal whose spread is
+0.03% and which looks all but closed. GBCS remains the nearest at 2026-08-31,
+which has now passed — worth checking what happened to it.
+
+`test_outside_date.py` gains 11 checks; `test_formulas.py` is at 218.

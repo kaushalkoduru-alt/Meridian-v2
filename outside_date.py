@@ -109,6 +109,93 @@ ELECTIVE_EXTENSION_MARKERS = [
 EXTENSION_MARKERS = AUTOMATIC_EXTENSION_MARKERS + ELECTIVE_EXTENSION_MARKERS
 
 
+# ── DEADLINES DEFINED AS A PERIOD FROM SIGNING ───────────────────────────────
+#
+# Four of nineteen live agreements never state a calendar date at all. They
+# define the deadline as a period measured from the day the agreement was
+# signed, and every PATTERNS entry above terminates in a date, so the module
+# read nothing and correctly declined to guess:
+#
+#   ATKR  "the first Business Day that is twelve (12) months after the date of
+#          this Agreement (the 'End Date')"
+#   ALOT  "the date that is one hundred and fifty (150) days after the date of
+#          this Agreement (the 'Outside Date')"
+#   RAMP  "the date that is twelve (12) months after the date hereof (the
+#          'Outside Date')"
+#   HZO   "the date which is nine months following the date of this Agreement
+#          ... the 'Outside Date'"
+#
+# Distinct from APGE, which has a DATED base extended by a period. Here the
+# period IS the definition and there is no base to extend.
+#
+# The anchor is the agreement's own stated date, never the filing date. Those
+# differ for all four — by a day for ATKR, ALOT and HZO and by two for RAMP —
+# and a deadline computed off the wrong day is exactly the invented number this
+# module exists to avoid. Where no agreement date can be read, nothing is
+# returned.
+
+_AGREEMENT_DATE = rf'dated\s+as\s+of\s+{_DATE_WORDS}'
+
+# "twelve (12) months", "one hundred and fifty (150) days", and HZO's bare
+# "nine months" with no numeral at all. The numeral wins when present; the words
+# carry it when not.
+_RELATIVE_DEADLINE = (
+    rf'(?:has|shall|will|would)\s+not\s+(?:have\s+)?(?:been\s+)?'
+    rf'(?:occurred|consummated|closed|become\s+effective)[^.]{{0,140}}?'
+    rf'{_PREP}\s+(?:the\s+)?'
+    # "the first Business Day that is", "the date that is", "the date which is"
+    rf'(?:(?:first|last)\s+Business\s+Day\s+(?:that\s+|which\s+)?is\s+|'
+    rf'date\s+(?:that|which)\s+is\s+)?'
+    rf'(?:([A-Za-z][A-Za-z\s\-]{{2,28}}?)\s+)?'
+    rf'(?:\(\s*(\d{{1,3}})\s*\)\s*)?'
+    rf'(month|day|year)s?\s+(?:after|following|from)\s+'
+    rf'the\s+date\s+(?:of\s+this\s+Agreement|hereof)'
+)
+
+
+def extract_agreement_date(agreement_text):
+    """
+    The date the agreement states for itself, as a datetime, or None.
+
+    Read from the first stretch of the document, where the execution date sits
+    on the cover: "AGREEMENT AND PLAN OF MERGER ... Dated as of August 2, 2026".
+    Bounded to the opening because "dated as of" recurs throughout an agreement
+    in unrelated contexts -- schedules, exhibits, prior agreements.
+    """
+    if not agreement_text:
+        return None
+    head = re.sub(r'\s+', ' ', agreement_text[:8000])
+    m = re.search(_AGREEMENT_DATE, head, re.IGNORECASE)
+    return _to_date(m.groups()) if m else None
+
+
+def _relative_deadline(flat, agreement_date):
+    """
+    A deadline stated as a period from signing, resolved against the agreement's
+    own date. Returns (date, quote) or None.
+
+    Returns None without an agreement date rather than falling back to anything
+    else: the whole value of this reading is that the anchor is the signing day,
+    and an anchor off by two days is a deadline off by two days.
+    """
+    if not agreement_date:
+        return None
+    m = re.search(_RELATIVE_DEADLINE, flat, re.IGNORECASE)
+    if not m:
+        return None
+    period = _period(m.group(1), m.group(2), m.group(3))
+    if not period:
+        return None
+    n, unit = period
+    # A merger deadline is months, not decades. 36 months is generous against a
+    # feed whose longest dated deadline is 24 months out.
+    if unit == 'month' and n > 36:
+        return None
+    if unit == 'day' and n > 1100:
+        return None
+    return _apply_period(agreement_date, n, unit), m.group(0)[:260]
+
+
 def _classify_extension(window):
     """
     Which kind of extension governs the date at the end of this window.
@@ -154,13 +241,20 @@ _DURATION = (r'extended\s+(?:by\s+)?(?:an?\s+(?:additional\s+)?'
              r'(?:\(\s*(\d{1,3})\s*\)\s*)?(month|day|year)s?\b')
 
 
+# The plausible size of a period depends on its unit, and a single bound cannot
+# serve both. 120 was written for months and silently rejected ALOT's deadline,
+# which its agreement states as "one hundred and fifty (150) days".
+_PERIOD_MAX = {'day': 1100, 'month': 120, 'year': 10}
+
+
 def _period(word, numeral, unit):
     """The three regex groups -> (count, unit), or None when unreadable."""
     n = int(numeral) if numeral else _NUMBER_WORDS.get((word or '').lower())
-    # An extension of a hundred-odd months is a misread, not a deadline.
-    if not n or n > 120:
+    unit = (unit or '').lower()
+    # A period larger than this for its unit is a misread, not a deadline.
+    if not n or n > _PERIOD_MAX.get(unit, 120):
         return None
-    return n, unit.lower()
+    return n, unit
 
 
 def _apply_period(d, n, unit):
@@ -242,7 +336,8 @@ def _to_date(groups):
         return None
 
 
-def extract_outside_date(agreement_text, announced_date=None, now=None):
+def extract_outside_date(agreement_text, announced_date=None, now=None,
+                         agreement_date=None):
     """
     Returns a dict, or None when no date could be read.
 
@@ -292,7 +387,16 @@ def extract_outside_date(agreement_text, announced_date=None, now=None):
             break
 
     if not found:
-        return None
+        # No dated base anywhere. The deadline may still be defined as a period
+        # from signing, which is a shape the tiers above cannot express.
+        _agd = agreement_date or extract_agreement_date(agreement_text)
+        _rel = _relative_deadline(flat, _agd)
+        if not _rel:
+            return None
+        _rdate, _rquote = _rel
+        found = [{'date': _rdate, 'label': 'period from the agreement date',
+                  'quote': _rquote, 'position': flat.find(_rquote[:60])
+                  if _rquote else 0}]
 
     # An extension clause states its date in prose near the definition, not in
     # its own tier, so sweep for any plausible date the tiers did not reach.

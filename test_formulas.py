@@ -737,5 +737,31 @@ for _t, _want in [('expected to close in the fourth quarter of 2026', 'fourth qu
     check(f"{_want!r} still reads", extract_close_date(_t), _want)
 
 print()
+print("EVERY QUALIFIER PATTERN REQUIRES CLOSE LANGUAGE")
+print("-" * 78)
+
+# Four patterns were labelled "standalone (no surrounding close language
+# required)" and that is how three wrong dates reached the feed: BWMN's "Q2
+# 2026" from an earnings cross-reference, ATKR's "fiscal 2026" from a
+# fiscal-year mention, HZO's "2026" the same way. Each was caught downstream,
+# which made them harmless by accident rather than by design.
+for _lbl, _t in [
+    ('a fiscal-year mention', 'Atkore reported record results for fiscal 2026.'),
+    ('an earnings cross-reference',
+     "Bowman's Q2 2026 Earnings Results In a separate press release today."),
+    ('a fiscal year end', 'The Company operates on a fiscal year ending September 30, 2026.'),
+    ('a bare quarter with no verb', 'Segment revenue for Q3 2026 rose 4%.')]:
+    check(f"{_lbl} is no longer a close date", extract_close_date(_t), 'TBD')
+
+# Real guidance still reads, and in both word orders -- the date can sit either
+# side of the verb.
+for _t, _want in [
+    ('The transaction is expected to close in Q3 2026.', 'Q3 2026'),
+    ('A Q4 2026 closing is anticipated.', 'Q4 2026'),
+    ('expected to close in the second half of 2026', 'second half of 2026'),
+    ('The merger is expected to be completed in calendar year 2027.', '2027')]:
+    check(f"{_want!r} still reads", extract_close_date(_t), _want)
+
+print()
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")
