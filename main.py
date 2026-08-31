@@ -2643,7 +2643,7 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         # the cached readings and forces a fresh read.
         try:
             from deal_commitment import assess_commitment
-            from outside_date import extract_outside_date
+            from outside_date import extract_outside_date, extract_agreement_date
 
             # Restore the prior readings captured before the scan's first write.
             # results dicts are built from scratch and carry neither field, so
@@ -2753,9 +2753,15 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                         # signing. It arrives as NaN on some cached rows, and
                         # only a string is usable as an anchor.
                         _filed = _d.get('filed')
+                        # The agreement's own stated date is the better anchor
+                        # and it is right here in the text. `filed` arrives as
+                        # NaN on cached rows, and without an anchor the
+                        # plausibility floor moves to today — which is how GBCS
+                        # lost its deadline on the day the deadline arrived.
                         _d['outside_date'] = extract_outside_date(
                             _txt,
-                            announced_date=_filed if isinstance(_filed, str) else None)
+                            announced_date=_filed if isinstance(_filed, str) else None,
+                            agreement_date=extract_agreement_date(_txt))
                 except Exception as _ce:
                     print(f"  [Commitment] {_tk}: {_ce}")
 

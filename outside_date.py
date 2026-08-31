@@ -196,6 +196,31 @@ def _relative_deadline(flat, agreement_date):
     return _apply_period(agreement_date, n, unit), m.group(0)[:260]
 
 
+# How far from the anchor a date may sit and still be a deadline rather than a
+# parse artifact.
+#
+# The two cases are not the same, and collapsing them cost GBCS its outside
+# date on the very day the deadline arrived. Anchored on the ANNOUNCEMENT, a
+# deadline before signing is impossible and 0 is the right floor. Anchored on
+# TODAY -- which happens whenever the announcement date is missing, and `filed`
+# arrives as NaN on cached rows -- a date in the past is not evidence of
+# anything except that the deadline has been reached, which is the single most
+# important state this field can hold: past it, either party can walk away
+# without paying a break fee.
+#
+# So the floor is 0 with a real anchor and -24 months without one. A deal whose
+# deadline passed two years ago is long gone from the feed by other means; a
+# deal whose deadline passed last week is exactly what a holder needs to see.
+_MAX_MONTHS_OUT = 42
+_MAX_MONTHS_PAST_WITHOUT_ANCHOR = -24
+
+
+def _plausible(months_out, anchored_on_announcement):
+    """Whether a candidate date is a deadline rather than a misread."""
+    floor = 0 if anchored_on_announcement else _MAX_MONTHS_PAST_WITHOUT_ANCHOR
+    return floor < months_out < _MAX_MONTHS_OUT
+
+
 def _classify_extension(window):
     """
     Which kind of extension governs the date at the end of this window.
@@ -352,12 +377,17 @@ def extract_outside_date(agreement_text, announced_date=None, now=None,
     now = now or datetime.utcnow()
     flat = re.sub(r'\s+', ' ', agreement_text)
 
-    anchor = announced_date or now
+    # Whether the anchor is the announcement or merely today decides what
+    # counts as implausible, so the two cases cannot share one bound.
+    # The agreement's own date beats the filing date, and either beats today.
+    anchor = announced_date or agreement_date or now
+    anchored_on_announcement = (announced_date is not None
+                                or agreement_date is not None)
     if isinstance(anchor, str):
         try:
             anchor = datetime.strptime(anchor[:10], "%Y-%m-%d")
         except ValueError:
-            anchor = now
+            anchor, anchored_on_announcement = now, False
 
     has_extension = any(re.search(p, flat, re.IGNORECASE) for p in EXTENSION_MARKERS)
 
@@ -367,9 +397,8 @@ def extract_outside_date(agreement_text, announced_date=None, now=None,
             d = _to_date(m.groups())
             if not d:
                 continue
-            # A deadline sits after signing and inside a few years of it.
             months_out = (d - anchor).days / 30.4
-            if not (0 < months_out < 42):
+            if not _plausible(months_out, anchored_on_announcement):
                 continue
             found.append({
                 'date': d,
@@ -406,7 +435,7 @@ def extract_outside_date(agreement_text, announced_date=None, now=None,
             if not d:
                 continue
             months_out = (d - anchor).days / 30.4
-            if not (0 < months_out < 42):
+            if not _plausible(months_out, anchored_on_announcement):
                 continue
             # Wider than the cue search needs, so the nearest extension verb
             # is inside it and can be classified.

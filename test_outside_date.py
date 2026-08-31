@@ -9,7 +9,7 @@ import sys
 from datetime import datetime, timedelta
 sys.path.insert(0, '/home/claude/commit')
 from outside_date import (extract_outside_date, extract_agreement_date,
-                          _relative_deadline)
+                          _relative_deadline, _plausible)
 
 ok = True
 def check(label, cond, detail=""):
@@ -313,6 +313,51 @@ check("a period-defined base is still classified for extensions",
 check("and an elective extension leaves the base as the deadline",
       bool(_r) and _r['date'] == '2026-11-13',
       'elective moves nothing without someone acting')
+
+print()
+print("A DEADLINE THAT HAS ARRIVED IS NOT A PARSE ERROR")
+print("=" * 78)
+
+# GBCS lost its outside date on 31 August 2026 -- the day the deadline it named
+# arrived. The bound read `0 < months_out < 42` against an anchor that falls
+# back to TODAY when the announcement date is missing, so a date that had
+# merely been reached was discarded as implausible. A passed outside date is the
+# single most important state this field holds: past it, either party can walk
+# away without paying a break fee.
+_GBCS = ('by Purchaser or the Company, by written notice, if the Acceptance '
+         'Time shall not have occurred on or before August 31, 2026 (the '
+         '"Outside Date")')
+
+for _lbl, _kw in [('anchored on the announcement', {'announced_date': datetime(2026, 6, 24)}),
+                  ('anchored on the agreement date', {'agreement_date': datetime(2026, 6, 18)}),
+                  ('no anchor at all -- the path that broke', {})]:
+    _r = extract_outside_date(_GBCS, now=datetime(2026, 9, 5), **_kw)
+    check(f"GBCS resolves {_lbl}", bool(_r) and _r['date'] == '2026-08-31',
+          _r['date'] if _r else 'NONE -- discarded')
+    check(f"  and is marked passed ({_lbl})", bool(_r) and _r['passed'] is True)
+
+_r = extract_outside_date(_GBCS, announced_date=datetime(2026, 6, 24),
+                          now=datetime(2026, 9, 5))
+check("days_remaining goes negative rather than vanishing",
+      _r['days_remaining'] == -5, str(_r['days_remaining']))
+check("the past-deadline meaning renders",
+      'This deadline has passed' in _r['meaning'] and
+      'walk away without paying a break fee' in _r['meaning'],
+      _r['meaning'][:96])
+check("the quote still backs it", 'August 31, 2026' in _r['quote'], _r['quote'][:70])
+
+# The bound still refuses genuine parse errors, which are dates that cannot be
+# deadlines -- not dates that have simply been reached.
+check("a deadline BEFORE signing is still refused",
+      _plausible(-1.5, True) is False,
+      'measured from the announcement, negative means before the agreement existed')
+check("a deadline 50 months out is still refused, anchored or not",
+      _plausible(50, True) is False and _plausible(50, False) is False)
+check("without an anchor, a deadline passed last month is kept",
+      _plausible(-1.0, False) is True,
+      'the deadline arrived; that is information, not a misread')
+check("without an anchor, one passed three years ago is refused",
+      _plausible(-36, False) is False)
 
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

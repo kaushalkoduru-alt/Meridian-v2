@@ -2295,3 +2295,108 @@ ALOT is the one to watch: **2026-11-13, 73 days out**, on a deal whose spread is
 which has now passed — worth checking what happened to it.
 
 `test_outside_date.py` gains 11 checks; `test_formulas.py` is at 218.
+
+---
+
+# GBCS lost its deadline on the day the deadline arrived
+
+2026-08-31.
+
+## The cause
+
+One bound, serving two anchors that need different rules:
+
+```python
+anchor = announced_date or now
+months_out = (d - anchor).days / 30.4
+if not (0 < months_out < 42):
+    continue
+```
+
+Anchored on the **announcement**, `0` is the right floor: a deadline before the
+agreement existed is impossible and the candidate is a misread. Anchored on
+**today** — which is what `or now` does whenever the announcement date is
+missing — `0` means something entirely different. It rejects every date that has
+been reached.
+
+GBCS's deadline is 2026-08-31. Today is 2026-08-31. `months_out` was 0, `0 < 0`
+is false, the only candidate was discarded, and `extract_outside_date` returned
+`None` — no date, no `passed`, no `days_remaining`, no meaning text. The module
+has a `passed` branch and past-deadline prose written for exactly this state and
+never reached it.
+
+**Why the fallback fired at all.** `filed` arrives as `NaN` on cached rows —
+CLAUDE.md already records this, and the call site guards it with
+`announced_date=_filed if isinstance(_filed, str) else None`. That guard turns a
+missing date into `None`, which is correct in itself, and then `or now` quietly
+converts "we do not know when this was announced" into "reject anything not in
+the future". Two reasonable-looking lines composing into a data-destroying one.
+
+## The fix
+
+`_plausible(months_out, anchored_on_announcement)` splits the two cases:
+
+| anchor | floor | ceiling | reasoning |
+|---|---:|---:|---|
+| announcement or agreement date | `0` | 42 months | a deadline before signing is impossible |
+| today (no anchor known) | **−24 months** | 42 months | a passed deadline is a state, not a misread |
+
+A deal whose deadline passed two years ago has left the feed by other means; one
+whose deadline passed last week is precisely what a holder needs to see.
+
+The call site also stopped depending on `filed`. The agreement states its own
+date on its cover and the text is already in hand, so
+`extract_agreement_date(_txt)` is passed as a second anchor — GBCS's agreement is
+dated 2026-06-18, and with that the plausibility floor is a real one whether or
+not `filed` survived the cache.
+
+## GBCS, confirmed
+
+All three anchor paths now resolve identically:
+
+```
+date            2026-08-31
+passed          True
+days_remaining  -1
+source          not-consummated-by clause
+quote           "shall not have occurred on or before August 31, 2026"
+meaning         "This deadline has passed. Either company can now walk away
+                 without paying a break fee, so the deal is being kept alive by
+                 agreement rather than by contract."
+```
+
+Feed re-read: **19 of 19 outside dates, one of them passed.** GBCS is the one,
+and it is now visible as passed rather than absent.
+
+That matters beyond the field. GBCS carries score 82 and risk Very Low on the
+day its contractual deadline expired, with a 41% modeled drawdown and a $400,000
+reverse fee at 2.0%. The score cannot see the deadline — `score_deal` takes no
+time input at all, which QA D3 recorded — so the field disappearing was the only
+signal left, and it disappeared.
+
+## The same exposure elsewhere — checked, and confined to this field
+
+Every other date-bounded check is anchored on the **announcement**, never on
+today, so a value that has merely passed stays:
+
+| Check | bound | past-date exposure |
+|---|---|---|
+| `validate_close_date` | before announcement / >1,260 days after | **none** — verified: `Q1 2026` on a 2026-01-05 announcement is kept |
+| `cap_expected_close` | caps at the outside date | **none** — caps to a passed date without discarding |
+| `days_to_close` | none | returns a negative number |
+| `annualized_spread` | `days <= 0` | suppresses the **derived figure** only; `close_date` itself survives |
+| `_relative_deadline` / `_period` | magnitude per unit | not time-relative |
+| `close_date_from_proxy` | skips proxies filed before the announcement | correct — a proxy predating the deal is a different deal's |
+
+`annualized_spread` is the one worth being explicit about, because it looks like
+the same shape and is not: refusing to annualize a passed date is right — the
+figure would be meaningless — and it deletes nothing. The close date, its
+`days_to_close`, and the passed state all remain readable.
+
+So the defect was specific to `outside_date`, and specific to its fallback
+anchor. It was reachable on any deal whose `filed` did not survive the cache,
+and it destroyed the field's most important state rather than degrading it.
+
+`test_outside_date.py` gains 13 checks covering all three anchor paths, the
+`passed` flag, the negative `days_remaining`, the meaning text, and the four
+plausibility corners.
