@@ -1024,6 +1024,72 @@ def cap_expected_close(close_date, outside):
 ENRICHED_CLOSE_MAX_DAYS = 1260          # ~3.5 years past announcement
 
 
+def close_date_from_proxy(ticker, cik, announced):
+    """
+    Expected-close timing from the target's merger proxy, or None.
+
+    PROXY_CLOSE_DATE_SCAN_CHARS existed for a week and was never passed to
+    anything: `extract_close_date` had exactly one call site, on the 8-K text,
+    with the default cap. The capability was built and never connected, and CBZ
+    resolving anyway — its press release carries the phrase, within the 8-K cap —
+    hid that the proxy path did not exist.
+
+    Only called for deals still reading TBD after the filing pass, so it costs
+    one submissions lookup and one document fetch for the handful that need it.
+
+    A proxy is the best source for this: it is written for shareholders voting on
+    the deal, it postdates the announcement, and it states timing in a section
+    built for the purpose. It is also enormous, which is why it gets its own cap.
+    """
+    if not cik:
+        return None, None
+    try:
+        sub = requests.get(f"https://data.sec.gov/submissions/CIK{cik}.json",
+                           headers=EDGAR_HEADERS, timeout=15).json()
+        time.sleep(0.12)  # SEC rate limit: 10 req/sec max
+    except Exception as e:
+        print(f"  [Proxy] {ticker}: submissions lookup failed — {e}")
+        return None, None
+    rec = sub.get('filings', {}).get('recent', {})
+    best = None
+    for form, acc, doc, fdate in zip(rec.get('form', []), rec.get('accessionNumber', []),
+                                     rec.get('primaryDocument', []), rec.get('filingDate', [])):
+        # Merger proxies only. An annual DEF 14A is a governance document and
+        # states no deal timing -- BOW's and BWMN's were checked and hold none.
+        if form.replace(' ', '').upper() not in ('DEFM14A', 'PREM14A', 'PRER14A'):
+            continue
+        if announced and fdate < str(announced)[:10]:
+            continue                      # predates this deal
+        if best is None or fdate > best[3]:
+            best = (form, acc, doc, fdate)
+    if not best:
+        return None, None
+    form, acc, doc, fdate = best
+    accn = acc.replace('-', '')
+    try:
+        r = requests.get(
+            f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{accn}/{doc}",
+            headers=EDGAR_HEADERS, timeout=60)
+        time.sleep(0.12)
+        if r.status_code != 200:
+            print(f"  [Proxy] {ticker}: {form} {doc} HTTP {r.status_code}")
+            return None, None
+        text = BeautifulSoup(r.text, 'html.parser').get_text()
+    except Exception as e:
+        print(f"  [Proxy] {ticker}: {form} fetch failed — {e}")
+        return None, None
+    got = extract_close_date(text, scan_chars=PROXY_CLOSE_DATE_SCAN_CHARS)
+    ok, why = validate_close_date(got, announced)
+    if ok:
+        print(f"  [Proxy] {ticker}: {form} {fdate} ({len(text):,} chars) -> {ok!r}")
+        return ok, f'{form.lower()}_{fdate}'
+    if got and got != 'TBD':
+        print(f"  [Proxy] {ticker}: {form} {fdate} gave {got!r} — REJECTED, {why}")
+    else:
+        print(f"  [Proxy] {ticker}: {form} {fdate} ({len(text):,} chars) states no timing")
+    return None, None
+
+
 def validate_close_date(cd, announced, now=None):
     """
     A model-produced close date, or None with the reason it was refused.
@@ -1046,6 +1112,17 @@ def validate_close_date(cd, announced, now=None):
     resolved = parse_close_date(cd)
     if not resolved:
         return None, f'unreadable: {cd!r} resolves to no date'
+    # A year on its own is not guidance. "2026" resolves to 31 December and
+    # therefore passes every other test here, but it names a 365-day window and
+    # tells a reader nothing they did not already know from the announcement
+    # date. ATKR, HZO and GSAT each carried one.
+    #
+    # An exact date is exempt: it is finer than a quarter, not coarser.
+    if not re.match(r'^\s*20\d{2}-\d{1,2}-\d{1,2}', str(cd)) and \
+       not re.search(r'q[1-4]|first|second|third|fourth|quarter|half|h[12]|'
+                     r'early|mid|late', str(cd), re.IGNORECASE):
+        return None, (f'too coarse: {cd!r} names a year with no quarter or half, '
+                      f'which is a fragment rather than guidance')
     try:
         ann = datetime.strptime(str(announced)[:10], '%Y-%m-%d').date()
     except (ValueError, TypeError):
@@ -2642,6 +2719,25 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
             # because the outside date is read from the agreement, which happens
             # in this pass — the deal dict was built hundreds of lines earlier
             # with no deadline to bound anything against.
+            # Deals the filing pass left at TBD get their proxy read. This is
+            # where PROXY_CLOSE_DATE_SCAN_CHARS is finally used.
+            _proxied = 0
+            for _d in results:
+                if _d.get('close_date') not in (None, '', 'TBD'):
+                    continue
+                _pcd, _psrc = close_date_from_proxy(
+                    _d.get('ticker'), SEC_CIK_MAP.get(_d.get('ticker') or '', ''),
+                    _d.get('filed'))
+                if not _pcd:
+                    continue
+                _d['close_date'] = _pcd
+                _d['close_date_source'] = _psrc
+                _pdtc = days_to_close(_pcd)
+                _d['days_to_close'] = _pdtc
+                _d['ann'] = annualized_spread(_d.get('sp_pct'), _pdtc)
+                _proxied += 1
+            print(f"[Proxy] {_proxied} close date(s) recovered from merger proxies")
+
             _capped = 0
             for _d in results:
                 _od = parse_structured(_d.get('outside_date', {}))

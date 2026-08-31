@@ -1885,3 +1885,147 @@ rejections still holding, CBZ's phrasing extracting and resolving, the three
 other written-out quarter forms, the half form and Q-abbreviation unchanged, the
 proxy cap reading CBZ's real offset where the 8-K cap cannot, and the proxy cap
 remaining bounded.
+
+---
+
+# Three things that did not land — causes
+
+2026-08-31. Production has rescanned since the report, which changes two of the
+three answers.
+
+## 1 · BOW and ATKR — already fixed, and the premise has moved
+
+Neither (a), (b) nor (c) as posed. **The document-type fix landed and worked on
+both.** Production now shows:
+
+```
+BOW    agreement_read 0001628280-26-051540   commitment yes   outside_date yes
+ATKR   agreement_read 0001666138-26-000016   commitment yes   outside_date NO
+```
+
+BOW is complete. ATKR's exhibit is now found and read — `atkr_mergerk.htm`, the
+file filename matching could not see — which is why it has a commitment reading
+it did not have before. Its missing outside date is a **different problem**, and
+`agreement_read` being set proves the EX-2 discovery is not it.
+
+**The outside-date extractor is what fails for ATKR**, and for three others:
+
+| Deal | EX-2 read | chars | `extract_outside_date` |
+|---|---|---:|---|
+| ATKR | `atkr_mergerk.htm` | 358,070 | none found |
+| ALOT | `d100857dex21.htm` | 264,736 | none found |
+| HZO | `d135056dex21.htm` | 371,013 | none found |
+| RAMP | `tm2614904d1_ex2-1.htm` | 336,132 | none found |
+
+ATKR's agreement contains **24 occurrences of "End Date"**, so the term is
+defined and the extractor is not reaching its date. The only dated End Date
+clause in the document is a capital-expenditure provision — "For the period
+after September 30, 2027 until the End Date, the Capex Budget shall be…" — so
+the operative date is expressed some other way, most likely as a period from
+signing like APGE's "six (6) months". That is an extractor gap, out of scope
+here, and now four deals wide.
+
+No cache marker was involved. The (b) hypothesis is a good one in general — a
+cache that records absence must be invalidated when the detection method changes
+— but `agreement_read` is only set after an exhibit is successfully read, so a
+failed lookup leaves no marker and retries on the next scan by construction.
+
+## 2 · CBZ — the proxy path was never wired, and CBZ resolved without it
+
+CBZ now reads `fourth quarter of 2026` in production. **It did not come from the
+proxy.** It came from the press release, which the quarter-form pattern fix made
+readable:
+
+```
+CBZ 8-K body       37,644 chars -> 'TBD'
+CBZ press release  22,179 chars -> 'fourth quarter of 2026'   (within the 25,000 cap)
+```
+
+So the pattern half of that fix carried CBZ on its own, and that masked the
+other half being dead. **`PROXY_CLOSE_DATE_SCAN_CHARS` was defined and never
+referenced.** `extract_close_date` had exactly one call site — on `full_ct`, with
+the default cap — and `scan_chars` was never passed by anything:
+
+```
+grep -n 'extract_close_date('        ->  def (1450)  +  one call site (1953)
+grep -n 'PROXY_CLOSE_DATE_SCAN_CHARS' ->  the definition, and nothing else
+grep -n 'scan_chars='                 ->  the signature, and nothing else
+```
+
+The capability was built and never connected. That is the answer: **only into
+the function that was tested.**
+
+Now wired. `close_date_from_proxy(ticker, cik, announced)` runs in the agreement
+pass for deals still reading TBD, finds the most recent DEFM14A / PREM14A /
+PRER14A filed *after* the announcement, reads it with the proxy cap, and puts
+the result through `validate_close_date`. Annual DEF 14As are excluded — they
+are governance documents and BOW's and BWMN's were checked last pass and hold no
+deal timing. `days_to_close` and `ann` are recomputed from whatever it returns.
+
+Against the live filings:
+
+```
+[Proxy] CBZ:  PREM14A 2026-08-27 (896,239 chars) -> 'fourth quarter of 2026'
+[Proxy] BOW:  PREM14A 2026-08-28 gave '2027' — REJECTED, too coarse
+[Proxy] ATKR: PREM14A 2026-08-28 gave '2026' — REJECTED, too coarse
+[Proxy] RAMP: DEFM14A 2026-07-06 gave '2026' — REJECTED, too coarse
+```
+
+BOW and ATKR have both filed preliminary proxies since the last pass, which the
+earlier search could not have seen.
+
+## 3 · The bare year — three in the feed, and all three rejections are right
+
+`validate_close_date` now requires quarter or half granularity. A year alone
+resolves to 31 December and therefore passed every other test while naming a
+365-day window, which tells a reader nothing the announcement date did not. An
+exact date is exempt: it is finer than a quarter, not coarser.
+
+**Three deals carried one: ATKR `2026`, HZO `2026`, GSAT `2027`.** All three are
+now refused, and checking what produced them shows the rule is catching more
+than coarseness:
+
+**BOW and ATKR — stray matches from boilerplate.** Their PREM14As are
+*preliminary*, with the dates still unfilled as `[•]` placeholders. The years the
+extractor found are in mailing-date and share-price sentences:
+
+> "This proxy statement … are first being mailed to the stockholders on or about
+> **[•] [•], 2026**."
+> "…as compared to the closing share price of the Common Stock as of **July 31,
+> 2026**, of $72…"
+
+Neither is close guidance. These would have become `close_date` values, and
+through them `days_to_close` and `ann`. The granularity rule refuses them.
+
+**RAMP is different, and worth acting on.** Its DEFM14A states timing precisely:
+
+> "…we currently expect the **Closing to occur by December 31, 2026**."
+
+That is an exact date, not a bare year. `extract_close_date` reduced it to
+`'2026'` because its patterns look for qualifier-plus-year forms and have none
+for a written-out calendar date in close-guidance context — and
+`parse_close_date` only accepts an exact date in ISO form. So the rule correctly
+rejects the residue, but the underlying guidance is real, specific, better than
+any quarter, and currently being thrown away.
+
+**This is the obvious next fix and I have not made it:** a pattern for
+`(?:by|on or before|no later than)\s+<Month> <D>, <YYYY>` in close-guidance
+context, plus written-out date support in `parse_close_date`. It is a third
+pattern change and the instruction this pass named three items, so it is left
+here as a decision. RAMP is the only deal in the feed currently affected.
+
+## Net effect
+
+| Deal | before | after |
+|---|---|---|
+| CBZ | `TBD` → now `fourth quarter of 2026` | unchanged, and no longer dependent on one source |
+| ATKR | `2026` | `TBD` — boilerplate year refused |
+| HZO | `2026` | `TBD` — bare year refused |
+| GSAT | `2027` | `TBD` — bare year refused |
+| RAMP | `TBD` | `TBD` — exact date exists, extractor cannot read it |
+
+Three deals lose a close date and therefore an annualized figure. That is the
+intended direction: each was resting on a year-wide window or, for ATKR, on a
+sentence about mailing proxies. `TBD` is the honest value for all three.
+
+`test_formulas.py` is at 194 checks.

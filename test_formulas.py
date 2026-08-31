@@ -18,7 +18,8 @@ from main import (parse_close_date, days_to_close, annualized_spread,
                  ANNUALIZE_MIN_DAYS, CLOSE_DATE_SCAN_CHARS, extract_close_date,
                  tx_value_plausible, get_acquirer_type,
                  TX_VALUE_MIN_RATIO, TX_VALUE_MAX_RATIO,
-                 PROXY_CLOSE_DATE_SCAN_CHARS, _pick_ex2, _EX2_NAME)
+                 PROXY_CLOSE_DATE_SCAN_CHARS, _pick_ex2, _EX2_NAME,
+                 close_date_from_proxy)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -637,6 +638,50 @@ check("conventionally named exhibits still match by filename",
 check("the filename filter still rejects near-misses",
       [_pick_ex2([n]) for n in ('index2.htm', 'ex1002.htm', 'd1ex21.jpg')],
       [None, None, None])
+
+print()
+print("A BARE YEAR IS A FRAGMENT, NOT GUIDANCE")
+print("-" * 78)
+
+# ATKR, HZO and GSAT each reached production with a year and no quarter.
+# "2026" resolves to 31 December and so passed every other test, while naming a
+# 365-day window that tells a reader nothing the announcement date did not.
+for _tk, _cd, _ann in [('ATKR', '2026', '2026-08-03'), ('HZO', '2026', '2026-08-10'),
+                       ('GSAT', '2027', '2026-04-14')]:
+    _v, _w = validate_close_date(_cd, _ann)
+    check(f"{_tk}: bare {_cd!r} is refused", _v, None)
+    check(f"  and named as too coarse", 'too coarse' in (_w or ''), True)
+
+# Everything with quarter or half granularity survives.
+for _cd in ('Q3 2026', 'H2 2026', 'fourth quarter of 2026', 'second half 2026',
+            'early 2027', 'mid-2027', 'mid-to-late 2027'):
+    check(f"{_cd!r} still passes", validate_close_date(_cd, '2026-01-01')[0], _cd)
+
+# An exact date is FINER than a quarter, not coarser, so the rule must not
+# catch it.
+check("an exact date is exempt from the granularity rule",
+      validate_close_date('2026-10-20', '2026-06-24')[0], '2026-10-20')
+
+print()
+print("THE PROXY PATH IS WIRED, NOT JUST BUILT")
+print("-" * 78)
+
+# PROXY_CLOSE_DATE_SCAN_CHARS existed for a week and was never passed to
+# anything: extract_close_date had one call site, on the 8-K text, with the
+# default cap. CBZ resolved anyway because its press release carries the phrase
+# within the 8-K cap, which hid that the proxy path did not exist.
+check("close_date_from_proxy exists and is callable",
+      callable(close_date_from_proxy), True)
+import inspect as _i, main as _m
+_src = _i.getsource(_m)
+check("the proxy cap now has a caller",
+      'scan_chars=PROXY_CLOSE_DATE_SCAN_CHARS' in _src, True,
+      "was defined and never referenced")
+check("the scan calls the proxy path",
+      'close_date_from_proxy(' in _src.split('def close_date_from_proxy')[1], True,
+      "a call site outside the definition")
+check("a deal with no CIK returns nothing rather than raising",
+      close_date_from_proxy('ZZZZ', '', '2026-01-01'), (None, None))
 
 print()
 print("=" * 78)
