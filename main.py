@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, HTMLResponse, StreamingResponse
 import pandas as pd
 import os
+import sys
 import requests
 import re
 import yfinance as yf
@@ -2861,6 +2862,20 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     print(f"[Gate] blocked {_before - len(results)} unverified deal(s)")
             _clean = [{k: v for k, v in r.items() if k != '_filing_text'} for r in results]
             save_cache(_clean)
+
+            # Everything a human would question, named out loud. Runs on
+            # `results` rather than the cache read-back because _filing_text is
+            # still attached here, and three of the ten checks need the filing.
+            # Reports only — nothing below blocks or alters a deal.
+            try:
+                import integrity as _integ
+                _f = _integ.sweep(results, sys.modules[__name__])
+                _h, _ls = _integ.report(_f, results)
+                print(_h)
+                for _l in _ls:
+                    print(_l)
+            except Exception as _ie:
+                print(f"[Integrity] sweep failed (non-fatal): {_ie}")
 
             # Read the feed back and check the blended prices survived the write.
             # This is the check that did not exist when GSAT's pricing silently

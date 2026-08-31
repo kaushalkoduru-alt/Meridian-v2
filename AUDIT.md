@@ -2400,3 +2400,112 @@ and it destroyed the field's most important state rather than degrading it.
 `test_outside_date.py` gains 13 checks covering all three anchor paths, the
 `passed` flag, the negative `days_remaining`, the meaning text, and the four
 plausibility corners.
+
+---
+
+# The data integrity sweep
+
+2026-08-31. `integrity.py`, run at the end of every scan. **A report, not a
+gate** — nothing it prints blocks a deal, changes a value, or fails a scan.
+
+## Why it is a report
+
+Nine real defects were found in the feed this week. **Seven were silent**:
+nothing crashed, nothing logged, and every value looked like a number a
+merger-arb screen would print. Each was found by someone looking.
+
+The distinction that shapes the design: a test suite asserts what must be true
+of *code*. This asserts what is usually true of *data*, which is a weaker and
+more useful claim — it flags the unusual and leaves the judgement to a reader. A
+finding is a question, and some will have good answers.
+
+It runs on `results` rather than on the cache read-back, because `_filing_text`
+is still attached at that point and three of the ten checks need the filing.
+
+## The ten checks
+
+| # | Check | Caught this week |
+|---|---|---|
+| 1 | `tx_value` against shares × deal price | CBZ at 20x its equity value |
+| 2 | spread in band, and consistent with its own `cp`/`dp`/blended | sp_pct off the headline while blended governed |
+| 3 | close date after announcement, at quarter granularity | BWMN, ATKR, GSAT |
+| 4 | outside date after the agreement date, and whether it has **passed** | GBCS |
+| 5 | break price against current and deal price | AES, and now BZH |
+| 6 | `deal_type` against consideration language; `acquirer_type` against its acquirer | GSAT |
+| 7 | acquirer name appearing in the filing | the enrichment gap |
+| 8 | structured field contradicting itself | GSAT's pricing |
+| 9 | provenance label disagreeing with the record | `tx_value_source` |
+| 10 | missing a field ≥85% of the feed carries | the dropped-write shape |
+
+Each reuses the validator the scan already enforces rather than restating the
+rule — `tx_value_plausible`, `validate_close_date`, `two_state_applies`,
+`get_acquirer_type`, `validate_enriched_acquirer`, `blended_governs`,
+`pricing_integrity_failures`. A sweep whose rules disagree with the pipeline's
+is worse than no sweep.
+
+**One deliberate inversion.** A *passed* outside date is reported, and it is not
+an error — it is the single most important state that field holds. The report
+says so in those terms: *"either party may now walk without a break fee"*.
+
+## What it flags on the current feed
+
+**Four questions across 19 deals.** All four are real; none was previously
+surfaced by anything.
+
+```
+[Integrity] 4 question(s) across 4 of 19 deal(s) — reported, nothing blocked
+
+  BZH
+      break_price    33.46 vs current 33.18 and deal 33.5: the modeled break
+                     price is at or above the current price, so there is no
+                     downside left for the model to price
+  CBZ
+      acquirer_type  'Unknown' stored, but 'Grant Thornton Advisors LLC' reads
+                     as 'Strategic'
+  DSGR
+      acquirer_type  'Unknown' stored, but 'LKCM Headwater Investments, LLC'
+                     reads as 'Strategic'
+  GSAT
+      close_date     '2027': too coarse: '2027' names a year with no quarter or
+                     half, which is a fragment rather than guidance
+```
+
+**BZH is new — a second instance of the AES break-price shape.** Its modeled
+break of $33.46 sits above its $33.18 current price, so its two-state
+probability is already gated and its position-size row shows a gain where a loss
+belongs. Nothing had reported it. AES took a week and a manual audit to find;
+BZH took one scan.
+
+**CBZ and DSGR are a new instance of an old shape.** Both carry
+`acquirer_type: Unknown` while naming a real acquirer. `Unknown` is what
+`get_acquirer_type` returns for `Undisclosed`, and both were `Undisclosed` at
+detection — the enrichment pass filled the acquirer in and never recomputed the
+type. Same defect as `close_date` not recomputing `days_to_close`, one field
+over, and the fourth appearance of the enrichment-ordering shape in CLAUDE.md.
+
+**GSAT** is the known bare year, which clears on the next scan now that
+`validate_close_date` refuses it.
+
+## What it does not flag, and why that took a correction
+
+The first run produced **24 findings, 20 of them false**. Every deal without a
+`pricing` or `direction` object was reported as "present but empty — the shape a
+dropped write leaves behind". They were empty because `/api/deals` runs every
+structured field through `parse_structured`, which turns an absent value into
+`{}`. The check was reading an artifact of the serialisation layer as evidence
+of data loss.
+
+That is precisely the failure mode a report like this dies of: twenty lines of
+noise and nobody reads the four that matter. Emptiness is now the ubiquity
+check's job — a field is worth asking about when **most of the feed has it and
+this deal does not** — and the structured-field check looks only for
+self-contradiction: barriers passed with no blended price, an outside date
+naming no date, a commitment naming no terms.
+
+The ubiquity threshold is 0.85 rather than 0.90 because the feed is small: at
+nineteen deals, 17 of 19 is 89.5% and would slip under a 0.90 bar — which is
+exactly the case worth catching. The finding prints the ratio, so a reader can
+discount it.
+
+`test_integrity.py` covers all nine defect shapes plus the false-positive
+regression, 21 checks.
