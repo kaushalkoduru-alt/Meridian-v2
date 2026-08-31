@@ -684,5 +684,58 @@ check("a deal with no CIK returns nothing rather than raising",
       close_date_from_proxy('ZZZZ', '', '2026-01-01'), (None, None))
 
 print()
+print("A WRITTEN-OUT CALENDAR DATE IS READ, AND NOT COARSENED")
+print("-" * 78)
+
+# RAMP's DEFM14A: the most precise close guidance in the feed, reduced to '2026'
+# because no pattern read a written-out date, then refused as a bare year.
+_RAMP = 'we currently expect the Closing to occur by December 31, 2026.'
+check("RAMP's exact date is extracted whole",
+      extract_close_date(_RAMP), 'December 31, 2026', "was '2026'")
+check("and resolves to the day, not the quarter boundary",
+      parse_close_date('December 31, 2026'), date(2026, 12, 31))
+check("and survives the granularity rule",
+      validate_close_date('December 31, 2026', '2026-05-18')[0], 'December 31, 2026',
+      "an exact date is finer than a quarter, not coarser")
+
+# Both written orders, and the other prepositions filings use.
+for _t, _want in [
+    ('The merger is expected to be completed on or before March 4, 2027.', 'March 4, 2027'),
+    ('We anticipate the transaction will close by 15 January 2027.', '15 January 2027'),
+    ('The parties expect to consummate the merger no later than June 30, 2027.', 'June 30, 2027')]:
+    check(f"{_want!r} is read", extract_close_date(_t), _want)
+check("a day-first date resolves correctly",
+      parse_close_date('15 January 2027'), date(2027, 1, 15))
+check("a non-breaking space between month and day still parses",
+      parse_close_date('December 31, 2026'), date(2026, 12, 31),
+      "how the proxy actually renders it")
+
+# An exact date must outrank a coarser form found earlier in the same document.
+check("an exact date beats a quarter appearing before it",
+      extract_close_date('Closing is expected in the third quarter of 2026. '
+                         'We now expect the Closing to occur by December 31, 2026.'),
+      'December 31, 2026')
+
+# The guards that keep boilerplate out. ATKR's and BOW's proxies are
+# PRELIMINARY, with unfilled [.] fields, and carry dates near close-adjacent
+# words that are not guidance.
+for _lbl, _t in [
+    ('a price quoted as of a date',
+     'as compared to the closing share price of the Common Stock as of July 31, 2026, of $72.'),
+    ('a proxy mailing placeholder',
+     'This proxy statement is first being mailed to the stockholders on or about [.] [.], 2026.'),
+    ('a record date',
+     'The record date for the special meeting is September 15, 2026.'),
+    ('a signing date',
+     'Revisions were exchanged until the execution of the Merger Agreement on August 2, 2026.')]:
+    check(f"{_lbl} is not close guidance", extract_close_date(_t), 'TBD')
+
+# Period forms are untouched -- an exact date is added beside them, not instead.
+for _t, _want in [('expected to close in the fourth quarter of 2026', 'fourth quarter of 2026'),
+                  ('expected to close in Q3 2026', 'Q3 2026'),
+                  ('expected to close in the second half of 2026', 'second half of 2026')]:
+    check(f"{_want!r} still reads", extract_close_date(_t), _want)
+
+print()
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

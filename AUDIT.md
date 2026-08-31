@@ -2029,3 +2029,146 @@ intended direction: each was resting on a year-wide window or, for ATKR, on a
 sentence about mailing proxies. `TBD` is the honest value for all three.
 
 `test_formulas.py` is at 194 checks.
+
+---
+
+# Written-out close dates, and why four agreements yield no outside date
+
+2026-08-31.
+
+## 1 · An exact date is read, and kept exact
+
+Two patterns added ahead of every period form, handling `Month D, YYYY` and
+`D Month YYYY`. `parse_close_date` learned both orders. The result is returned
+whole — `December 31, 2026`, resolving to 2026-12-31 — rather than collapsed to
+a quarter boundary, because a stated day is better guidance than "Q4 2026" and
+rounding it to one throws away the precision that made it worth reading.
+
+Exact patterns run **first**, so a coarser form appearing earlier in the same
+document cannot outrank them.
+
+**The anchor is expectation plus close language, inside one sentence.** `[^.]`
+cannot cross a period, so an "expect" belonging to an earlier sentence can never
+license a date in this one. That is what keeps the boilerplate out, and the
+boilerplate is real — three of the four cases below come from live filings:
+
+```
+"as compared to the closing share price ... as of July 31, 2026, of $72"   -> TBD
+"first being mailed to the stockholders on or about [•] [•], 2026"         -> TBD
+"the record date for the special meeting is September 15, 2026"            -> TBD
+"until the execution of the Merger Agreement on August 2, 2026"            -> TBD
+```
+
+The first carries a date *and* the word "closing" and is still refused, both by
+the sentence anchor and by an explicit guard on `clos\w*\s+(?:share|sale|stock)?
+\s*price`. The placeholder case is refused structurally: `[•] [•], 2026` has no
+month, so `Month D, YYYY` cannot match it. The bare-year granularity rule from
+the previous pass is untouched and still catches what gets past these.
+
+### The sweep: one deal, not many
+
+**RAMP is the only deal in the feed whose exact close date was being coarsened.**
+
+```
+RAMP  DEFM14A 2026-07-06 (1,196,428 chars)
+      "we currently expect the Closing to occur by December 31, 2026"
+      was: '2026' -> refused as a bare year
+      now: 'December 31, 2026' -> 2026-12-31, 122 days out, ann 6.01%
+```
+
+Every other deal states a period, not a day. Re-reading all nineteen proxies:
+AES `late 2026`, APGE `third quarter of 2026`, CBZ `fourth quarter of 2026`,
+GBTG `second half of 2026`, NATH `first half of 2026`, OGN `early 2027`, PAYO
+`mid-2027`, SLAB `first half of 2027`, CZR states nothing. None is an exact
+date. So the extractor was not "silently coarsening precise guidance" across the
+feed — the precise guidance is rare, and RAMP had the only instance.
+
+**One thing the sweep did expose.** ATKR and HZO carried `2026` from a pattern
+that requires no close language whatsoever:
+
+```
+pattern #11:  (?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})
+ATKR press release  ->  matched "fiscal 2026"
+```
+
+Atkore's press release mentions its **fiscal year**. That became the deal's
+expected close date. Neither ATKR's nor HZO's press release contains a
+close-guidance sentence at all. The granularity rule already refuses the output,
+so nothing reaches the feed today — but the pattern manufactures a date from any
+mention of a fiscal year and is unsound on its own terms. Narrowing it to
+require close language is the obvious follow-up; it is a pattern change, so it
+is left here rather than made.
+
+## 2 · The four missing outside dates — all one shape
+
+ATKR, ALOT, HZO and RAMP have agreement readings and no outside date. **All four
+define the deadline as a period measured from the agreement date, never as a
+calendar date.** Here is what each actually says:
+
+**ATKR** — `atkr_mergerk.htm`, @230,404
+> "…(b) by either the Company or Buyer, if: (i) the Effective Time shall not
+> have occurred on or before **the first Business Day that is twelve (12) months
+> after the date of this Agreement** (the "End Date")…"
+
+**ALOT** — `d100857dex21.htm`, @200,362
+> "…(a) if the Merger has not been consummated on or before **the date that is
+> one hundred and fifty (150) days after the date of this Agreement** (the
+> "Outside Date")…"
+
+**RAMP** — `tm2614904d1_ex2-1.htm`, @270,361
+> "…(d) by either Parent or the Company, in the event that the Effective Time
+> has not occurred on or before **the date that is twelve (12) months after the
+> date hereof** (the "Outside Date")…"
+
+**HZO** — `d135056dex21.htm`, @268,886
+> "…(b) by either of the Company or Parent: (i) if the Effective Time shall not
+> have occurred on or prior to **the date which is nine months following the date
+> of this Agreement** (as such date may be extended pursuant to this Section
+> 7.01(b)(i), the "Outside Date")…"
+
+Every `PATTERNS` entry in `outside_date.py` terminates in `_DATE_WORDS` or
+`_DATE_SLASH` — a calendar date. None of these four sentences contains one, so
+no pattern can match and the module correctly returns nothing rather than
+guessing. This is not a near-miss on phrasing; it is a shape the reader was
+never built for.
+
+It is distinct from APGE's case, which the module already handles. APGE has a
+**dated base** that is then extended by a period — "the End Date shall be
+automatically extended by six (6) months" off December 18, 2026. These four have
+**no dated base at all**: the period is the definition.
+
+Four variants across four agreements, which is worth noting before anyone writes
+one regex for it:
+
+| Deal | phrasing | period |
+|---|---|---|
+| ATKR | "the first Business Day that is twelve (12) months after the date of this Agreement" | 12 months, rounded to a business day |
+| ALOT | "the date that is one hundred and fifty (150) days after the date of this Agreement" | 150 days |
+| RAMP | "the date that is twelve (12) months after the date hereof" | 12 months, "hereof" not "of this Agreement" |
+| HZO | "the date which is nine months following the date of this Agreement" | 9 months, **spelled out with no numeral** |
+
+HZO is the awkward one: "nine months" has no `(9)` to key on, so a pattern built
+around the numeral-in-parentheses convention that `_DURATION` already uses would
+miss it. ATKR's "first Business Day that is" also sits between the preposition
+and the period.
+
+**What a fix would produce**, using each deal's filing date as the agreement
+date:
+
+| Deal | filed | period | outside date |
+|---|---|---|---|
+| ALOT | 2026-06-17 | +150 days | ~2026-11-14 |
+| HZO | 2026-08-10 | +9 months | ~2027-05-10 |
+| RAMP | 2026-05-18 | +12 months | ~2027-05-18 |
+| ATKR | 2026-08-03 | +12 months | ~2027-08-03 |
+
+Those are computable and would take the feed from 15 of 19 outside dates to 19
+of 19. **Not implemented** — the instruction was to show the phrasing before
+widening anything, and the four variants above are the argument for looking at
+them together rather than patching one at a time. Two further questions belong
+with that decision: whether the agreement date is the filing date (it is not
+always — the agreement is signed a day or two before the 8-K) and whether the
+extension provisos that follow each of these clauses, which `_classify_extension`
+would need to read, change the answer.
+
+`test_formulas.py` is at 210 checks.

@@ -882,6 +882,23 @@ def parse_close_date(close_date):
             return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3))).date()
         except ValueError:
             return None
+    # "December 31, 2026" and "31 December 2026". A stated day is finer than any
+    # quarter and must not be rounded to one -- returning 2026-12-31 for RAMP is
+    # the point of reading it at all.
+    _MON = ['january', 'february', 'march', 'april', 'may', 'june', 'july',
+            'august', 'september', 'october', 'november', 'december']
+    _NAMES = '|'.join(_MON)
+    for _pat, _mdy in ((r'(' + _NAMES + r')\s+(\d{1,2}),?\s+(20\d{2})', True),
+                       (r'(\d{1,2})\s+(' + _NAMES + r')\s+(20\d{2})', False)):
+        _m = re.search(_pat, s)
+        if not _m:
+            continue
+        _a, _b, _y = _m.groups()
+        _mon, _day = (_a, _b) if _mdy else (_b, _a)
+        try:
+            return datetime(int(_y), _MON.index(_mon.lower()) + 1, int(_day)).date()
+        except (ValueError, IndexError):
+            return None
 
     years = list(re.finditer(r'20\d{2}', s))
     if not years:
@@ -1118,7 +1135,12 @@ def validate_close_date(cd, announced, now=None):
     # date. ATKR, HZO and GSAT each carried one.
     #
     # An exact date is exempt: it is finer than a quarter, not coarser.
-    if not re.match(r'^\s*20\d{2}-\d{1,2}-\d{1,2}', str(cd)) and \
+    _EXACT = (r'^\s*20\d{2}-\d{1,2}-\d{1,2}'
+              r'|(?:january|february|march|april|may|june|july|august|september'
+              r'|october|november|december)\s+\d{1,2},?\s+20\d{2}'
+              r'|\d{1,2}\s+(?:january|february|march|april|may|june|july|august'
+              r'|september|october|november|december)\s+20\d{2}')
+    if not re.search(_EXACT, str(cd), re.IGNORECASE) and \
        not re.search(r'q[1-4]|first|second|third|fourth|quarter|half|h[12]|'
                      r'early|mid|late', str(cd), re.IGNORECASE):
         return None, (f'too coarse: {cd!r} names a year with no quarter or half, '
@@ -1527,7 +1549,28 @@ PROXY_CLOSE_DATE_SCAN_CHARS = 400000
 def extract_close_date(clean_text, scan_chars=None):
     # Patterns ordered specific-to-general: qualified phrases first, greedy catch-alls last.
     # [-\s]+ allows hyphenated forms like "mid-2027" as well as spaced "mid 2027".
+    # Month names, shared by the two exact-date patterns below.
+    _M = (r'January|February|March|April|May|June|July|August|September|'
+          r'October|November|December')
     patterns=[
+        # EXACT DATES FIRST. An exact date is better guidance than a quarter and
+        # must not be outranked by a coarser form appearing earlier in the
+        # document. RAMP's DEFM14A says "we currently expect the Closing to
+        # occur by December 31, 2026" and that was reduced to '2026', then
+        # refused as a bare year -- the most precise close guidance in the feed,
+        # discarded twice over.
+        #
+        # Anchored on expectation AND close language, both inside one sentence.
+        # [^.] cannot cross a period, so an "expect" belonging to an earlier
+        # sentence can never license a date in this one. That is what keeps
+        # ATKR's "closing share price of the Common Stock as of July 31, 2026"
+        # out: it carries a date and the word "closing", and no expectation.
+        r'(?:expect|anticipat|project)\w*[^.]{0,130}?(?:clos\w+|complet\w+|'
+        r'consummat\w+)[^.]{0,90}?(?:by|on|in|during|no\s+later\s+than|'
+        r'on\s+or\s+(?:before|prior\s+to))\s+((?:' + _M + r')\s+\d{1,2},?\s+20\d{2})',
+        r'(?:expect|anticipat|project)\w*[^.]{0,130}?(?:clos\w+|complet\w+|'
+        r'consummat\w+)[^.]{0,90}?(?:by|on|in|during|no\s+later\s+than|'
+        r'on\s+or\s+(?:before|prior\s+to))\s+(\d{1,2}\s+(?:' + _M + r')\s+20\d{2})',
         # Specific: qualifier words anchored to close/complete/anticipated language
         r'(?:expected|anticipated|projected)\s+to\s+close.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
         r'(?:expected|anticipated|projected)\s+to\s+be\s+completed.*?((?:Q[1-4]|first|second|third|fourth|early|mid-?|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?(?:of\s+)?20\d{2})',
@@ -1553,7 +1596,12 @@ def extract_close_date(clean_text, scan_chars=None):
     for pat in patterns:
         m=re.search(pat, clean_text[:(scan_chars or CLOSE_DATE_SCAN_CHARS)], re.IGNORECASE)
         if m:
-            result = m.group(1).strip()
+            result = m.group(1).strip().rstrip('.,;')
+            # A price quoted "as of" a date is not close guidance, however much
+            # close-adjacent vocabulary surrounds it.
+            if re.search(r'clos\w*\s+(?:share\s+|sale\s+|stock\s+)?price',
+                         m.group(0), re.IGNORECASE):
+                continue
             if not any(yr in result for yr in ['2025','2026','2027','2028']):
                 continue
             # Abstention guard: reject bare "of 2026", "the 2026", "in 2026" fragments
