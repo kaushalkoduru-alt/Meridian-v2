@@ -279,3 +279,186 @@ These need no checkbox. They govern everything above.
 1 of 22 complete.
 
 - §2 · Audit every formula — [AUDIT.md](AUDIT.md)
+
+---
+
+# Part two — sections 30 to 45
+
+Added Aug 2026. Same rule: a box is checked only when the section is
+completely done.
+
+Several of these sharpen things Part One treated loosely, and three of them
+name defects the audit found independently. Where that happens it is noted,
+because a section already half-addressed by accident still has to be finished
+deliberately.
+
+---
+
+## NOW — correctness and trust (P0)
+
+- [ ] **§30 · Critical modeling corrections**
+
+  **A. All-cash does not mean financing secured.** An all-cash deal can still
+  run on debt, bridge, credit facilities, equity, or asset sales. Separate
+  CONSIDERATION STRUCTURE (cash / stock / mixed / CVR / tender) from FINANCING
+  CERTAINTY (no financing required / fully committed / debt committed / equity
+  commitment / condition present / subject to conditions / insufficient
+  evidence). Never infer the second from the first.
+  *Partly exposed already: `check_financing` reads the agreement properly, but
+  `score_deal` uses the weaker press-release scan, and `financing_signal` has
+  no source label at all.*
+
+  **B. Private equity does not mean financing risk.** Judge the actual
+  structure — equity and debt commitment letters, financing conditions, limited
+  guarantee, specific performance, reverse termination fee, debt-market
+  dependency, fund capacity. Not the buyer's category.
+  *Related defect already fixed: `get_acquirer_type` returned Private Equity
+  unconditionally when `deal_type` said so, which put Amazon in the PE bucket.
+  The stereotype was structural, not just editorial.*
+
+  **C. A large premium is not evidence a deal will close.** Audit any logic
+  treating premium size as safety. Premium is useful for standalone downside,
+  valuation, break-price work, and shareholder incentives. It says nothing on
+  its own about buyer commitment, termination rights, probability, or
+  regulatory risk. If kept, state what it actually measures.
+
+- [ ] **§31 · Probability terminology and false precision**
+  Four distinct concepts, each labelled as itself: two-outcome implied
+  probability (with its assumptions disclosed), scenario-weighted model
+  probability (labelled a Meridian estimate), analyst-assessed probability
+  (labelled judgment), and market signal (spread as evidence of uncertainty,
+  not as a probability). Prefer High/Medium/Low or a range over 76.43% where
+  the uncertainty does not justify precision.
+  Where current price sits below the modeled break, print the reason rather
+  than a number.
+  *Companion to §3. §3 fixes the mathematics; this fixes what the product
+  claims about it. Partly done — the clamp is deleted and the model refuses to
+  print when it does not apply.*
+
+- [ ] **§32 · Spread is a signal, not a probability**
+  Remove any copy or logic implying spread predicts outcome, and any rigid
+  bucket (0-5% safe, 25%+ near-certain break) not supported by evidence.
+  *The 39-deal dataset already settles this: break rate below the median spread
+  was 10.5%, at or above 10.0%, and the bucket rates were non-monotonic. The
+  product's own data says spread did not predict breaking in that sample. Any
+  surviving language claiming otherwise contradicts the methodology page.*
+
+- [ ] **§43 · Remove cool but misleading features**
+  Anything that produces a confident number it cannot defend gets removed or
+  relabelled. Prefer "insufficient evidence" over an unsupported figure, and
+  "model estimate, medium confidence" over "true break price: $28.80".
+  *Four instances already found and fixed: the probability clamp turning 114%
+  into a confident 99.9%, the annualized figure that was the spread times a
+  constant, the fabricated close dates, and `tx_value_source` reading
+  `regex_enterprise` over a model's number. This section is the sweep for the
+  rest.*
+
+---
+
+## NOW — P1
+
+- [ ] **§33 · Methodology page audit**
+  Read it as a skeptical PM, a quant, and an M&A lawyer. Find every claim that
+  overstates confidence, implies causation, leans on a weak sample, presents an
+  assumption as fact, or generalizes too far. It should say plainly what is
+  fact, what is estimate, what is assumed, and what the limits are.
+  *The backtest paragraph already does this well. The rest of the page has not
+  been held to the same standard.*
+
+- [ ] **§34 · Data quality gates**
+  A completeness framework per deal — economics, contractual terms, regulatory,
+  break price, financing — with mandatory validation before a deal can present
+  as fully analyzed. No high-confidence probability where break-price
+  confidence is low, financing is missing, or regulatory status is stale.
+  Not gamification: it should reflect actual required fields.
+  *The provenance inventory is the input. Four fields already carry real
+  validation; the rest do not.*
+
+- [ ] **§35 · Research status per deal**
+  RAW / IN REVIEW / VERIFIED / MONITORED / STALE / ARCHIVED.
+  Not every deal should look equally trustworthy, and right now they all do.
+  *Pairs with §8 freshness and §34.*
+
+- [ ] **§36 · Positioning audit**
+  Remove any framing as a cheaper Bloomberg or any price comparison implying
+  feature equivalence. Compete on specialization, contractual intelligence,
+  underwriting workflow, source transparency. Focus over breadth.
+  *Cheap. Mostly copy.*
+
+- [ ] **§37 · Landing page shows the product**
+  One deal, one screen: economics, downside, contractual intelligence, why the
+  spread exists, and a real agreement excerpt as source evidence. A visitor
+  should understand the value in seconds rather than reading feature
+  descriptions.
+  *Higher priority than its number suggests. The differentiator is currently
+  invisible until someone clicks into a deal page.*
+
+---
+
+## LATER — blocked
+
+- [ ] **§40 · Daily workflow and morning brief**
+  What changed overnight, which spreads moved, which deals have catalysts
+  today, which regulatory developments landed, which outside dates approach,
+  which positions changed risk, which deals need deeper research.
+  *Same block as §16: milestone detection, plus history that only starts
+  accumulating from the detection-freeze fix onward.*
+
+---
+
+## NOT UNTIL THERE ARE USERS
+
+- [ ] **§38 · User segmentation and pricing**
+  Individual, professional, team. The section says it itself: do not finalize
+  pricing without user interviews. Architecture can be designed for it; pricing
+  cannot be set from a desk.
+
+- [ ] **§41 · Product-market-fit instrumentation**
+  Which deals get opened, which modules get used, time per deal, repeat visits,
+  most-clicked sources, features ignored.
+  *Worth building the moment there is a first user, and worth nothing before
+  then. The argument for building early is that data accumulates — but with no
+  traffic there is nothing to accumulate.*
+
+---
+
+## NOT TASKS — evaluation lenses
+
+- **§39 · What manual work does this replace?** Reading a 200-page agreement,
+  checking DOJ and FTC sites, maintaining a spreadsheet, calculating scenario
+  returns, remembering what changed yesterday. The goal is eliminating
+  repetitive research, not providing information.
+- **§42 · Professional trust test.** Accuracy, sourceability, freshness,
+  methodology, uncertainty, consistency, actionability. A feature failing these
+  gets improved or removed before it can be called institutional-grade.
+- **§44 · Traceability chain.** Primary sources → structured facts →
+  transparent interpretation → scenario modeling → risk and return → catalyst
+  monitoring → daily workflow. Every layer links back to the one above. A PM
+  must be able to go from "why is this risk HIGH" down to the agreement
+  section and the actual language.
+- **§45 · Execution priority.** P0 trust and correctness, P1 differentiation,
+  P2 daily workflow, P3 commercialization, P4 polish. P4 must not displace P0.
+
+---
+
+## Revised sequence
+
+§45 reorders Part One. Merged priority:
+
+1. **§2 audit** — done as a document, findings still open
+2. **§25 QA** — twelve deals covered, eight new ones arrived
+3. **§3 + §31** — break price and probability, mathematics and language together
+4. **§4** — the break-price engine §3 needs
+5. **§30** — the three modeling corrections, all P0 and all cheap
+6. **§32 + §33 + §36** — spread language, methodology, positioning. Copy work,
+   one pass
+7. **§43** — the sweep for remaining false precision
+8. **§20 + §8 + §19 + §34 + §35** — the trust layer, which §44 says must exist
+   before anything above it can be relied on
+9. **§6 §7 §13 §23 §37** — expansions and the landing page demonstration
+10. **Milestone detection** — unlocks §11, §12, §16, §17, §40
+11. Everything deferred
+
+## Progress
+
+0 of 34 complete.
