@@ -119,5 +119,25 @@ check("an empty structured field is not itself a finding",
       "parse_structured turns absence into {} for the whole feed")
 
 print()
+print("ACQUIRER TYPE FOLLOWS THE ACQUIRER WHEN ENRICHMENT CHANGES IT")
+print("-" * 78)
+
+# CBZ and DSGR carried acquirer_type 'Unknown' while naming Grant Thornton and
+# LKCM Headwater. Both were 'Undisclosed' at detection -- which correctly yields
+# 'Unknown' -- and the enrichment pass filled the acquirer in without
+# recomputing the type. The sweep found it; this is the rule it should follow.
+check("an undisclosed acquirer types as Unknown at detection",
+      main.get_acquirer_type('All Cash', 'Undisclosed') == 'Unknown')
+for _tk, _acq, _want in [('CBZ', 'Grant Thornton Advisors LLC', 'Strategic'),
+                         ('DSGR', 'LKCM Headwater Investments, LLC', 'Strategic'),
+                         ('BWMN', 'Bernhard Capital Partners', 'Private Equity')]:
+    check(f"{_tk}: once enriched, it types as {_want}",
+          main.get_acquirer_type('All Cash', _acq) == _want,
+          f"{_acq!r}")
+check("and the sweep no longer questions the recomputed value",
+      not checks_of(dict(BASE, ticker='CBZ', acquirer='Grant Thornton Advisors LLC',
+                         acquirer_type='Strategic'), 'acquirer_type'))
+
+print()
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

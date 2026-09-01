@@ -2330,8 +2330,22 @@ If you cannot identify the acquirer with confidence, return: {{"acquirer": null}
                             if _ok:
                                 deal['acquirer'] = _ok
                                 deal['acquirer_source'] = 'llm_enriched'
+                                # acquirer_type is READ FROM the acquirer, so it
+                                # is stale the moment the acquirer changes. It
+                                # was computed at detection, when this deal said
+                                # 'Undisclosed', which returns 'Unknown' — and
+                                # CBZ and DSGR carried that Unknown while naming
+                                # Grant Thornton and LKCM Headwater. Fourth
+                                # appearance of the enrichment-ordering shape:
+                                # a field written after its consumers have run.
+                                _oldtype = deal.get('acquirer_type')
+                                deal['acquirer_type'] = get_acquirer_type(
+                                    deal.get('deal_type'), _ok)
                                 enriched = True
-                                print(f"  [Enrich] {ticker} acquirer: {_ok}")
+                                print(f"  [Enrich] {ticker} acquirer: {_ok}"
+                                      + (f" (acquirer_type {_oldtype} -> "
+                                         f"{deal['acquirer_type']})"
+                                         if _oldtype != deal['acquirer_type'] else ""))
                             else:
                                 print(f"  [Enrich] {ticker} acquirer REFUSED — {_why}")
                         elif resp.status_code == 429:

@@ -2509,3 +2509,117 @@ discount it.
 
 `test_integrity.py` covers all nine defect shapes plus the false-positive
 regression, 21 checks.
+
+---
+
+# Following the sweep's first findings
+
+2026-09-01. The sweep flagged four things on its first run. This is what each
+turned out to be.
+
+## GBCS — the deadline passed, and the deal is alive
+
+The outside date now renders in production: `2026-08-31, passed=True,
+days_remaining=-2`. The fix works.
+
+What happened at the deadline is answerable from EDGAR, and it is the best
+possible validation of the meaning text. **Black Pearl filed an SC TO-T/A on
+2026-08-31 — the outside date itself:**
+
+> "BLACK PEARL EXTENDS TENDER OFFER FOR ALL OUTSTANDING SHARES OF SELECTIS
+> HEALTH, INC."
+
+That is the sixth amendment since 2026-08-03, roughly weekly. The stock closed
+5.45 on the deadline against a 5.75 offer — holding, not collapsing.
+
+The module's past-deadline prose says: *"Either company can now walk away
+without paying a break fee, so the deal is being kept alive by agreement rather
+than by contract."* That is exactly what the filing record shows. The deadline
+passing was real and the parties chose to extend anyway.
+
+**And the product still cannot see any of it.** GBCS reads score 82, risk Very
+Low, two days past its contractual deadline, with six tender-offer extensions on
+file. `score_deal` takes no time input at all (QA D3), and nothing reads
+SC TO-T/A amendments. This is the milestone detection the roadmap calls its
+biggest unlock (§12), and GBCS is a clean worked example of what it would catch:
+seven filings, each one a dated event, none of them read.
+
+## CBZ and DSGR — fixed. The enrichment-ordering shape, a fourth time
+
+Both carried `acquirer_type: Unknown` while naming a real acquirer. `Unknown` is
+what `get_acquirer_type` correctly returns for `Undisclosed`, and both were
+`Undisclosed` at detection. The enrichment pass then filled the acquirer in and
+never recomputed the type.
+
+Same defect as `close_date` not recomputing `days_to_close`, one field over. The
+enrichment pass now recomputes `acquirer_type` whenever it writes `acquirer`, and
+logs the transition:
+
+```
+[Enrich] CBZ acquirer: Grant Thornton Advisors LLC (acquirer_type Unknown -> Strategic)
+```
+
+CBZ and DSGR both become `Strategic` on the next scan. This is the **fourth**
+appearance of a field written after its consumers have run, and the pattern is
+now explicit enough to state as a rule: *any field derived from another must be
+recomputed wherever the source is written, not only where it is first set.*
+
+## BZH — a decision, and not the shape AES was
+
+The sweep flagged `break_price 33.46` against a `33.18` current price. The
+instinct is that this is a second AES. **It is not**, and the price series says
+so plainly:
+
+```
+2026-04-05  19.88      2026-07-05  28.07
+2026-05-03  20.63      2026-07-26  33.19
+2026-06-07  25.96      2026-08-02  32.10
+2026-06-28  29.20      2026-08-06  33.46   <- stored break price
+                       2026-08-07  ANNOUNCEMENT
+2026-08-09  33.18      2026-08-23  33.13
+2026-08-16  33.10      2026-08-30  33.22
+```
+
+AES ran up 23% in four weeks and then **fell 17.8% on the announcement** — the
+signature of speculation disappointed. BZH climbed steadily for four months and
+**did not move on the announcement at all**, then traded flat at the deal price.
+Those are opposite shapes.
+
+The filing explains why, and it is the finding worth keeping:
+
+> "Beazer shareholders will receive $33.50 in cash for each share … representing
+> an implied purchase price-to-book multiple of **0.8x**."
+
+**The press release states no premium anywhere.** $33.50 against a $33.46
+pre-announcement close is a premium of **0.1%**, and the deal values Beazer
+*below book*. A merger at essentially zero premium is unusual enough to be the
+headline fact about this deal, and the product currently shows none of it.
+
+**What I have not done, and why.** No hand-verified unaffected price. AES had
+one because its series proved contamination — a flat range, a sharp spike, a
+collapse on announcement. BZH's 68% climb over four months could be deal
+anticipation or could be a homebuilder re-rating, and the price series cannot
+separate them. That is the conclusion the AES sweep already reached for the feed
+at large, and inventing a number here would be the error that finding exists to
+prevent. Unlike AMPS and VOXX, this filing offers no unaffected-price reference
+to anchor on.
+
+Two options, both requiring your judgement:
+
+- **Leave it.** The two-state model is already gated, so no false probability is
+  published. The cost is that BZH's downside reads as `+0.8%` — a gain — in the
+  position-size table, which the sign fix renders honestly but which is still
+  built on a break price nobody believes.
+- **Hand-verify against the sale process.** Beazer's proxy, when it appears, will
+  likely state when the process began. The unaffected price is the price before
+  that date, and that is a filing fact rather than a price-shape inference.
+
+## One check the sweep should probably gain
+
+BZH would have been caught earlier by a rule the sweep does not have: **deal
+price barely above the pre-announcement price**. A merger at a 0.1% premium is
+either a real no-premium deal, a wrong `dp`, or a contaminated break price — all
+three worth a question. It generalises, it needs no new data, and it is one line.
+
+Not added, because the sweep was specified as "the things that have caught real
+errors this week" and this would be extending it on my own judgement. Offered.
