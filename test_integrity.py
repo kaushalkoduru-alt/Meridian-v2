@@ -139,5 +139,49 @@ check("and the sweep no longer questions the recomputed value",
                          acquirer_type='Strategic'), 'acquirer_type'))
 
 print()
+print("PREMIUM — SURFACED, AND NOT MISTAKEN FOR SAFETY")
+print("-" * 78)
+
+# BZH: $33.50 against a $33.46 pre-announcement close, at 0.8x book, with the
+# press release stating no premium anywhere. Nothing else in the sweep catches
+# it -- its spread, close date and tx_value are all unremarkable.
+_bz = checks_of(dict(BASE, ticker='BZH', cp=33.18, dp=33.5, sp_pct=0.96,
+                     break_price=33.46), 'premium')
+check("a deal priced at market is flagged", _bz, _bz[0].detail[:92] if _bz else '')
+check("  and all three explanations are named",
+      _bz and all(w in _bz[0].detail for w in
+                  ('no-premium deal', 'wrong deal price', 'absorbed')))
+check("a healthy premium is not flagged",
+      not checks_of(dict(BASE, ticker='GBTG', cp=9.46, dp=9.5, sp_pct=0.42,
+                         break_price=5.93), 'premium'),
+      '60.2% — the next-lowest real deal is CZR at 7.7%, clear of the 5% bar')
+
+# A stated premium is a filing fact and outranks our own break-price estimate,
+# which AUDIT #8 shows is a price lookup rather than a model.
+_st = main.deal_premium({'dp': 14.0, 'break_price': 11.23},
+                        'representing a premium of approximately 42% to the '
+                        'closing price on March 3, 2026.')
+check("a stated premium wins over the computed one", _st['basis'] == 'stated',
+      f"{_st['value']}% {_st['basis']}")
+check("  and carries the filing's own reference",
+      'March 3, 2026' in _st['reference'], _st['reference'])
+_cp = main.deal_premium({'dp': 33.5, 'break_price': 33.46,
+                         'break_price_method': 'historical'}, 'no premium language')
+check("with no stated premium it computes and says so",
+      _cp['basis'] == 'computed' and 'states no premium' in _cp['reference'])
+check("and marks a thin one", _cp['thin'] is True, f"{_cp['value']}%")
+
+# §30C, carried with the number rather than left to the reader.
+check("the caveat says what a premium measures",
+      'standalone downside' in _cp['caveat'] and 'vote yes' in _cp['caveat'])
+check("and what it does not",
+      'not evidence the deal will close' in _cp['caveat'] and
+      'regulatory risk' in _cp['caveat'])
+
+# A premium that cannot be read is not invented.
+for _bad in ({'dp': None}, {'dp': 14.0}, {'dp': 14.0, 'break_price': 0}):
+    check(f"no premium invented from {_bad}", main.deal_premium(_bad, '') is None)
+
+print()
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

@@ -165,6 +165,24 @@ def sweep(deals, main):
                 out.append(Finding(tk, 'break_price',
                                    f'{bp} vs current {cp} and deal {dp}: {why}'))
 
+        # ── 5b · a buyer paying nothing over market ─────────────────────────
+        # Three different things look like this and all three are worth a
+        # question: a genuine no-premium deal, a wrong deal price, or a break
+        # price that has absorbed the run-up it was supposed to exclude. BZH is
+        # the live case at 0.1%, and none of the other checks would have caught
+        # it -- its spread, close date and tx_value are all unremarkable.
+        pm = _struct(d.get('premium'), main.parse_structured)
+        pv = _num(pm.get('value')) if pm else None
+        if pv is None and bp and dp and bp > 0:
+            pv = round(((dp - bp) / bp) * 100, 1)          # sweep the feed as it is
+        if pv is not None and pv < main.PREMIUM_THIN_PCT:
+            basis = pm.get('basis', 'computed') if pm else 'computed'
+            out.append(Finding(tk, 'premium',
+                               f'{pv}% ({basis}) — the buyer is paying at or barely '
+                               f'above market. Either a genuine no-premium deal, a '
+                               f'wrong deal price, or a break price that absorbed '
+                               f'the run-up'))
+
         # ── 6 · deal_type against what the filing actually describes ────────
         dt = d.get('deal_type')
         if dt and text:

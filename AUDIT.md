@@ -2623,3 +2623,117 @@ three worth a question. It generalises, it needs no new data, and it is one line
 
 Not added, because the sweep was specified as "the things that have caught real
 errors this week" and this would be extending it on my own judgement. Offered.
+
+---
+
+# The premium — checked, and shown
+
+2026-09-01.
+
+## 1 · The sweep gains a premium check
+
+A deal price at or barely above the pre-announcement price, threshold 5%. Three
+different things produce that shape and all three are worth a question: a
+genuine no-premium deal, a wrong `dp`, or a break price that absorbed the run-up
+it was supposed to exclude.
+
+**Across the feed it flags one deal: BZH at 0.1%.** The separation is as clean
+as the `tx_value` ratio calibration was — the next-lowest real premium is CZR at
+7.7%, half as far again from the bar:
+
+```
+BZH   0.1%  THIN      CBZ   17.8%      HZO   48.5%
+CZR   7.7%            GSAT  23.5%      APGE  49.5%
+AES   9.1%            OGN   24.7%      BWMN  57.9%
+PAYO  9.6%            DSGR  27.4%      GBTG  60.2%
+BOW  11.1%            RAMP  29.8%      SLAB  69.1%
+NATH 11.1%            ATKR  30.7%      ALOT  73.8%
+                                       GBCS  79.7%
+```
+
+Nothing else in the sweep would have caught BZH. Its spread, close date and
+transaction value are all unremarkable; only the relationship between the deal
+price and the break price is odd, and no existing check looked at it.
+
+## 2 · The premium is on the deal page, with what it means
+
+`deal_premium()` produces `{value, basis, reference, thin, caveat}` during the
+scan, where `_filing_text` is still attached.
+
+**A stated premium wins.** `extract_stated_premium` reads the filing's own
+figure and, importantly, the reference attached to it — *"a premium of
+approximately 42% to the closing price on March 3, 2026"* yields both the 42%
+and the date the buyer treated as unaffected. That is a filing fact, where our
+break price is a lookup that AUDIT #8 shows is not a model at all. Where no
+premium is stated, it computes against the modeled break price and **says so**:
+
+```
+BZH   +0.1%  computed
+      "against the modeled break price of $33.46 (historical) —
+       the filing states no premium"
+      "The buyer is paying at or barely above market."
+```
+
+**§30C is carried with the number, not left to the reader.** Every rendering
+of the premium is followed by:
+
+> Premium measures standalone downside and how motivated holders are to vote
+> yes. It is not evidence the deal will close, and says nothing about buyer
+> commitment, termination rights or regulatory risk.
+
+It sits beside Gross Spread in the metric row, which is where the context
+belongs — a 0.32% spread reads very differently at a 60% premium than at 0.1%.
+
+### One §30C violation removed on the way
+
+The existing "Deal Premium" row painted itself **teal at 25% or above**:
+
+```js
+c: (premium!==null && premium>=25 ? '#5fe0c9' : '#e2d8c0')
+```
+
+Teal is the colour this product uses for a good outcome. That is precisely the
+"premium size means safety" inference §30C says to audit out, expressed in CSS
+rather than in prose. The premium now has no colour scale at all. Thinness is
+called out in words, because "the buyer is paying at or barely above market" is
+a fact about downside, not a verdict about closing.
+
+**A second, larger one is left alone and flagged.** `score_deal_premium` awards
++8 for a premium of 50% or more, sliding to **−5 below 5%** — premium size
+feeding the risk score directly. BZH's 0.1% costs it five points on a 153-point
+scale, which is §30C's exact complaint. Changing score weights is §9/§30 work
+and touching them here would layer a correction on six unvalidated factors, so
+it is recorded rather than made.
+
+## What BZH now shows, and what it still does not
+
+The deal page now says a buyer is paying 0.1% over market for a company valued
+at 0.8x book, that the figure is computed rather than stated because the filing
+states no premium, and that this measures downside rather than likelihood.
+
+**Its break price is untouched, as instructed.** The tape cannot separate deal
+anticipation from a homebuilder re-rating over BZH's four-month, 68% climb, and
+the filing offers no unaffected-price reference to anchor on — unlike AMPS and
+VOXX, where the premium statement supplied one. Revisit when Beazer's proxy
+appears: a merger proxy's background-of-the-merger section dates the start of
+the process, and the price before that date is a filing-anchored unaffected
+price rather than a price-shape inference.
+
+## The rest of the sweep, this run
+
+```
+[Integrity] 4 question(s) across 3 of 19 deal(s)
+
+  BZH   break_price   33.46 vs current 33.19 and deal 33.5 — no downside left to price
+        premium       0.1% (computed) — at or barely above market
+  GBCS  outside_date  2026-08-31 has PASSED (2 days ago)
+  GSAT  close_date    '2027' — a year with no quarter or half
+```
+
+CBZ and DSGR have cleared. Both now read `acquirer_type: Strategic` in
+production — not because the fix deployed, but because this scan had their
+acquirers cached and known at construction, so the type computed correctly on
+the normal path. The fix still matters for the case that produced the defect:
+an acquirer arriving mid-scan from enrichment.
+
+`test_integrity.py` is at 36 checks.

@@ -1321,7 +1321,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
 
     <!-- critical numbers strip -->
-    <div id="da-metrics" style="display:grid; grid-template-columns:repeat(5,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
+    <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
+    <div id="da-premium-note" style="margin:0 2.5rem;"></div>
 
     <!-- implied probability + break price -->
     <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid rgba(238,228,208,0.10);">
@@ -1977,6 +1978,31 @@ function _daSgn(n){ return (n==null||isNaN(n)) ? '\u2014' : (n>=0?'+':'\u2212')+
 // The annualized figure, or what is actually known when it is suppressed.
 // Below ANNUALIZE_MIN_DAYS the server sends null rather than a 2,222% headline
 // off a one-day window, and the honest substitute is the days themselves.
+// The premium, as the server computed it, falling back to the local
+// calculation for a cached deal written before the field existed.
+//
+// §30C decides how this reads: a large premium is NOT evidence a deal will
+// close. It measures standalone downside and how motivated holders are to vote
+// yes, and nothing about buyer commitment, termination rights or regulatory
+// risk. So it gets NO colour scale -- the previous row painted anything at or
+// above 25% teal, which is exactly the "premium size means safety" inference
+// §30C says to audit out.
+function _daPremium(deal){
+  var p = deal && deal.premium;
+  if(p && p.value != null && !isNaN(p.value)) return p;
+  var bp = deal && deal.break_price, dp = deal && deal.dp;
+  if(bp == null || dp == null || !(bp > 0)) return null;
+  return { value: Math.round(((dp - bp) / bp) * 1000) / 10, basis: 'computed',
+           reference: 'against the modeled break price of ' + _daUsd(bp),
+           thin: ((dp - bp) / bp) * 100 < 5 };
+}
+function _daPremiumText(deal){
+  var p = _daPremium(deal);
+  if(!p) return '\u2014';
+  return _daSgn(p.value) + ' <span style="color:#8f8772; font-weight:400; '
+       + 'font-size:10.5px;">' + (p.basis === 'stated' ? 'stated in the filing'
+                                                       : 'computed') + '</span>';
+}
 function _daAnn(deal){
   if(deal && deal.ann != null && !isNaN(deal.ann)) return _daSgn(deal.ann);
   var d = deal && deal.days_to_close;
@@ -2110,6 +2136,7 @@ async function renderAnalysis(deal){
     { l:'Current Price', v:_daUsd(deal.cp),  c:'#f4eee0' },
     { l:'Deal Value',    v:_daUsd(deal.dp),  c:'#f7f1e4' },
     { l:'Gross Spread',  v:_daSgn(deal.sp_pct), c:m.fg },
+    { l:'Premium',       v:_daPremiumText(deal),  c:'#e2d8c0' },
     { l:'Annualized',    v:_daAnn(deal),        c:m.fg },
     { l:'Days to Close', v:(dtc!=null ? '~'+dtc : '\u2014'), c:'#efe7d6', sub:(closeEst ? 'est. '+closeEst : 'not yet disclosed') }
   ];
@@ -2216,7 +2243,7 @@ async function renderAnalysis(deal){
   var finBadgeColor = fin==='committed' ? '#4fe6cb' : fin==='contingent' ? '#ff9466' : '#cdbf9f';
   var rowsAcq = [
     { l:'Acquirer Type',    v:(deal.acquirer_type||'Strategic') },
-    { l:'Deal Premium',     v:(premium!==null ? (premium>=0?'+':'\u2212')+Math.abs(premium)+'% <span style="color:#8f8772; font-weight:400; font-size:10.5px;">to '+_daUsd(bp)+' unaffected</span>' : 'N/A'), c:(premium!==null&&premium>=25?'#5fe0c9':'#e2d8c0') },
+    { l:'Deal Premium',     v:_daPremiumText(deal), c:'#e2d8c0' },
     { l:'Consideration',    v:(deal.deal_type||'\u2014')+' \u00b7 '+_daUsd(deal.dp)+' / share' },
     { l:'Transaction Value',v:txVal }
   ];
@@ -2266,6 +2293,26 @@ async function renderAnalysis(deal){
       + '<div style="margin-top:5px; font-size:11.5px; line-height:1.45; color:#9a9079;">No elevated regulatory concerns identified based on deal size and sector.</div>'
       + '</div>');
   }
+
+  // §30C, carried with the number rather than left to the reader to supply.
+  // A premium says what a holder loses if the deal breaks and how motivated
+  // they are to vote yes. It says nothing about whether it will close.
+  (function(){
+    var p = _daPremium(deal);
+    var el = document.getElementById('da-premium-note');
+    if(!el) return;
+    if(!p){ el.innerHTML = ''; return; }
+    el.innerHTML = '<div style="margin-top:10px; padding:9px 12px; '
+      + 'border-left:2px solid rgba(238,228,208,0.18); font-size:11.5px; '
+      + 'line-height:1.65; color:#9a9079;">'
+      + (p.reference ? '<span style="color:#cdc2a8;">' + p.reference + '.</span> ' : '')
+      + (p.thin ? '<span style="color:#e2b23f;">The buyer is paying at or barely '
+                + 'above market.</span> ' : '')
+      + 'Premium measures standalone downside and how motivated holders are to '
+      + 'vote yes. It is not evidence the deal will close, and says nothing '
+      + 'about buyer commitment, termination rights or regulatory risk.'
+      + '</div>';
+  })();
 
   // ---- structure notes (deal flags + blended consideration) — neutral facts
   //      about what the price means ----

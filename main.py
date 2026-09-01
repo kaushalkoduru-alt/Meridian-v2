@@ -1252,6 +1252,110 @@ def apply_blended_to_spread(deal):
             'risk': (old_risk, deal.get('risk'))}
 
 
+# ── DEAL PREMIUM ─────────────────────────────────────────────────────────────
+#
+# What the buyer is paying over what the shares were worth without the deal.
+#
+# §30C governs how this is presented: a large premium is NOT evidence a deal
+# will close. It measures standalone downside, valuation, and how motivated
+# shareholders are to vote yes. It says nothing about buyer commitment,
+# termination rights, or regulatory risk. Anything rendering this number carries
+# that sentence with it.
+#
+# BZH is why it is worth surfacing at all. Dream Finders is paying $33.50 against
+# a $33.46 pre-announcement close -- a premium of 0.1%, at an implied 0.8x book
+# -- and the press release states no premium anywhere, because there is none to
+# state. That is the single most important fact about the deal and the product
+# said nothing about it.
+PREMIUM_THIN_PCT = 5.0
+
+# Filings state it in a handful of shapes, always with the reference attached:
+# "a premium of approximately 42% to the closing price on March 3, 2026".
+_STATED_PREMIUM = (
+    r'premium\s+of\s+(?:approximately\s+|about\s+|roughly\s+)?'
+    r'(\d{1,3}(?:\.\d+)?)\s*%'
+    r'([^.]{0,140})'
+)
+
+
+def extract_stated_premium(filing_text):
+    """
+    The premium the filing states, with the reference it names, or None.
+
+    Returns (percent, reference_phrase). The reference matters as much as the
+    number: "a 42% premium to the closing price on March 3, 2026" tells you
+    which day the buyer considered unaffected, which is a filing fact where our
+    own break price is a model estimate.
+    """
+    if not filing_text:
+        return None
+    flat = re.sub(r'\s+', ' ', filing_text[:CLOSE_DATE_SCAN_CHARS])
+    for m in re.finditer(_STATED_PREMIUM, flat, re.IGNORECASE):
+        try:
+            pct = float(m.group(1))
+        except (TypeError, ValueError):
+            continue
+        if not (0 <= pct <= 400):
+            continue
+        ref = re.sub(r'\s+', ' ', (m.group(2) or '')).strip(' ,;')
+        # Only keep a reference that actually points at a price or a date.
+        if not re.search(r'clos\w+|price|volume|average|unaffected|as\s+of|'
+                         r'January|February|March|April|May|June|July|August|'
+                         r'September|October|November|December', ref, re.IGNORECASE):
+            ref = ''
+        return pct, ref[:170]
+    return None
+
+
+def deal_premium(deal, filing_text=''):
+    """
+    The premium as a dict the UI can render, or None where it cannot be read.
+
+      value      percent
+      basis      'stated' (the filing says so) or 'computed' (vs our break price)
+      reference  what the percentage is measured against
+      thin       True when the buyer is paying at or barely above market
+      caveat     §30C, carried with the number so it cannot be shown alone
+
+    A stated premium wins. It is a filing fact naming the buyer's own unaffected
+    reference; ours is a model estimate off a price lookup that AUDIT #8 shows
+    is not a model at all.
+    """
+    dp = deal.get('dp')
+    try:
+        dp = float(dp)
+    except (TypeError, ValueError):
+        return None
+    if not dp or dp <= 0:
+        return None
+
+    caveat = ('Premium measures standalone downside and how motivated holders '
+              'are to vote yes. It is not evidence the deal will close, and says '
+              'nothing about buyer commitment, termination rights or regulatory '
+              'risk.')
+
+    stated = extract_stated_premium(filing_text)
+    if stated:
+        pct, ref = stated
+        return {'value': round(pct, 1), 'basis': 'stated',
+                'reference': ref or 'as stated in the filing',
+                'thin': pct < PREMIUM_THIN_PCT, 'caveat': caveat}
+
+    bp = deal.get('break_price')
+    try:
+        bp = float(bp)
+    except (TypeError, ValueError):
+        return None
+    if not bp or bp <= 0:
+        return None
+    pct = ((dp - bp) / bp) * 100
+    method = deal.get('break_price_method') or 'historical'
+    return {'value': round(pct, 1), 'basis': 'computed',
+            'reference': (f'against the modeled break price of ${bp:.2f} '
+                          f'({method}) — the filing states no premium'),
+            'thin': pct < PREMIUM_THIN_PCT, 'caveat': caveat}
+
+
 def pricing_integrity_failures(deals):
     """
     Deals that should carry a blended price and do not. Empty means healthy.
@@ -2876,6 +2980,21 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     print(f"[Gate] blocked {_before - len(results)} unverified deal(s)")
             _clean = [{k: v for k, v in r.items() if k != '_filing_text'} for r in results]
             save_cache(_clean)
+
+            # The premium, computed where the filing does not state one. Runs
+            # before the sweep so the sweep can question the result.
+            for _d in results:
+                try:
+                    _pm = deal_premium(_d, _d.get('_filing_text', '') or '')
+                    if _pm:
+                        _d['premium'] = _pm
+                except Exception as _pme:
+                    print(f"  [Premium] {_d.get('ticker')}: {_pme}")
+            _thin = [_d.get('ticker') for _d in results
+                     if isinstance(_d.get('premium'), dict) and _d['premium'].get('thin')]
+            print(f"[Premium] {sum(1 for _d in results if _d.get('premium'))} deal(s) "
+                  f"carry a premium"
+                  + (f"; thin (<{PREMIUM_THIN_PCT}%): {', '.join(_thin)}" if _thin else ""))
 
             # Everything a human would question, named out loud. Runs on
             # `results` rather than the cache read-back because _filing_text is
