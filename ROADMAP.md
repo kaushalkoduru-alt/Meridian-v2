@@ -173,6 +173,35 @@ about a number being misleading, not about a feature being missing.
   measured. "Regulatory: weak antitrust covenant, $7B RTF" not "Regulatory: 68".
   Where evidence is insufficient, say so.
 
+  **DEFERRED CORRECTIONS COLLECTED HERE.** Four known-wrong scoring behaviours
+  are live and waiting on this section. They are listed together because each
+  was correct to defer on its own and the set is the argument for moving §9 up
+  — the rule agreed was that a fourth would do it, and this is the fourth.
+
+  1. **The premium band treats premium size as safety** — `score_deal_premium`
+     pays +8 at 50% or more and charges −5 below 5%. That is §30C stated as
+     arithmetic. Live cost: **BZH −5** for being a genuine no-premium deal, with
+     Dream Finders paying $33.50 against a $33.46 close at 0.8x book. Documented
+     at the point of use in `main.py`.
+  2. **`deal_type` propagates into the score** — All Cash pays +10, Private
+     Equity +5. Live cost: **GSAT −5**, typed Private Equity on a deal where
+     Amazon is the acquirer. `acquirer_type` was fixed to read from the acquirer;
+     `deal_type` itself is still wrong and still scoring.
+  3. **The score has no time input at all** — not days to close, not days to the
+     outside date. Live cost: **GBCS scores 92, risk Very Low, two days past its
+     contractual deadline**, with six tender extensions on file. A deal past its
+     deadline scores identically to one with 300 days of runway.
+  4. **Spread is double-counted** — it is 60 of the 153-point score range (39%)
+     and then `get_risk` uses it again as the primary gate, so the risk band is
+     largely a relabelling of the spread and the other five factors barely reach
+     it. AUDIT #10.
+
+  Items 1–3 each leave a specific wrong number on a specific deal today. Item 4
+  is structural. None was fixed in isolation because the six weights are
+  unvalidated as a set — 39 deals with 4 failures could not validate them — and
+  correcting one band at a time makes the composite harder to reason about, not
+  easier.
+
 ---
 
 ## LATER — blocked on something that does not exist yet

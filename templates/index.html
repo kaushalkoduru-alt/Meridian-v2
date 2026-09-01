@@ -1323,6 +1323,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <!-- critical numbers strip -->
     <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
     <div id="da-premium-note" style="margin:0 2.5rem;"></div>
+    <div id="da-deadline" style="margin:0 2.5rem;"></div>
 
     <!-- implied probability + break price -->
     <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid rgba(238,228,208,0.10);">
@@ -2016,13 +2017,68 @@ function _daPremiumText(deal){
 // §31 says two precise numbers invite taking the flattering one. The answer
 // here is presentational: same size, same colour, same row, days attached. A
 // reader who wants the bigger number has to also read the shorter horizon.
+// The contractual deadline, which until now was extracted for all nineteen
+// deals, quote-backed, and rendered nowhere.
+//
+// A deal past its deadline must not look like a deal with 300 days of runway.
+// When it has passed, this block leads the page's lower half in the alarm
+// colour and carries the module's own past-deadline sentence: either party may
+// now walk without paying a break fee, so the deal is being kept alive by
+// agreement rather than by contract. GBCS is the live case — its deadline
+// expired on 31 August and Black Pearl filed a sixth tender extension the same
+// day, which is exactly that sentence happening.
+function _daDeadline(deal){
+  var od = deal && deal.outside_date;
+  if(!od || !od.date) return '';
+  var passed = od.passed === true;
+  var days   = od.days_remaining;
+  var near   = !passed && days != null && days <= 60;
+  var col    = passed ? '#f0735e' : (near ? '#e2b23f' : '#8f8772');
+  var head   = passed ? 'CONTRACTUAL DEADLINE PASSED'
+             : (near ? 'CONTRACTUAL DEADLINE APPROACHING' : 'CONTRACTUAL DEADLINE');
+  var when   = passed ? Math.abs(days) + ' days ago'
+             : (days != null ? days + ' days remaining' : '');
+  var ext    = od.extension_type
+             ? (od.extension_type === 'automatic'
+                ? 'extends automatically if regulatory conditions are unmet'
+                : 'either party may elect to extend')
+             : 'no extension clause';
+  return '<div style="margin-top:12px; padding:13px 16px; '
+    + 'border:1px solid ' + col + (passed ? '' : '55') + '; '
+    + 'background:' + (passed ? 'rgba(240,115,94,0.07)' : 'transparent') + ';">'
+    + '<div style="font-size:9.5px; letter-spacing:0.16em; color:' + col + '; '
+    +   'text-transform:uppercase; font-weight:600;">' + head + '</div>'
+    + '<div style="margin-top:7px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">'
+    +   '<span style="font-size:15px; color:#f1eadb; font-weight:500;">'
+    +     _daFmtCloseDate(od.date) + '</span>'
+    +   '<span style="font-size:11.5px; color:' + col + ';">' + when + '</span>'
+    +   '<span style="font-size:10.5px; color:#8f8772;">\u00b7 ' + ext + '</span>'
+    + '</div>'
+    + (od.meaning ? '<div style="margin-top:8px; font-size:11.5px; line-height:1.65; '
+        + 'color:' + (passed ? '#e2d8c0' : '#9a9079') + ';">' + od.meaning + '</div>' : '')
+    + (od.quote ? '<blockquote style="margin:9px 0 0; padding:2px 0 2px 12px; '
+        + 'border-left:2px solid ' + col + '66; font-family:\'DM Mono\',monospace; '
+        + 'font-size:10.5px; line-height:1.6; color:#8f8772; font-style:normal;">'
+        + od.quote + '</blockquote>' : '')
+    + '</div>';
+}
 function _daAnnBounds(deal){
   var b = deal && deal.ann_bounds;
   if(!b) return _daAnn(deal);          // a cached deal written before the field
   var parts = [];
   if(b.guidance) parts.push(['to guidance', b.guidance]);
   if(b.deadline) parts.push(['to deadline', b.deadline]);
-  if(!parts.length) return '\u2014';
+  if(!parts.length){
+    // Both bounds gone is not the same as no data. Say which it is, or a deal
+    // whose dates have both passed reads identically to one with no dates.
+    var od = deal && deal.outside_date;
+    if(od && od.passed) return '<span style="font-size:11px; color:#f0735e;">'
+      + 'not annualizable \u00b7 the deadline has passed</span>';
+    if(deal && (deal.close_date === 'TBD' || !deal.close_date))
+      return '<span style="font-size:11px; color:#8f8772;">'
+        + 'no stated close date</span>';
+    return '\u2014';
+  }
   return parts.map(function(p){
     return '<div style="display:flex; align-items:baseline; gap:7px;">'
       + '<span style="font-size:13px; color:#e2d8c0; font-weight:500;">'
@@ -2358,6 +2414,8 @@ async function renderAnalysis(deal){
       + 'about buyer commitment, termination rights or regulatory risk.'
       + '</div>';
   })();
+
+  _daSet('da-deadline', _daDeadline(deal));
 
   // ---- structure notes (deal flags + blended consideration) — neutral facts
   //      about what the price means ----

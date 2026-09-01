@@ -3012,3 +3012,113 @@ Only the annualized figure's inputs and presentation moved.
 horizons, the cap not reaching the guidance bound, RAMP and NATH proving the
 larger bound flips, single-bound cases in both directions, neither-available,
 and the floor applying per bound.
+
+---
+
+# The deadline is visible, and the deferred list is in one place
+
+2026-09-01. Last work before §30.
+
+## 1 · The outside date was never rendered
+
+The instruction was to make the passed state prominent. Checking the template
+first turned up something larger: **`outside_date` appears nowhere in the UI at
+all.** Nineteen of nineteen deals carry one, each quote-backed, each with a
+`passed` flag, an extension type and written meaning text — and none of it
+reached the page. Seven turns of extraction work, invisible.
+
+So this is not "make it prominent", it is "render it". `_daDeadline(deal)` now
+draws a block under the metric row in three states:
+
+```
+GBCS   CONTRACTUAL DEADLINE PASSED       red, filled
+       Aug 31, 2026 · 2 days ago · no extension clause
+       "This deadline has passed. Either company can now walk away without
+        paying a break fee, so the deal is being kept alive by agreement
+        rather than by contract."
+       > shall not have occurred on or before August 31, 2026
+
+NATH   CONTRACTUAL DEADLINE APPROACHING  amber, ≤60 days
+       Oct 20, 2026 · 49 days remaining · extends automatically
+
+GSAT   CONTRACTUAL DEADLINE             neutral
+       Apr 13, 2028 · 590 days remaining · extends automatically
+```
+
+GBCS's meaning text is not a hypothetical. Black Pearl filed its sixth tender
+extension on 31 August — the deadline itself — so "kept alive by agreement
+rather than by contract" is a description of what the filing record shows.
+
+**And an empty annualized field now says why it is empty.** Both bounds absent
+because both dates passed reads differently from both bounds absent because no
+date was ever stated, and the two looked identical:
+
+```
+GBCS   not annualizable · the deadline has passed
+ATKR   no stated close date
+```
+
+A deal past its contractual deadline no longer looks like a deal with 300 days
+of runway. The score still says Very Low, which §9 owns — but the page now
+carries the fact beside it rather than leaving the score to speak alone.
+
+## 2 · The §30C conflict, documented where it lives
+
+`score_deal_premium` carries a docstring naming what it is: §30C in scoring
+form, paying +8 for a premium of 50% or more and charging −5 below 5%, which is
+a claim that a bigger premium means a safer deal. The live cost is named too —
+BZH −5 for being a genuine no-premium deal — along with why it is not fixed in
+isolation. **The weights are unchanged.**
+
+## 3 · The four deferred §9 corrections, collected
+
+ROADMAP.md §9 now lists them together rather than leaving them scattered:
+
+| # | Correction | Live cost today |
+|---|---|---|
+| 1 | premium band treats size as safety | **BZH −5** |
+| 2 | `deal_type` pays +10 All Cash vs +5 PE | **GSAT −5**, typed PE with Amazon buying |
+| 3 | the score has no time input at all | **GBCS 92, Very Low, two days past its deadline** |
+| 4 | spread double-counted — 39% of the range, then the risk gate | structural, AUDIT #10 |
+
+**This is the fourth, so by the rule agreed, §9 moves up the order.** Items 1–3
+each leave a specific wrong number on a specific deal right now.
+
+One correction to my own earlier report: GBCS scores **92**, not 82. It has
+risen since, which makes the point sharper rather than softer.
+
+## What else in the feed is known wrong and deferred
+
+Everything below is a value currently displayed that we know is not right, with
+the section that owns it. Verified against the live feed today, not recalled.
+
+**Specific to one deal**
+
+| Deal | Value | Why it is wrong | Owner |
+|---|---|---|---|
+| BZH | `break_price` 33.46 vs `cp` 33.20 | above the current price, so no downside is left to price; probability correctly gated, position table shows a gain | §4, revisit on Beazer's proxy |
+| GSAT | `deal_type` Private Equity | Amazon is the acquirer; also costs 5 score points | §9 item 2 |
+| HZO | `outside_date` 2027-08-09 | the proviso allows **two** automatic three-month extensions to a stated 15-month maximum, so the true outer deadline is 2027-11-09 | outside_date |
+| GBCS | `score` 92 / Very Low | two days past its deadline | §9 item 3 |
+| BZH | `score` −5 from the premium band | genuine no-premium deal | §9 item 1 |
+
+**Across the feed**
+
+| Field | State | Why it is wrong | Owner |
+|---|---|---|---|
+| `break_price` | 18 of 19 `historical` | a pre-announcement close lookup rendered as "Modeled downside case"; the word models nothing | §4, AUDIT #8 |
+| `financing_signal` | 10 of 19 `unknown` | read from the press release while `check_financing` reads the agreement and is not consulted | §30A, AUDIT #16 |
+| `reg_tags` | all 19 | size-and-sector priors computed at detection, never regulatory status — a cleared deal and one facing a second request tag identically | §12, QA C3 |
+| `tx_value` | 14 `regex_enterprise`, 4 `equity_calc_approx` | enterprise and equity value under one label, so the RTF percentage is not comparable across deals | AUDIT #15 |
+| `cp` | all 19 | a daily close with no as-of date attached, labelled "current" | §8, AUDIT #1 |
+
+**Not on this list, and worth saying why.** The bare-year close dates, the
+stale `acquirer_type`, the capped annualization, the missing outside dates and
+the dropped enrichment readings were all on it a week ago and are now fixed. The
+list above is what remains, and every entry has a section that owns it rather
+than sitting unassigned.
+
+Nothing here is a surprise to the sweep either: `integrity.py` flags BZH's break
+price and premium, and GBCS's passed deadline, on every scan. The rest are
+systemic rather than per-deal, which is why they read as roadmap items and not
+as findings.

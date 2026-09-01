@@ -703,6 +703,28 @@ def score_regulatory_complexity(reg_tags):
     return max(-20, min(5, score))
 
 def score_deal_premium(break_price, deal_price):
+    """
+    Premium band, worth +8 to -5 of the score.
+
+    KNOWN WRONG, DEFERRED TO §9. This is §30C in scoring form: "a large premium
+    is not evidence a deal will close. Audit any logic treating premium size as
+    safety." This function is that logic — it pays +8 for a premium of 50% or
+    more and charges -5 below 5%, which is a claim that a bigger premium means a
+    safer deal. §30C says premium measures standalone downside, valuation and
+    shareholder incentive, and says nothing about buyer commitment, termination
+    rights, probability or regulatory risk.
+
+    Live cost: BZH loses 5 points for being a genuine no-premium deal — Dream
+    Finders is paying $33.50 against a $33.46 close at 0.8x book, and the press
+    release states no premium because there is none. The deal is not riskier for
+    that; it is differently priced.
+
+    Not changed here because the weights are unvalidated as a set — 39 deals
+    with 4 failures could not validate the six factors that exist — and
+    correcting one band in isolation makes the composite harder to reason about,
+    not easier. Collected in ROADMAP.md under §9 with the other deferred
+    corrections.
+    """
     if not break_price or not deal_price or break_price <= 0: return 0
     premium_pct = ((deal_price - break_price) / break_price) * 100
     if premium_pct >= 50:   return 8
