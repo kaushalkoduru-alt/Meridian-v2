@@ -2003,6 +2003,45 @@ function _daPremiumText(deal){
        + 'font-size:10.5px;">' + (p.basis === 'stated' ? 'stated in the filing'
                                                        : 'computed') + '</span>';
 }
+// Both bounds on the annualized return, at EQUAL visual weight.
+//
+// Neither is highlighted and neither is called "expected". Guidance resolves to
+// a period end and the deadline is the day either party may walk -- both are
+// bounds, and naming one a forecast would imply precision the product does not
+// have. The horizon in days sits beside each figure so the reason they differ
+// is visible rather than mysterious: NATH reads 12.67% over 121d and 31.29%
+// over 49d, and the second number stops looking like a better deal the moment
+// the 49 is next to it.
+//
+// §31 says two precise numbers invite taking the flattering one. The answer
+// here is presentational: same size, same colour, same row, days attached. A
+// reader who wants the bigger number has to also read the shorter horizon.
+function _daAnnBounds(deal){
+  var b = deal && deal.ann_bounds;
+  if(!b) return _daAnn(deal);          // a cached deal written before the field
+  var parts = [];
+  if(b.guidance) parts.push(['to guidance', b.guidance]);
+  if(b.deadline) parts.push(['to deadline', b.deadline]);
+  if(!parts.length) return '\u2014';
+  return parts.map(function(p){
+    return '<div style="display:flex; align-items:baseline; gap:7px;">'
+      + '<span style="font-size:13px; color:#e2d8c0; font-weight:500;">'
+      +   _daSgn(p[1].value) + '</span>'
+      + '<span style="font-size:10.5px; color:#8f8772;">'
+      +   p[0] + ' \u00b7 ' + p[1].days + 'd</span>'
+      + '</div>';
+  }).join('');
+}
+// One slot, one number -- the ticker and the dashboard have no room for two.
+// It always says which bound it is, so a lone figure is never unlabelled.
+function _daAnnSingle(deal){
+  var b = deal && deal.ann_bounds;
+  if(!b || !(b.guidance || b.deadline)) return _daAnn(deal);
+  var slot = b.guidance || b.deadline;
+  var which = b.guidance ? 'guidance' : 'deadline';
+  return _daSgn(slot.value) + ' <span style="font-size:10px; color:#8f8772;">to '
+       + which + '</span>';
+}
 function _daAnn(deal){
   if(deal && deal.ann != null && !isNaN(deal.ann)) return _daSgn(deal.ann);
   var d = deal && deal.days_to_close;
@@ -2075,10 +2114,16 @@ function _daDaysToClose(cd){
   if(!d) return null;
   return Math.round((d - new Date()) / 86400000);
 }
-function _daFmtCloseDate(cd){
-  var d = _daParseCloseDate(cd);
+function _daFmtCloseDate(cd, deal){
+  // The cap belongs here, on the DISPLAYED date. NATH guides to H2 2026 while
+  // its deadline is 20 October, and showing "Dec 31, 2026" beside a deadline it
+  // cannot pass was the impossibility the cap was built to remove. The
+  // annualized figures deliberately do not use this -- see _daAnnBounds.
+  var capped = deal && deal.close_date_capped_to;
+  var d = capped ? _daParseCloseDate(capped) : _daParseCloseDate(cd);
   if(!d) return null;
-  return d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'});
+  return d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'})
+       + (capped ? ' (capped at the deadline)' : '');
 }
 function _daSet(id, html){ var e=document.getElementById(id); if(e) e.innerHTML = html; }
 function _daTxt(id, txt){ var e=document.getElementById(id); if(e) e.textContent = txt; }
@@ -2094,7 +2139,7 @@ async function renderAnalysis(deal){
   var txRaw   = (deal.tx_value && !isNaN(deal.tx_value)) ? parseFloat(deal.tx_value) : null;
   var txVal   = txRaw===null ? 'N/A' : (txRaw>=1 ? '$'+txRaw.toFixed(1)+'B' : '$'+Math.round(txRaw*1000)+'M');
   var dtc     = _daDaysToClose(deal.close_date);
-  var closeEst= _daFmtCloseDate(deal.close_date);
+  var closeEst= _daFmtCloseDate(deal.close_date, deal);
 
   // ---- breadcrumb ----
   _daSet('da-breadcrumb',
@@ -2137,7 +2182,7 @@ async function renderAnalysis(deal){
     { l:'Deal Value',    v:_daUsd(deal.dp),  c:'#f7f1e4' },
     { l:'Gross Spread',  v:_daSgn(deal.sp_pct), c:m.fg },
     { l:'Premium',       v:_daPremiumText(deal),  c:'#e2d8c0' },
-    { l:'Annualized',    v:_daAnn(deal),        c:m.fg },
+    { l:'Annualized',    v:_daAnnBounds(deal),  c:m.fg },
     { l:'Days to Close', v:(dtc!=null ? '~'+dtc : '\u2014'), c:'#efe7d6', sub:(closeEst ? 'est. '+closeEst : 'not yet disclosed') }
   ];
   _daSet('da-metrics', cells.map(function(c,i){
@@ -2203,7 +2248,7 @@ async function renderAnalysis(deal){
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(deal.dp)+'</div>'
     +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+_daSgn(deal.sp_pct)+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?_daSgnUsd(deal.dp-deal.cp)+' / share':'')+'</div>'
-    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daAnn(deal)+'</div>'
+    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daAnnSingle(deal)+'</div>'
     + '</div>';
   var breaksCard = bp!=null ? ''
     + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(240,115,94,0.4); padding:18px 20px; overflow:hidden;">'
@@ -2723,6 +2768,12 @@ function renderDeals(deals){
   // Same substitution on the dashboard: days remaining where annualizing would
   // describe a return nobody can compound.
   var annCell = function(d){
+    var b = d && d.ann_bounds;
+    if(b && (b.guidance || b.deadline)){
+      var slot = b.guidance || b.deadline;
+      return sgn1(slot.value) + '<span style="font-size:9px; color:#7d745f;"> to '
+           + (b.guidance ? 'guidance' : 'deadline') + '</span>';
+    }
     if(d && d.ann != null && !isNaN(d.ann)) return sgn1(d.ann);
     if(d && d.days_to_close != null && !isNaN(d.days_to_close) && d.days_to_close > 0)
       return '\u2014 \u00b7 ' + Math.round(d.days_to_close) + 'd';

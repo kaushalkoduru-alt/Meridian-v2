@@ -19,7 +19,7 @@ from main import (parse_close_date, days_to_close, annualized_spread,
                  tx_value_plausible, get_acquirer_type,
                  TX_VALUE_MIN_RATIO, TX_VALUE_MAX_RATIO,
                  PROXY_CLOSE_DATE_SCAN_CHARS, _pick_ex2, _EX2_NAME,
-                 close_date_from_proxy)
+                 close_date_from_proxy, annualized_bounds)
 
 ok = True
 def check(label, got, want, detail=""):
@@ -761,6 +761,62 @@ for _t, _want in [
     ('expected to close in the second half of 2026', 'second half of 2026'),
     ('The merger is expected to be completed in calendar year 2027.', '2027')]:
     check(f"{_want!r} still reads", extract_close_date(_t), _want)
+
+print()
+print("TWO BOUNDS ON THE ANNUALIZED RETURN, NEITHER AN EXPECTATION")
+print("-" * 78)
+
+# NATH showed 31.29% alone, computed against a capped close date -- which
+# asserts the deal closes ON its deadline, the least likely single outcome.
+# Quoted against 2026-09-01, the date the diagnosis table was computed on, so
+# the numbers here are the ones in AUDIT.md rather than TODAY's.
+_D1 = date(2026, 9, 1)
+_N = annualized_bounds({'sp_pct': 4.2, 'close_date': 'H2 2026',
+                        'outside_date': {'date': '2026-10-20'}}, now=_D1)
+check("NATH: the guidance bound is restored",
+      _N['guidance']['value'], 12.67, "was hidden behind the capped figure")
+check("NATH: the deadline bound is kept", _N['deadline']['value'], 31.29)
+check("NATH: both are present", _N['basis'], 'both')
+check("the horizons differ, which is why the figures do",
+      (_N['guidance']['days'], _N['deadline']['days']), (121, 49))
+
+# The cap must not reach the annualization. A capped close_date on the record
+# changes the displayed date and nothing else.
+check("a capped close date does not move the guidance bound",
+      annualized_bounds({'sp_pct': 4.2, 'close_date': 'H2 2026',
+                         'close_date_capped_to': '2026-10-20',
+                         'outside_date': {'date': '2026-10-20'}},
+                        now=_D1)['guidance']['value'], 12.67,
+      "guidance is read from the raw close_date, never the capped one")
+
+# Which bound is larger flips between deals, which is the argument for showing
+# both rather than choosing.
+_R = annualized_bounds({'sp_pct': 1.97, 'close_date': 'December 31, 2026',
+                        'outside_date': {'date': '2027-05-16'}}, now=_D1)
+check("RAMP: guidance is the HIGHER bound",
+      _R['guidance']['value'] > _R['deadline']['value'], True,
+      f"{_R['guidance']['value']}% vs {_R['deadline']['value']}%")
+check("NATH: deadline is the higher bound",
+      _N['deadline']['value'] > _N['guidance']['value'], True,
+      "so neither can be called the conservative one")
+
+# One bound where only one exists, named -- and never synthesised.
+_D = annualized_bounds({'sp_pct': 1.41, 'close_date': 'TBD',
+                        'outside_date': {'date': '2027-08-02'}}, now=_D1)
+check("no stated close leaves the deadline bound alone", _D['basis'], 'deadline')
+check("  and the guidance bound is absent, not invented", _D['guidance'], None)
+_G = annualized_bounds({'sp_pct': 1.0, 'close_date': 'Q4 2026'}, now=_D1)
+check("no outside date leaves the guidance bound alone", _G['basis'], 'guidance')
+check("  and the deadline bound is absent, not invented", _G['deadline'], None)
+check("neither available means neither shown",
+      annualized_bounds({'sp_pct': 5.5, 'close_date': 'TBD'}, now=_D1)['basis'], None)
+
+# The floor still applies per bound.
+check("a bound inside 30 days is suppressed, the other survives",
+      annualized_bounds({'sp_pct': 0.03, 'close_date': 'Q3 2026',
+                         'outside_date': {'date': '2026-11-13'}},
+                        now=_D1)['basis'], 'deadline',
+      "ALOT: guidance is 29 days out, under the floor")
 
 print()
 print("=" * 78)

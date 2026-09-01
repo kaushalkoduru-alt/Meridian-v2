@@ -2891,3 +2891,124 @@ feeding the capped date into the annualization, not to stop capping.
 **Ordering, if you want it in stages.** Showing both figures makes the capping
 question moot for the annualized number, so it subsumes the smaller fix rather
 than competing with it. If only one change is wanted, it is that one.
+
+---
+
+# Two bounds on the annualized return
+
+2026-09-01. Implemented as diagnosed.
+
+## A correction to the record, first
+
+The premise that annualizing to the deadline **systematically** overstates was
+wrong, and it is worth stating plainly because the fix would have been different
+if it were right. For 8 of the 12 deals carrying both figures the **guidance**
+number is the higher one, because a deadline usually falls *later* than the
+guided period ends. RAMP is 5.94% to its stated 31 December close and 2.80% to
+its 2027 deadline — the deadline figure is less than half.
+
+Which bound is larger flips per deal, and that is the strongest argument for
+showing both. Neither is reliably the conservative one, so "pick the safe one"
+was never available as an answer.
+
+## What changed
+
+`annualized_bounds(deal)` returns `{guidance, deadline, basis}`, each slot
+carrying `value`, `days` and `date`.
+
+**The guidance bound reads the raw `close_date`, never the capped one.** The cap
+remains, and it still governs the *displayed* close date — NATH showing an
+expected close of 31 December against a 20 October deadline was the
+impossibility it was built to remove, and the page now renders
+`Oct 20, 2026 (capped at the deadline)`. What the cap no longer does is drive
+the annualized figure, because a capped date asserts the deal closes *on* its
+deadline, which is the least likely single outcome rather than the expected one.
+
+**Neither bound is called "expected".** They read `to guidance` and
+`to deadline`. Guidance resolves to a period *end* — "H2 2026" becomes 31
+December — so it is a bound; the outside date is the day either party may walk,
+which is also a bound. Naming either a forecast would imply precision the
+product does not have.
+
+**§31 is answered in the presentation, not by choosing.** Both figures render at
+identical size and colour, neither highlighted, in the same row, with the
+horizon in days beside each:
+
+```
+Annualized   +12.67%  to guidance · 121d
+             +31.29%  to deadline · 49d
+```
+
+The 31.29% stops looking like a better deal the moment the 49 is next to it. A
+reader who wants the larger number has to read the shorter horizon to get it.
+
+Where only one bound exists it is shown alone and named — `+1.59% to deadline ·
+335d`. The missing one is never synthesised. The 30-day floor applies per bound,
+so ALOT's 29-day guidance is suppressed while its 73-day deadline bound stands.
+
+The ticker and the dashboard have one slot each; they take the guidance bound
+where it exists, the deadline bound otherwise, and **always name which**, so a
+lone figure is never unlabelled.
+
+## Before and after, every deal
+
+Computed 2026-09-01 against the live feed.
+
+| Deal | before | to guidance | to deadline | basis |
+|---|---:|---:|---:|---|
+| AES | 2.70 | 2.70% (211d) | 2.09% (273d) | both |
+| ALOT | — | — | 0.15% (73d) | **deadline** |
+| APGE | — | — | 0.03% (290d) | **deadline** |
+| ATKR | — | — | 1.59% (335d) | **deadline** |
+| BOW | — | — | 1.99% (213d) | **deadline** |
+| BWMN | — | — | 1.37% (251d) | **deadline** |
+| BZH | 2.71 | 2.71% (121d) | 1.33% (247d) | both |
+| CBZ | 3.26 | 3.26% (121d) | 1.19% (330d) | both |
+| CZR | 3.62 | 3.36% (486d) | 3.62% (452d) | both |
+| DSGR | — | — | 2.59% (121d) | **deadline** |
+| GBCS | — | — | — | none — both dates passed |
+| GBTG | 1.27 | 1.27% (121d) | 1.00% (154d) | both |
+| GSAT | 3.44 | 3.44% (486d) | 2.83% (590d) | both |
+| HZO | — | — | 1.80% (342d) | **deadline** |
+| **NATH** | **32.78** | **13.27% (121d)** | **32.78% (49d)** | both |
+| OGN | 3.01 | 3.01% (211d) | 4.32% (147d) | both |
+| PAYO | 5.44 | 5.11% (302d) | 5.44% (284d) | both |
+| RAMP | 5.43 | 5.43% (121d) | 2.56% (257d) | both |
+| SLAB | 6.55 | 6.55% (302d) | 3.80% (521d) | both |
+
+**11 with both bounds, 7 with a deadline bound only, 1 with neither.**
+
+**Seven deals gain a figure they did not have.** ATKR, BOW, BWMN, DSGR and HZO
+state no close date, so they showed an em-dash; each has a readable contractual
+deadline and now carries an honest bound against it. ALOT and APGE were
+suppressed by the 30-day floor on guidance and now show their deadline bound.
+This is the second dividend of reaching 19 of 19 outside dates.
+
+GBCS shows neither, correctly: its guidance resolved to a date that has passed
+and its deadline expired on 31 August.
+
+### NATH, as asked
+
+At the spread the diagnosis table used (4.20):
+
+```
+to guidance   +12.67%   121d   2026-12-31
+to deadline   +31.29%    49d   2026-10-20
+```
+
+Confirmed against the exact figures. The live feed reads 13.27% / 32.78% because
+the spread has since moved to 4.40 — the same two bounds, repriced.
+
+The 31.29% no longer stands alone. It is still there, still the larger number,
+and now sits beside the 121-day figure and its own 49-day horizon, so a reader
+can see it is a deadline case rather than a return expectation.
+
+## What did not change
+
+`sp_pct`, the break price, the close-date cap on display, and the 30-day floor.
+Only the annualized figure's inputs and presentation moved.
+
+`test_formulas.py` is at 231 checks, 13 of them new: NATH's two bounds and their
+horizons, the cap not reaching the guidance bound, RAMP and NATH proving the
+larger bound flips, single-bound cases in both directions, neither-available,
+and the floor applying per bound.

@@ -1406,6 +1406,62 @@ def pricing_integrity_failures(deals):
     return failures
 
 
+def annualized_bounds(deal, now=None):
+    """
+    Both bounds on the annualized return, or whichever one exists.
+
+    Returns {'guidance': slot|None, 'deadline': slot|None, 'basis': str|None}
+    where a slot is {'value', 'days', 'date'}.
+
+    NEITHER IS AN EXPECTATION, and the labels say so. Guidance resolves to a
+    period END -- "H2 2026" becomes 31 December -- so it is a bound, not a
+    forecast. The outside date is the day either party may walk, which is also a
+    bound and not a plan. Calling one "expected" and the other "latest" would
+    imply a forecast the product does not have.
+
+    Which is larger flips between deals, and that is the reason for showing both
+    rather than choosing. For eight of twelve deals carrying both, the GUIDANCE
+    figure is higher, because a deadline usually falls later than the guided
+    period ends -- RAMP is 5.94% to its stated 31 December close and 2.80% to
+    its 2027 deadline. NATH is the other way: 12.67% to a 31 December guidance
+    and 31.29% to a 20 October deadline. A single number cannot carry that, and
+    picking one is where the 31.29% artifact came from.
+
+    The guidance bound is computed from the RAW close_date, never the capped
+    one. The cap belongs to the displayed date -- a deal cannot close after a
+    deadline it cannot pass -- but feeding a capped date into the annualization
+    asserts the deal closes ON the deadline, which is the least likely single
+    outcome rather than the expected one.
+    """
+    sp = deal.get('sp_pct')
+    try:
+        sp = float(sp)
+    except (TypeError, ValueError):
+        return {'guidance': None, 'deadline': None, 'basis': None}
+    today = now or datetime.utcnow().date()
+
+    def _slot(d):
+        if not d:
+            return None
+        days = (d - today).days
+        val = annualized_spread(sp, days)
+        if val is None:
+            return None
+        return {'value': val, 'days': days, 'date': d.isoformat()}
+
+    guidance = _slot(parse_close_date(deal.get('close_date')))
+
+    od = parse_structured(deal.get('outside_date', {}))
+    deadline = None
+    if isinstance(od, dict) and od.get('date'):
+        deadline = _slot(parse_close_date(od['date']))
+
+    basis = ('both' if guidance and deadline
+             else 'guidance' if guidance
+             else 'deadline' if deadline else None)
+    return {'guidance': guidance, 'deadline': deadline, 'basis': basis}
+
+
 def two_state_applies(cp, dp, bp):
     """
     Whether the close-or-break model can produce a probability at all.
@@ -2940,14 +2996,32 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                 if not _cap_to:
                     continue
                 _capped += 1
+                # days_to_close follows the capped date, because that is the
+                # close date the page shows. `ann` deliberately does NOT: see
+                # annualized_bounds, which reads the raw guidance instead.
                 _dtc2 = (_ec - datetime.utcnow().date()).days
                 _d['days_to_close'] = _dtc2
-                _d['ann'] = annualized_spread(_d.get('sp_pct'), _dtc2)
                 print(f"  [CloseDate] {_d.get('ticker')}: guidance "
                       f"'{_d.get('close_date')}' resolves past the "
                       f"{_od.get('extension_type') or 'fixed'} outside date "
                       f"{_cap_to} — capped, {_dtc2}d to close")
             print(f"[CloseDate] {_capped} deal(s) capped at their outside date")
+
+            # Both bounds, now that guidance and deadlines are both in hand.
+            # `ann` keeps carrying a single number for the ticker and the
+            # dashboard, which have one slot -- and `ann_basis` names which
+            # bound it is, so a lone figure is never unlabelled.
+            _b = {'both': 0, 'guidance': 0, 'deadline': 0}
+            for _d in results:
+                _ab = annualized_bounds(_d)
+                _d['ann_bounds'] = _ab
+                _d['ann_basis'] = _ab['basis']
+                _primary = _ab['guidance'] or _ab['deadline']
+                _d['ann'] = _primary['value'] if _primary else None
+                if _ab['basis']:
+                    _b[_ab['basis']] += 1
+            print(f"[Annualized] {_b['both']} deal(s) with both bounds, "
+                  f"{_b['guidance']} guidance only, {_b['deadline']} deadline only")
             for _tk, _od in _dated:
                 _days = _od.get('days_remaining')
                 _when = ("PASSED " + str(abs(_days)) + " days ago") if _od.get('passed')                         else (str(_days) + " days remaining")
