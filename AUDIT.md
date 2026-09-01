@@ -2737,3 +2737,157 @@ the normal path. The fix still matters for the case that produced the defect:
 an acquirer arriving mid-scan from enrichment.
 
 `test_integrity.py` is at 36 checks.
+
+---
+
+# Which date drives the annualized figure — diagnosis
+
+2026-09-01, against the live feed (fetched 16:04). **No code changed.**
+
+## 1 · Missing spreads and annualized figures
+
+**Category 3 is empty. There is no wiring gap.** Every missing `ann` has a
+correct reason, and no deal is missing `sp_pct`.
+
+| Deal | `sp_pct` | `ann` | `dtc` | Why |
+|---|---:|---:|---:|---|
+| AES | 1.59 | 2.75 | 211 | — |
+| ALOT | 0.03 | **—** | 29 | **below the 30-day floor** |
+| APGE | 0.02 | **—** | 29 | **below the 30-day floor** |
+| ATKR | 1.41 | **—** | — | **no close date** (TBD) |
+| BOW | 1.27 | **—** | — | **no close date** (TBD) |
+| BWMN | 0.93 | **—** | — | **no close date** (TBD) |
+| BZH | 0.92 | 2.78 | 121 | — |
+| CBZ | 1.04 | 3.14 | 121 | — |
+| CZR | 4.45 | 3.59 | 452 | — |
+| DSGR | 0.65 | **—** | — | **no close date** (TBD) |
+| GBCS | 5.50 | **—** | −1 | **close date passed** |
+| GBTG | 0.37 | 1.12 | 121 | — |
+| GSAT | 4.84 | 3.63 | 486 | — |
+| HZO | 1.62 | **—** | — | **no close date** (TBD) |
+| NATH | 4.20 | 31.29 | 49 | — |
+| OGN | 1.67 | 2.89 | 211 | — |
+| PAYO | 4.08 | 5.24 | 284 | — |
+| RAMP | 1.97 | 5.94 | 121 | — |
+| SLAB | 5.55 | 6.71 | 302 | — |
+
+```
+no close date          5    correct, the em-dash stays
+close date passed      1    correct
+below the 30-day floor 2    correct
+close date but no ann  0    <- the category that would have been a bug
+sp_pct missing         0
+annualizing            11
+```
+
+ALOT and APGE both sit at 29 days — one day under the floor. That is the floor
+doing its job rather than a near-miss worth tuning: at 29 days the multiplier is
+12.6x, and ALOT's 0.03% spread would print as 0.38%.
+
+## 2 · Which date produced the horizon
+
+**Ten of fourteen use the stated expected close. Four use the outside date.**
+Not most, which is the first thing worth saying.
+
+| Deal | `ann` shown | horizon | source |
+|---|---:|---:|---|
+| AES | 2.75% | 211d | stated expected close |
+| BZH | 2.78% | 121d | stated expected close |
+| CBZ | 3.14% | 121d | stated expected close |
+| **CZR** | **3.59%** | **452d** | **outside date (capped)** |
+| **GBCS** | — | **−1d** | **outside date (capped)** |
+| GBTG | 1.12% | 121d | stated expected close |
+| GSAT | 3.63% | 486d | stated expected close |
+| **NATH** | **31.29%** | **49d** | **outside date (capped)** |
+| OGN | 2.89% | 211d | stated expected close |
+| **PAYO** | **5.24%** | **284d** | **outside date (capped)** |
+| RAMP | 5.94% | 121d | stated expected close |
+| SLAB | 6.71% | 302d | stated expected close |
+| ALOT | — | 29d | stated expected close |
+| APGE | — | 29d | stated expected close |
+
+### The scale of the distortion — one deal, not the feed
+
+The cap binds only where guidance resolves *past* an automatic or fixed
+deadline. Comparing what each capped deal shows against what its own guidance
+would give:
+
+| Deal | to guidance | to outside date (shown) | inflation |
+|---|---:|---:|---:|
+| **NATH** | **12.67%** (121d) | **31.29%** (49d) | **2.5x** |
+| PAYO | 4.93% (302d) | 5.24% (284d) | 1.06x |
+| CZR | 3.34% (486d) | 3.59% (452d) | 1.07x |
+| GBCS | — | — (passed) | n/a |
+
+**NATH is the only material case.** Its guidance is "H2 2026" — a six-month
+window — and its deadline of 20 October falls early inside it, so the cap cuts
+121 days to 49 and the annualized figure runs from 12.67% to 31.29%. CZR and
+PAYO are within 7%, because their deadlines sit only a few weeks before their
+guidance ends.
+
+So the concern is right in kind and much narrower in degree: **the systematic
+overstatement is one deal wide**, and it is one deal wide because the
+end-of-period convention only diverges badly from the deadline when the guided
+period is very wide.
+
+### One thing the diagnosis confirms is working
+
+OGN's outside date (2027-01-26, 147 days) is **earlier** than its guidance (211
+days) and it is **not** capped, because that deadline is *elective* — a party
+must act to reach it. That was the rule chosen when the cap was built, and it is
+holding: OGN annualizes at 2.89% against guidance, not at 4.15% against a
+deadline nobody is obliged to hit.
+
+### And one framing correction
+
+Annualizing to the outside date does **not** systematically overstate. For 8 of
+the 12 deals carrying both figures, the *guidance* number is the higher one,
+because the deadline usually falls **later** than the guided period ends:
+
+```
+guidance higher   AES  BZH  CBZ  GBTG  GSAT  RAMP  SLAB   (and APGE, ALOT)
+outside higher    CZR  NATH  OGN  PAYO
+```
+
+RAMP is the sharpest: 5.94% to its stated 31 December close, 2.80% to its 2027
+deadline. So "annualize to the deadline" is not a conservative choice — it is
+sometimes conservative, sometimes not, and which it is varies per deal. That is
+itself an argument against picking either one.
+
+## 3 · What I would change
+
+**Show both figures. I am for it, with one constraint on the labels.**
+
+The case for is what the table above shows: the two numbers diverge by more than
+2x on RAMP, SLAB and NATH, and which is larger flips between deals. A single
+number cannot carry that, and choosing which to show is exactly where the NATH
+artifact came from — a horizon picked for being knowable rather than right,
+which is the GBCS 2,222% shape one step less extreme.
+
+**The constraint: neither may be called "expected".** The guidance figure is
+computed off a period *end* — "H2 2026" becomes 31 December — so it is already a
+bound, not an expectation. Labelling it "to expected close" beside "to outside
+date" would imply one is a forecast and the other a limit, when both are limits.
+They should read as what they are:
+
+```
+Annualized    +12.67%  by guidance (H2 2026)
+              +31.29%  by the 20 Oct 2026 deadline
+```
+
+**The case against, which I do not think wins.** Two precise-looking numbers
+invite a reader to take the flattering one, and §31 is specifically about false
+precision. A skimmer sees NATH's 31%. But that risk exists today in worse form —
+the feed currently shows *only* the 31%, with nothing to compare it against.
+Two bounds with their dates attached is strictly more honest than one bound with
+its basis hidden.
+
+**What I would not do:** stop capping the close date. The cap is correct for the
+*displayed* close date — a deal genuinely cannot close after a deadline it
+cannot pass — and NATH showing "expected close 31 December" against a 20 October
+deadline was the impossibility it was built to remove. The fix is to stop
+feeding the capped date into the annualization, not to stop capping.
+
+**Ordering, if you want it in stages.** Showing both figures makes the capping
+question moot for the annualized number, so it subsumes the smaller fix rather
+than competing with it. If only one change is wanted, it is that one.
