@@ -3403,3 +3403,113 @@ deal whose score moved as a result.
 Seven suites pass, including `test_provenance.py` — 46 new checks covering both
 sections, each built from the live deal or the exact filing sentence that
 exposed the defect.
+
+
+---
+
+# Guidance and the deadline are different claims, and the page now says so
+
+2026-09-01.
+
+## The contradiction, confirmed
+
+NATH displayed **Oct 20, 2026** beside **~120 days**. October 20 is 49 days out.
+
+The cause is what was suspected, and it is two lines apart in the template:
+
+```js
+var dtc      = _daDaysToClose(deal.close_date);          // UNCAPPED guidance
+var closeEst = _daFmtCloseDate(deal.close_date, deal);   // substitutes the CAP
+```
+
+Both fed the same metric cell, so the date shown and the day count shown were
+measured from dates ten weeks apart.
+
+**GBCS was worse than NATH.** It displayed **Aug 31, 2026** — three days in the
+**past** — beside **~27 days**, because the cap replaced a future guidance date
+with an expired deadline while the day count kept counting to the guidance.
+Capping the display did not merely collapse the gap; on a deal past its deadline
+it inverted the meaning.
+
+### Which deals had it
+
+Swept across all nineteen. The contradiction needs both a parseable guidance
+date and a capped date, which is two deals:
+
+| Deal | guidance | its days | displayed | its days | gap |
+|---|---|---:|---|---:|---:|
+| **NATH** | H2 2026 → Dec 31 | 120 | Oct 20, 2026 | 48 | **+72 days** |
+| **GBCS** | Q3 2026 → Sep 30 | 28 | Aug 31, 2026 | **−2** | **+30 days** |
+
+Two more carried a milder form of the same defect: **CZR** and **PAYO** have a
+capped date but guidance that resolves to no date ("mid-to-late 2027",
+"mid-2027"), so the page showed a date the company never guided to with no day
+count beside it at all.
+
+A note on the sweep, because the numbers moved between two runs an hour apart:
+a scan was **in progress** during the second, so only 9 of 19 deals had been
+rebuilt and GBCS and CZR briefly read `outside_date: None` with no
+`agreement_read`. That is a partially-rebuilt feed, not a regression. The table
+above is from the complete snapshot.
+
+## The decision: show both, uncapped
+
+Option one, as you leaned. The cap is removed from the displayed close date
+entirely, and both dates are shown with a day count each measures from its own
+date.
+
+The argument is stronger than "the gap carries meaning", though it does. **The
+cap existed because the outside date was invisible on the page.** A guidance
+date sitting past its own deadline looked like an error with no explanation
+beside it, so the cap hid it. The deadline has been rendered since two turns ago
+— its own block, quote-backed, with the days remaining — so the workaround has
+lost the condition that justified it. Keeping it now would mean suppressing one
+of two facts that are both on the page anyway.
+
+And GBCS settles it independently: a cap that can print a past date as a close
+estimate is not a safer display, it is a wrong one.
+
+## The relabelling
+
+"Days to Close" implied a prediction the product does not make, and named
+neither concept. The metrics cell is now **Timing**, and two labelled rows sit
+under the strip:
+
+```
+GUIDANCE   Dec 31, 2026 · 120 days    what the company said it expects
+DEADLINE   Oct 20, 2026 · 48 days     when either party may walk away
+
+Guidance is the company's stated expectation and carries no contractual force.
+The deadline is a contractual right — past it, either party may walk away
+without paying a break fee. They are different claims, and the gap between them
+is not an error.
+```
+
+Verified in-browser on four shapes, each internally consistent:
+
+| Deal | guidance | deadline | the shape it tests |
+|---|---|---|---|
+| NATH | Dec 31, 2026 · 120 days | Oct 20, 2026 · 48 days | the reported case |
+| GBCS | Sep 30, 2026 · 28 days | Aug 31, 2026 · **2 days ago** | a deadline already passed |
+| PAYO | Jun 30, 2027 · 301 days | Jun 12, 2027 · 283 days | guidance past the deadline, uncapped |
+| SLAB | Jun 30, 2027 · 301 days | Feb 4, 2028 · 520 days | the ordinary case, deadline later |
+
+SLAB matters as a control: it has no cap and never had the contradiction, and it
+gets both rows anyway. The rows are for every deal, not a special case bolted on
+for the broken ones.
+
+One smaller relabelling for consistency: the annualized fallback read
+`— · 28d to close` and now reads `to guidance`, since that is the date it counted
+to.
+
+## What did not change
+
+The cap itself. `close_date_capped_to` is still computed and still stored — it
+is the honest record that guidance runs past the deadline, and the integrity
+sweep can still use it. What changed is that it no longer overwrites a displayed
+date whose day count came from somewhere else.
+
+Six new checks in `test_provenance.py`, asserting against the template source
+rather than a rendered page, because the template is where this regressed:
+`_daFmtCloseDate` must not reference `close_date_capped_to`, each row must
+compute days from its own date, and "Days to Close" must stay gone.

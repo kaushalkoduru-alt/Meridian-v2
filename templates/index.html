@@ -1324,6 +1324,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
     <div id="da-premium-note" style="margin:0 2.5rem;"></div>
     <div id="da-deadline" style="margin:0 2.5rem;"></div>
+    <div id="da-timing" style="margin:14px 2.5rem 0;"></div>
     <div id="da-explain" style="margin:0 2.5rem;"></div>
 
     <!-- implied probability + break price -->
@@ -2177,7 +2178,9 @@ function _daAnnSingle(deal){
 function _daAnn(deal){
   if(deal && deal.ann != null && !isNaN(deal.ann)) return _daSgn(deal.ann);
   var d = deal && deal.days_to_close;
-  if(d != null && !isNaN(d) && d > 0) return '\u2014 \u00b7 ' + Math.round(d) + 'd to close';
+  // 'to close' named a prediction the product does not make; this
+  // horizon is the company's guidance, so it says so.
+  if(d != null && !isNaN(d) && d > 0) return '\u2014 \u00b7 ' + Math.round(d) + 'd to guidance';
   return '\u2014';
 }
 function _daSgnUsd(n){
@@ -2246,16 +2249,66 @@ function _daDaysToClose(cd){
   if(!d) return null;
   return Math.round((d - new Date()) / 86400000);
 }
+// The cap NO LONGER touches the displayed close date, and the `deal` argument
+// is kept only so call sites do not move.
+//
+// It used to substitute close_date_capped_to here while the day count beside it
+// was computed from the uncapped guidance, so two numbers on the same row were
+// measured from dates ten weeks apart: NATH read "~120 days · est. Oct 20,
+// 2026", which is 49 days away. GBCS was worse -- it read "~27 days" beside
+// "Aug 31, 2026", a date three days in the PAST. Capping the display did not
+// only collapse the gap, it could invert the meaning.
+//
+// The cap existed because the outside date was invisible on the page, so a
+// guidance date sitting past its own deadline looked like an error with no
+// explanation next to it. The deadline is rendered now, in its own block and in
+// the timing rows below, so the workaround has lost its reason: the gap between
+// the two dates is visible, labelled, and is itself the information.
 function _daFmtCloseDate(cd, deal){
-  // The cap belongs here, on the DISPLAYED date. NATH guides to H2 2026 while
-  // its deadline is 20 October, and showing "Dec 31, 2026" beside a deadline it
-  // cannot pass was the impossibility the cap was built to remove. The
-  // annualized figures deliberately do not use this -- see _daAnnBounds.
-  var capped = deal && deal.close_date_capped_to;
-  var d = capped ? _daParseCloseDate(capped) : _daParseCloseDate(cd);
+  var d = _daParseCloseDate(cd);
   if(!d) return null;
-  return d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'})
-       + (capped ? ' (capped at the deadline)' : '');
+  return d.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'});
+}
+
+// Guidance and the deadline are different KINDS of claim, and "Days to Close"
+// named neither of them -- it implies a prediction the product does not make.
+// One is what the company said it expects, with no contractual force. The other
+// is the day either party may walk away, which is a legal right. A reader
+// should not have to work out why two dates on the same deal differ by ten
+// weeks, so both are labelled and each carries its OWN day count.
+function _daTimingRows(deal){
+  var rows = [];
+  var g = _daParseCloseDate(deal.close_date);
+  if(g){
+    rows.push({k:'Guidance', d:g,
+               t:_daFmtCloseDate(deal.close_date, deal),
+               n:'what the company said it expects', c:'#cdc2a8'});
+  }
+  var od = deal && deal.outside_date;
+  var o  = od && od.date ? _daParseCloseDate(od.date) : null;
+  if(o){
+    rows.push({k:'Deadline', d:o,
+               t:o.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'}),
+               n:'when either party may walk away',
+               c: od.passed ? '#f0735e' : '#cdc2a8', passed: od.passed});
+  }
+  if(!rows.length) return '';
+  return rows.map(function(r){
+    var days = Math.round((r.d - new Date()) / 86400000);
+    var dtxt = r.passed || days < 0 ? Math.abs(days)+' days ago' : days+' days';
+    return '<div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-top:6px;">'
+      + '<span style="font-size:9.5px; letter-spacing:0.14em; color:#ada284; '
+      +   'text-transform:uppercase; min-width:74px;">'+r.k+'</span>'
+      + '<span style="font-size:14px; color:'+r.c+'; font-weight:500;">'+r.t+'</span>'
+      + '<span style="font-size:11.5px; color:'+r.c+';">\u00b7 '+dtxt+'</span>'
+      + '<span style="font-size:10.5px; color:#7d745f;">'+r.n+'</span>'
+      + '</div>';
+  }).join('')
+  + '<div style="margin-top:9px; font-size:10.5px; line-height:1.65; color:#7d745f;">'
+  + 'Guidance is the company\u2019s stated expectation and carries no contractual '
+  + 'force. The deadline is a contractual right \u2014 past it, either party may '
+  + 'walk away without paying a break fee. They are different claims, and the '
+  + 'gap between them is not an error.</div>';
 }
 function _daSet(id, html){ var e=document.getElementById(id); if(e) e.innerHTML = html; }
 function _daTxt(id, txt){ var e=document.getElementById(id); if(e) e.textContent = txt; }
@@ -2315,7 +2368,13 @@ async function renderAnalysis(deal){
     { l:'Gross Spread',  v:_daSgn(deal.sp_pct), c:m.fg },
     { l:'Premium',       v:_daPremiumText(deal),  c:'#e2d8c0' },
     { l:'Annualized',    v:_daAnnBounds(deal),  c:m.fg },
-    { l:'Days to Close', v:(dtc!=null ? '~'+dtc : '\u2014'), c:'#efe7d6', sub:(closeEst ? 'est. '+closeEst : 'not yet disclosed') }
+    // "Days to Close" is gone. It carried a day count from the uncapped
+    // guidance beside a date that had been capped to the deadline, and the two
+    // disagreed by ten weeks on NATH and pointed in opposite directions on
+    // GBCS. Guidance and deadline now each get a labelled row of their own,
+    // below, with a day count each measures from its own date.
+    { l:'Timing',        v:(dtc!=null ? '~'+dtc+' days' : '\u2014'),
+      c:'#efe7d6', sub:(closeEst ? 'to guidance' : 'no stated close date') }
   ];
   _daSet('da-metrics', cells.map(function(c,i){
     return '<div style="padding:14px 20px;'+(i<4?' border-right:1px solid rgba(238,228,208,0.08);':'')+'">'
@@ -2324,6 +2383,8 @@ async function renderAnalysis(deal){
       + (c.sub ? '<div style="margin-top:2px; font-size:10.5px; color:#7d745f; letter-spacing:0.06em;">'+c.sub+'</div>' : '')
       + '</div>';
   }).join(''));
+
+  _daSet('da-timing', _daTimingRows(deal));
 
   // ---- break price box ----
   if(bp!=null){

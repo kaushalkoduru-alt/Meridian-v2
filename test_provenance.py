@@ -5,6 +5,8 @@ consumed fields that claimed to be measurements and were not.
 Every case here is a live deal or the exact filing sentence that exposed the
 defect, not a synthetic one.
 """
+import io
+
 import provenance as P
 import explain as X
 from main import (extract_financing_signal, financing_from_commitment,
@@ -204,6 +206,35 @@ check("a passed deadline reaches the timing row",
                        if r['category'] == 'Timing'), True)
 check("every row is labelled with its provenance",
       all(r.get('provenance_label') for r in _rows), True)
+
+print()
+print("=" * 78)
+print("timing — a displayed date and its day count measure the same thing")
+print("=" * 78)
+
+# This regressed in the template, so it is guarded in the template. The cap used
+# to substitute close_date_capped_to into the DISPLAYED date while the day count
+# beside it came from the uncapped guidance: NATH read "~120 days · est. Oct 20,
+# 2026" (49 days away) and GBCS read "~27 days" beside a date three days PAST.
+_TPL = io.open(r'templates/index.html', encoding='utf-8').read()
+_fmt = _TPL[_TPL.index('function _daFmtCloseDate'):]
+_fmt = _fmt[:_fmt.index('\nfunction ')]
+check("the displayed close date is no longer capped",
+      'close_date_capped_to' in _fmt, False,
+      'the cap existed because the deadline was invisible; it is rendered now')
+check("guidance and deadline each get their own row",
+      'function _daTimingRows' in _TPL, True)
+check("the deadline row reads the outside date",
+      'outside_date' in _TPL[_TPL.index('function _daTimingRows'):
+                             _TPL.index('function _daTimingRows') + 2200], True)
+check("each row computes days from its OWN date",
+      _TPL.count('(r.d - new Date())'), 1,
+      'one shared day count was the defect')
+check("'Days to Close' is gone from the metrics strip",
+      "l:'Days to Close'" in _TPL, False,
+      'it implied a prediction the product does not make')
+check("the page says guidance carries no contractual force",
+      'no contractual force' in _TPL, True)
 
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")
