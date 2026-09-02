@@ -3729,3 +3729,97 @@ filed disclosure says the financing is committed, and the score declines to
 count it. That is the policy working rather than a case it fails to cover.
 
 Thirteen new checks in `test_provenance.py`. All seven suites pass.
+
+
+---
+
+# A cache of verdicts, and three deals nobody checked
+
+2026-09-02. Scan idle before every sweep.
+
+## 1 · Why the financing fix did not reach production: (b)
+
+The deploy landed — `provenance` and `explanation` are on all 22 records. The
+fix works. It is **blocked by cache**, exactly as `agreement_read` blocked the
+outside-date rollout:
+
+```python
+if _d.get('agreement_read') and _d.get('agreement_read') == _d.get('accession'):
+    continue                      # exhibit never re-fetched
+```
+
+ALOT, APGE, BWMN and GBTG all still carry `commitment` dicts holding
+`Financing condition: WEAK` — the verdicts the rival-bid guard and the
+case-sensitivity fix were built to correct. The exhibit is skipped, the stale
+dict is carried forward verbatim, and the rescore block then reads the financing
+signal *out of that cached dict*. Local 84 / 81 / 88 / 83, production 77 / 66 /
+73 / 68.
+
+### Which caches hold a DERIVED value
+
+This is the important half of the question, and the answer is: **the two that
+matter most.**
+
+| Cached field | Holds | Blocks |
+|---|---|---|
+| `commitment` | STRONG/WEAK/UNKNOWN **verdicts** plus meaning text | every future improvement to fee, antitrust, financing and specific-performance reading |
+| `outside_date` | a parsed **date**, `passed`, `extension_type`, meaning | every extractor improvement — this is what HZO, ATKR and RAMP hit |
+| `direction` | a **verdict** | re-checking a deal already called TARGET |
+| `break_price`, `reg_tags`, `tx_value` | derived, but recomputed each scan | nothing |
+
+`agreement_read` itself is the right shape — it marks the DOCUMENT. The defect
+is what it gates: a document marker is used to freeze **readings of** that
+document. A signed agreement never changes, so skipping the fetch is correct;
+what is not correct is that the verdict derived from it is frozen alongside,
+with no version attached. Every parser improvement is invisible until a human
+clears markers by hand.
+
+The durable fix is to stamp the reading with the extractor version that produced
+it and re-read when that version moves — caching on the document, not on the
+verdict. Not built here; recorded because it will recur on the next extractor
+change, and it has already recurred twice.
+
+## 2 · Three new deals, none of which is a deal
+
+BCRX, GPRE and PACK arrived on one scan with no hand check. All three carry
+`direction: {}`, no `gate`, no `agreement_read`, no `commitment`, no
+`outside_date`, and `days_since_filed: None`.
+
+**They entered while the direction gate was blind.** `DIRECTION_ENFORCING` only
+filters when an Anthropic key is present — *"A missing API key makes every deal
+UNCLEAR, which enforcing would treat as a rejection and wipe the feed. Never
+enforce blind."* That guard is right. Its consequence is that a keyless scan
+admits deals, and nothing afterwards marks them as never-verified: on the page
+they are indistinguishable from a deal that passed.
+
+Hand verification against each filer's own 8-K — all three filers ARE the named
+company, and that is the only check any of them passes:
+
+| Deal | What the 8-K actually is | The "deal price" |
+|---|---|---|
+| **BCRX** | *"BioCryst has agreed to **acquire** Astria, a biopharmaceutical company"* — BioCryst is the **acquirer**. The target is ATXS. | $13.00/share is what BioCryst **pays** |
+| **GPRE** | A convertible notes **indenture** (Item 1.01 + 2.03, Wilmington Trust trustee) with exchange agreements on the existing 2029 notes | $15.72 is the **conversion price** |
+| **PACK** | A Transaction Agreement issuing **warrants to Walmart** (Item 1.01 + 3.02). The "tender offer" wording is a standstill clause describing a hypothetical future bid | $6.8308 is a warrant **exercise price** |
+
+BCRX is the CLST and FSK shape again — a company's own acquisition 8-K ingested
+as though it were the target. Three occurrences now.
+
+All three are excluded, with the evidence in the exclusion list rather than in a
+commit message.
+
+### PACK's 53 / Medium is not an assessment
+
+It is **not a real reading, and not missing data producing a default either** —
+it is a fabricated input. The 51.12% "spread" is the gap between a warrant strike
+($6.8308) and the share price ($4.52), which is not a spread at all. That drove
+the score down through the widest spread band (−18), while every field that
+would carry actual risk information — commitment, outside date, direction,
+agreement — was absent and contributed nothing.
+
+So the score is low for a reason that does not exist, on a security that is not
+in a merger. Six of eight explanation categories read *insufficient evidence*,
+which is the one part of the record that was honest.
+
+The integrity sweep flagged all three loudly — 7 to 9 absent-field findings each,
+plus PACK's break price above its current price. It was working; nothing was
+gating on it.

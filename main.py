@@ -588,6 +588,24 @@ VERIFIED_CLOSE_DATES = {
     'AVNS': 'second half 2026',
 }
 EXCLUDED_TICKERS = {
+    # ---- 2026-09-02: three deals admitted while the direction gate was blind.
+    # DIRECTION_ENFORCING only filters when an Anthropic key is present ("never
+    # enforce blind"), so a keyless scan admits deals and nothing later marks
+    # them unverified. All three carry direction {} and no gate, and all three
+    # fail hand verification against their own 8-K.
+    'BCRX',  # BioCryst is the ACQUIRER: "BioCryst has agreed to acquire Astria,
+             # a biopharmaceutical company". The $13.00/share is what BioCryst
+             # PAYS. Same shape as CLST and FSK below. The target is ATXS.
+    'GPRE',  # Not a merger. The 8-K is a convertible notes INDENTURE (Item 1.01
+             # + 2.03, Wilmington Trust as trustee) with exchange agreements on
+             # the existing 2029 notes. $15.72 is the CONVERSION PRICE, read as
+             # a deal price.
+    'PACK',  # Not a merger. Ranpak issued WARRANTS to Walmart under a
+             # Transaction Agreement (Item 1.01 + 3.02). $6.8308 is a warrant
+             # EXERCISE PRICE, and the "tender offer" language comes from a
+             # standstill clause describing a hypothetical future bid. The
+             # 51.12% "spread" is the gap between a strike and the share price,
+             # which is not a spread at all.
     'GIW', 'IEAG', 'FVAV', 'YCY', 'AIIA', 'LKSP', 'PACH', 'SPEGU',
     'LEGO', 'LEG', 'LEGN', 'MNKD', 'NMP', 'OIM', 'NBIX', 'APAC', 'HBT', 'MCW', 'RGR',
     'KALV',  # Chiesi acquisition closed and became effective 6/11/2026
