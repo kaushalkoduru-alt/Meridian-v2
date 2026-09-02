@@ -236,5 +236,70 @@ check("'Days to Close' is gone from the metrics strip",
 check("the page says guidance carries no contractual force",
       'no contractual force' in _TPL, True)
 
+print()
+print("=" * 78)
+print("financing — ONE pattern list, and the agreement wins")
+print("=" * 78)
+
+import re as _re
+import deal_commitment as DC
+from main import _FIN_NO_CONDITION, _FIN_HAS_CONDITION
+
+# The duplicate list is why the negation fix reached the press-release scan and
+# never reached the agreement reading. There is one list now, and this asserts
+# main.py derives from it rather than restating it.
+check("main.py's denial patterns come from deal_commitment",
+      _FIN_NO_CONDITION, [p for p, _l in DC.NO_FINANCING_COND],
+      'a duplicated pattern list is a guarantee this recurs')
+check("and so do the assertion patterns",
+      _FIN_HAS_CONDITION, [p for p, _l in DC.HAS_FINANCING_COND])
+
+_cf = lambda t: DC.check_financing(t)[0]
+
+# ATKR: the sentence that returned "no financing language found".
+check("ATKR: 'obtaining of the Financing is not a condition to Closing'",
+      _cf('Buyer acknowledges that the obtaining of the Financing is not a '
+          'condition to Closing.'), 'STRONG',
+      'the agreement reading was blind to what the press-release scan could read')
+
+# BWMN and GBTG: a section heading that DENIES a condition, in title case.
+check("a title-case 'No Financing Condition' heading is a denial",
+      _cf('(e) No Financing Condition. Parent acknowledges its obligations.'),
+      'STRONG',
+      'lowercase denial patterns vs [Ff]inancing [Cc]ondition read it as WEAK')
+
+# APGE: the denial names two conditions at once.
+check("APGE: 'not subject to a diligence or financing condition'",
+      _cf('the Merger is not subject to a diligence or financing condition'),
+      'STRONG')
+
+# ALOT: a condition on a rival bid is not a condition on this deal.
+check("a financing condition inside a Takeover Proposal test is not ours",
+      _cf('the anticipated timing, conditions (including any financing '
+          'condition or the reliability of any debt or equity funding '
+          'commitments) and prospects for completion of such Takeover Proposal'),
+      'UNKNOWN',
+      'ALOT was charged 10 points for an offer that does not exist')
+
+# The genuine article still reads WEAK, and genuine silence still reads UNKNOWN.
+check("a real financing condition is still WEAK",
+      _cf('The Offer is subject to a financing condition.'), 'WEAK')
+check("a commitment letter with no conditionality language stays UNKNOWN",
+      _cf('Parent has entered into a Debt Commitment Letter with the Lenders.'),
+      'UNKNOWN',
+      'AES, CBZ and GBCS are genuinely silent -- flipping them would be worse '
+      'than the bug')
+
+# Precedence, confirmed rather than assumed.
+check("the agreement outranks the press release when they disagree",
+      financing_from_commitment(
+          {'terms': [{'term': 'Financing condition', 'verdict': 'STRONG'}]})[0],
+      'committed')
+check("and is still named as the source when they AGREE",
+      financing_from_commitment(
+          {'terms': [{'term': 'Financing condition', 'verdict': 'STRONG'}]})[1],
+      'agreement',
+      'skipping the source on agreement badged a contractual fact as INFERENCE')
+
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

@@ -3513,3 +3513,118 @@ Six new checks in `test_provenance.py`, asserting against the template source
 rather than a rendered page, because the template is where this regressed:
 `_daFmtCloseDate` must not reference `close_date_capped_to`, each row must
 compute days from its own date, and "Days to Close" must stay gone.
+
+
+---
+
+# One financing pattern list, and the agreement wins
+
+2026-09-01. Scan idle before and during every sweep below.
+
+## The port, and what it uncovered
+
+`check_financing` returned UNKNOWN on ATKR's *"the obtaining of the Financing is
+not a condition to Closing"*. Porting the negation patterns fixed that, and
+re-reading all nineteen agreements turned up **two further defects of the same
+family** — both of which had been producing WEAK verdicts on sentences that say
+the opposite.
+
+**Case sensitivity, asymmetric.** `_first_match` used `re.search` with no
+`IGNORECASE`. The denial patterns were written lowercase (`no\s+financing\s+
+condition`) while the assertion pattern spelled `[Ff]inancing\s+[Cc]ondition`.
+So an agreement's section heading **"(e) No Financing Condition"** — which
+denies one — missed the denial list on capitalisation and matched the list that
+asserts one. **BWMN** and **GBTG** were both read WEAK off that heading. The
+casing was not neutral: it favoured "a condition exists" in every tie.
+
+**A denial can name two conditions at once.** APGE reads *"is not subject to a
+diligence or financing condition"*, and the words naming the first condition sat
+between "not subject to" and the one being tested for.
+
+**A condition on a rival bid is not a condition on this deal.** ALOT's only
+match sits inside its Superior Proposal test — *"the anticipated timing,
+conditions (including any financing condition or the reliability of any debt or
+equity funding commitments) ... of such **Takeover Proposal**"*. That describes
+an offer which does not exist, and it was charging the deal 10 points.
+**This one is beyond the port that was asked for** — it is a context error, not
+a negation error — and it is flagged here as scope rather than buried.
+
+## Consolidation
+
+`deal_commitment.py` now **owns** the patterns and `main.py` imports them:
+
+```python
+_FIN_NO_CONDITION  = [pat for pat, _label in NO_FINANCING_COND]
+_FIN_HAS_CONDITION = [pat for pat, _label in HAS_FINANCING_COND]
+```
+
+They stay in `deal_commitment.py` because it already carries the labelled-tuple
+convention its card needs, and `main.py` already imports it with no cycle. The
+two consumers want different things from the same question — `check_financing`
+wants a label and a quote, `extract_financing_signal` wants a four-state signal
+— so the *question* is defined once and the *answers* stay separate. A test
+asserts `main.py`'s lists are derived from the module's, not restated.
+
+There is no argument for keeping them separate. They were separate by accident,
+and the accident is exactly why the negation fix reached the weaker source and
+never reached the stronger one.
+
+## Precedence: confirmed, and one bug beside it
+
+The agreement does win — `financing_from_commitment` overwrites the
+press-release signal, and an UNKNOWN verdict deliberately carries no
+information. But the *label* was wrong in one case: the source was only set when
+the two **disagreed**, so a reading the contract backs stayed labelled
+`press_release` whenever both sources agreed. The §20 badge then rendered
+INFERENCE where the agreement had spoken — wrong precisely when both were right.
+The source is now set whenever the agreement speaks at all.
+
+## Across the feed
+
+**8 verdict changes, 4 score moves.**
+
+| Deal | agreement was | now | score |
+|---|---|---|---|
+| **ATKR** | UNKNOWN | **STRONG** | **80 → 88** |
+| APGE | WEAK | **STRONG** | 66 → 81, Low → Very Low |
+| BWMN | WEAK | **STRONG** | 73 → 88, Low → Very Low |
+| GBTG | WEAK | **STRONG** | 68 → 83, Low → Very Low |
+| CZR | UNKNOWN | STRONG | — |
+| PAYO | UNKNOWN | STRONG | — |
+| RAMP | UNKNOWN | STRONG | — |
+| ALOT | WEAK | UNKNOWN | — |
+
+ATKR landed on **88**, as predicted from the +10 band.
+
+CZR, PAYO and RAMP show no score move because their stored signal was already
+`committed` from the press release. What changes for them is **provenance**: the
+same value now comes from the agreement, so it is badged FACT rather than
+INFERENCE. That is the §20 half of this work paying out — three deals whose
+financing claim is now contractually sourced rather than inferred from a summary.
+
+### The four correct UNKNOWNs
+
+**All four stay UNKNOWN.** This was the thing most worth getting wrong and did
+not go wrong:
+
+| Deal | why silence is right |
+|---|---|
+| AES | 18 commitment letters; the only conditionality language is about conditions **to the financing itself**, never whether closing depends on it |
+| CBZ | 58 commitment letters, no conditionality language anywhere |
+| GBCS | 16 commitment letters, no conditionality language anywhere |
+| GSAT | 0 commitment letters, 6 mentions of financing, genuinely silent |
+
+A port that turned these into `committed` would have been worse than the bug it
+fixed, because it would have manufactured a contractual assurance out of an
+agreement's silence.
+
+## One thing left open
+
+ALOT now reads UNKNOWN from its agreement, so its stored `contingent` — and the
+−10 that comes with it — rests **entirely on the press-release scan**, with no
+contractual support. Whether that reading is right has not been checked. It is
+the only deal in the feed still carrying a financing penalty, and it is now
+carrying it on the weaker of the two sources.
+
+Ten new checks in `test_provenance.py`, each built from the exact sentence that
+exposed the defect. All seven suites pass.

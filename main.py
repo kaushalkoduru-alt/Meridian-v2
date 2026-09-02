@@ -672,43 +672,30 @@ def edgar_queries(now=None):
 
 # ─── V3 SCORING MODEL ────────────────────────────────────────────────────────
 
-# The phrase "financing condition" appears in the sentence that GRANTS one and
-# in the sentence that DENIES one, and the old scan matched the substring in
-# both. Two live deals were scored `contingent` -- worth -10 each -- on filings
-# that say the exact opposite:
+# The patterns for "is closing conditioned on financing?" live in
+# deal_commitment.py and are imported, NOT restated here.
 #
-#   HZO  "The obligations of Parent and Merger Sub to consummate the Merger are
-#         NOT subject to any financing condition."
-#   DSGR "The availability of financing is NOT a condition to the obligations of
-#         Parent ... to consummate the Merger."
-#
-# So the negated forms are matched FIRST and explicitly, and any remaining
-# condition-granting phrase is rejected if a negation sits just before it.
-_FIN_NO_CONDITION = [
-    r'not\s+(?:be\s+)?subject\s+to\s+(?:any\s+|a\s+|the\s+)?financing\s+condition',
-    r'not\s+(?:be\s+)?conditioned\s+(?:on|upon)\s+[^.]{0,50}?financing',
-    r'no\s+financing\s+condition',
-    r'financing\s+(?:is|are)\s+not\s+a\s+condition',
-    r'availability\s+of\s+financing\s+is\s+not\s+a\s+condition',
-    r'not\s+contingent\s+(?:on|upon)\s+[^.]{0,30}?financing',
-    r'without\s+any\s+financing\s+condition',
-]
-_FIN_COMMITTED = [
-    r'committed\s+financing', r'fully\s+committed',
-    r'debt\s+financing\s+committed',
+# They were restated here once. The negation fix went into this module and never
+# reached check_financing, so the press-release scan learned to read
+# "not subject to any financing condition" while the AGREEMENT reading -- the
+# stronger source, the one that wins -- still returned "no financing language
+# found" on ATKR's explicit "the obtaining of the Financing is not a condition
+# to Closing". One question answered by two lists is how that happens.
+from deal_commitment import (NO_FINANCING_COND, HAS_FINANCING_COND,
+                             COMMITMENT_LETTERS, FINANCING_NEGATORS,
+                             FINANCING_NEGATION_WINDOW)
+
+_FIN_NO_CONDITION = [pat for pat, _label in NO_FINANCING_COND]
+_FIN_HAS_CONDITION = [pat for pat, _label in HAS_FINANCING_COND]
+# A press release says "committed financing" where an agreement names the
+# letter, so the committed cues carry the shared list plus the release's idiom.
+_FIN_COMMITTED = [pat for pat, _label in COMMITMENT_LETTERS] + [
+    r'fully\s+committed', r'debt\s+financing\s+committed',
     r'(?:obtained|received|entered\s+into)\s+[^.]{0,60}?'
     r'(?:equity|debt)\s+commitment',
-    r'commitment\s+letter',
-    r'cash\s+on\s+hand', r'sufficient\s+cash',
+    r'commitment\s+letter', r'cash\s+on\s+hand', r'sufficient\s+cash',
 ]
-_FIN_HAS_CONDITION = [
-    r'subject\s+to\s+(?:a\s+|the\s+|any\s+)?financing\s+condition',
-    r'contingent\s+(?:on|upon)\s+(?:obtaining\s+)?financing',
-    r'subject\s+to\s+obtaining\s+financing',
-    r'subject\s+to\s+financing',
-    r'financing\s+condition',
-]
-_FIN_NEGATORS = ('not', 'no ', 'without', 'never', 'free of', 'absent')
+_FIN_NEGATORS = FINANCING_NEGATORS
 
 
 def extract_financing_signal(text):
@@ -738,7 +725,7 @@ def extract_financing_signal(text):
         for m in re.finditer(pat, t):
             # A negation in the words immediately before flips the meaning; the
             # window is short so an unrelated "not" further up cannot reach.
-            before = t[max(0, m.start() - 45):m.start()]
+            before = t[max(0, m.start() - FINANCING_NEGATION_WINDOW):m.start()]
             if any(neg in before for neg in _FIN_NEGATORS):
                 return 'committed'
             return 'contingent'
@@ -3134,8 +3121,16 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
             # bug in CLAUDE.md -- a field written after its consumer has run.
             _rescored = []
             for _d in results:
+                # THE AGREEMENT WINS. It is a contractual fact where the press
+                # release is a summary of one -- the same precedence that makes a
+                # stated premium beat a computed one.
                 _fs, _fsrc = financing_from_commitment(_d.get('commitment'))
-                if _fs and _fs != _d.get('financing_signal'):
+                if _fs:
+                    # Source is set whenever the agreement SPOKE, not only when
+                    # it disagreed. Skipping it on agreement left a reading the
+                    # contract backs labelled `press_release`, which the §20
+                    # badge then renders INFERENCE instead of FACT -- the label
+                    # would be wrong precisely when both sources were right.
                     _d['financing_signal'] = _fs
                     _d['financing_source'] = _fsrc
                 elif not _d.get('financing_source'):

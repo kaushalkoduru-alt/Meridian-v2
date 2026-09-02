@@ -102,13 +102,52 @@ WEAK_EFFORTS_PATTERNS = [
 ]
 
 # ── financing ─────────────────────────────────────────────────────────────────
+# ── the single source of truth for "is closing conditioned on financing?" ────
+#
+# THIS MODULE OWNS THESE PATTERNS. main.py imports them rather than keeping its
+# own copy, because it kept its own copy once and that is exactly how this bug
+# survived: the negation fix landed in main.py's press-release scan and never
+# reached here, so the AGREEMENT reading -- the stronger of the two sources --
+# stayed blind to the very sentence the weaker one had learned to read.
+#
+# ATKR's agreement says "the obtaining of the Financing is not a condition to
+# Closing" and check_financing returned "no financing language found".
+#
+# A duplicated pattern list is a guarantee this recurs, so there is one list and
+# two consumers: check_financing wants the label and the quote for the
+# commitment card, extract_financing_signal wants a four-state signal. Both ask
+# the same question of different text, so the question is defined once.
 NO_FINANCING_COND = [
     (r'not\s+(?:subject\s+to|conditioned\s+(?:up)?on)\s+(?:any\s+|the\s+receipt\s+of\s+)?'
      r'(?:financing|funding)', "not subject to a financing condition"),
     (r'no\s+financing\s+condition', "no financing condition"),
     (r'obligations?[^\n]{0,120}?(?:are|is)\s+not\s+(?:subject\s+to|contingent)[^\n]{0,60}?financing',
      "obligations not contingent on financing"),
+    # ATKR. The subject is "the obtaining of the Financing", so the negation
+    # sits after a noun phrase the older patterns required to be absent.
+    (r'(?:obtaining|receipt|availability)\s+of\s+(?:the\s+)?[Ff]inancing\s+'
+     r'(?:is|are|shall\s+be)\s+not\s+a\s+condition',
+     "obtaining the financing is not a condition to closing"),
+    # DSGR's press release, and the plain form of the same sentence.
+    (r'[Ff]inancing\s+(?:is|are|shall\s+be)\s+not\s+a\s+condition',
+     "financing is not a condition"),
+    (r'not\s+(?:be\s+)?conditioned\s+(?:on|upon)\s+[^.]{0,50}?financing',
+     "closing is not conditioned on financing"),
+    (r'not\s+contingent\s+(?:on|upon)\s+[^.]{0,30}?financing',
+     "not contingent on financing"),
+    (r'without\s+any\s+financing\s+condition', "without any financing condition"),
+    # APGE reads "is not subject to a diligence or financing condition" -- the
+    # denial covers two conditions at once, so the words naming the first sit
+    # between "not subject to" and the one being tested for. Bounded to a single
+    # sentence so it cannot reach an unrelated clause.
+    (r'not\s+subject\s+to\s+[^.]{0,60}?financing\s+condition',
+     "not subject to a financing condition"),
 ]
+
+# Words that flip a condition-granting phrase when they sit just before it. The
+# window is short so an unrelated "not" further up the sentence cannot reach.
+FINANCING_NEGATORS = ('not', 'no ', 'without', 'never', 'free of', 'absent')
+FINANCING_NEGATION_WINDOW = 45
 HAS_FINANCING_COND = [
     (r'subject\s+to[^\n]{0,80}?(?:the\s+)?(?:receipt|availability)\s+of\s+(?:the\s+)?financing',
      "subject to receipt of financing"),
@@ -306,10 +345,16 @@ def _to_dollars(amount, unit):
     return n
 
 
-def _first_match(text, patterns):
-    """Returns (label, matched_text) for the first pattern that hits."""
+def _first_match(text, patterns, flags=0):
+    """
+    Returns (label, matched_text) for the first pattern that hits.
+
+    `flags` is passed per call rather than applied globally, because the other
+    pattern lists in this module were written against exact casing and folding
+    them all would change verdicts that were never in question.
+    """
     for pat, label in patterns:
-        m = re.search(pat, text)
+        m = re.search(pat, text, flags)
         if m:
             return label, m.group(0)[:180]
     return None, None
@@ -354,8 +399,34 @@ def check_financing(text):
 
     flat = re.sub(r'\s+', ' ', text)
 
-    no_label, no_text = _first_match(flat, NO_FINANCING_COND)
-    yes_label, yes_text = _first_match(flat, HAS_FINANCING_COND)
+    # CASE-INSENSITIVE, and both lists, deliberately. The denial patterns were
+    # written lowercase while the assertion pattern spelled `[Ff]inancing
+    # [Cc]ondition`, so an agreement's section heading "(e) No Financing
+    # Condition" -- which DENIES a condition -- missed `no financing condition`
+    # on capitalisation and matched the pattern that asserts one instead.
+    # BWMN and APGE were both read WEAK off a sentence saying the opposite.
+    no_label, no_text = _first_match(flat, NO_FINANCING_COND, re.IGNORECASE)
+    yes_label, yes_text = _first_match(flat, HAS_FINANCING_COND, re.IGNORECASE)
+    # "financing condition" reads the same in the sentence that grants one and
+    # the sentence that denies one. The NO patterns above are tried first and
+    # catch most denials outright; this catches the phrasings they do not, so a
+    # denial is never reported as a condition on a technicality of wording.
+    if yes_label and yes_text:
+        _at = flat.lower().find(yes_text.lower())
+        if _at > 0:
+            _before = flat.lower()[max(0, _at - FINANCING_NEGATION_WINDOW):_at]
+            if any(_n in _before for _n in FINANCING_NEGATORS):
+                yes_label, yes_text = None, None
+            # A financing condition named inside the definition of a RIVAL bid
+            # is not a condition on this deal. ALOT's only match sits in its
+            # Superior Proposal test -- "the anticipated timing, conditions
+            # (including any financing condition ...) ... of such Takeover
+            # Proposal" -- describing an offer that does not exist, and it was
+            # charging the deal 10 points for it.
+            elif any(_p in flat.lower()[max(0, _at - 400):_at + 260]
+                     for _p in ('takeover proposal', 'superior proposal',
+                                'acquisition proposal', 'alternative proposal')):
+                yes_label, yes_text = None, None
     letter_label, letter_text = _first_match(flat, COMMITMENT_LETTERS)
 
     if no_label:
