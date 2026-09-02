@@ -3239,3 +3239,167 @@ The deferred list is now entirely sectioned, with no unassigned remainder:
 
 HZO was the only plain bug on it and it is fixed — along with the two the sweep
 turned up beside it. **There is no pre-work left.**
+
+
+---
+
+# §20 and §9: labels that match their sources, and a score that can be read
+
+2026-09-01. Done together, because the score was wrong partly because it
+consumed fields that claimed to be measurements and were not.
+
+## §20 · Fact, model, inference, forecast
+
+`provenance.py` classifies every displayed value and the page renders the class
+as a badge with the reason in its tooltip. The rule that makes it more than
+decoration: **a field is classified by where its value actually came from, not
+by where it is displayed.** All five live mismatches flattered the value.
+
+| Field | Was | Is | What changed |
+|---|---|---|---|
+| `break_price` | "Modeled downside case" | **FACT** | it is a lookup of the pre-announcement close on 18 of 19 deals. The price is a fact; that the stock returns to it on a break is the inference. The card now says which is which. |
+| `financing_signal` | press-release keyword scan | **FACT** when read from the agreement, **INFERENCE** otherwise | the agreement reading now supersedes the press release, and the label says which one spoke |
+| `reg_tags` | agency names implying a docket | **INFERENCE** | the panel states they are the expected review path from deal size and sector, **not filed regulatory status** |
+| `tx_value` | one label over two quantities | **FACT** or **MODEL** per deal | 14 filed enterprise values, 4 computed equity values, now distinguishable |
+| `cp` | "Current Price" | **FACT**, "Last Close" | a daily close is a fact about yesterday, not a live quote |
+
+### The financing scan was inverted on four deals
+
+The phrase "financing condition" appears in the sentence that grants one and in
+the sentence that denies one, and the old scan matched the substring in both.
+Two live filings say the exact opposite of what they were scored:
+
+```
+HZO   "The obligations of Parent and Merger Sub to consummate the Merger are
+       NOT subject to any financing condition."          -> scored contingent, -10
+DSGR  "The availability of financing is NOT a condition to the obligations of
+       Parent ... to consummate the Merger."             -> scored contingent, -10
+```
+
+CZR and GBTG were stored `contingent` on filings that read `committed` too. The
+scan is now negation-aware, and every one of the four re-reads as `committed`
+against its own filing — verified individually, not assumed. Worth **+15 points
+each** on the next scan.
+
+`check_financing` had been parsing the agreement's financing condition all
+along and its verdict was never consumed. `financing_from_commitment` now uses
+it, and an UNKNOWN verdict deliberately carries no information rather than
+overwriting the weaker reading with silence.
+
+## §9 · Explanation with evidence, not eight weighted sub-scores
+
+Eight weighted categories cannot be validated by 39 deals with 4 failures, so
+`explain.py` returns each category as **evidence and a verdict in words, with no
+number**. Two rules hold it honest, and both were written because the first
+draft broke them:
+
+1. **No verdict without evidence.** GBCS rendered "Contractual protection:
+   weak" citing nothing — the exact failure this section exists to prevent.
+2. **No claim of absence while citing something.** SLAB rendered "Financing:
+   strong" whose only supporting line read *"no financing language found"*.
+   A term whose meaning is a statement that nothing was found is not evidence,
+   and a fifth verdict state — `evidence, no verdict` — now separates "we read
+   the clause and it is silent" from "we found nothing".
+
+Across 19 deals × 8 categories: **zero verdict/evidence contradictions**, 42
+rows carrying no evidence and saying so plainly.
+
+### The four deferred corrections
+
+**1. The premium band no longer scores.** `score_deal_premium` returns 0 for
+every deal. The bands are described in the docstring rather than kept in code,
+because the objection is not that they were mistuned — it is that premium size
+has no bearing on whether a deal closes. A tuned version of a wrong input is
+still a wrong input. The premium is still computed, still shown, and now appears
+in the Market row as evidence about *valuation and standalone downside*, which is
+what it measures.
+
+**2. The buyer's identity no longer scores.** `score_consideration` replaces the
+`deal_type` band, which paid +10 for All Cash and +5 for Private Equity and so
+charged five points for the identity of the buyer — a charge **GSAT** was
+carrying with Amazon as its acquirer. What is scored now is whether the payout
+moves: a stock leg re-prices daily with the acquirer's shares (+4) and cash does
+not (+8). That is a fact about the deal rather than a guess about the buyer.
+
+**3. The score can see time.** `score_deadline` is worth 0 to -25, and a passed
+deadline is additionally a hard **override** in `get_risk` rather than a band,
+because it is not a matter of degree: past the outside date either party may walk
+without paying a break fee, so the contract has stopped protecting the position.
+**GBCS moves 92/Very Low → 74/High.** This is the correction that mattered most.
+
+**4. Spread is counted once.** Its share of the score is halved — the bands go
+from ±(25..35) to ±(12..18) — and `get_risk` no longer takes a spread argument
+at all. The band was largely the spread wearing a different name, which is why
+five other factors could barely move it.
+
+Scale restated: 50 -18 +0 -15 -20 -10 -25 = **-38** at worst, 50 +12 +8 +10 +5
++10 = **95** at best, both stated in the code beside the bands so a change to any
+band that is not reflected there shows up as a shifted scale.
+
+### Before and after, every deal
+
+"Before" is recomputed with the old bands, so this is like-for-like rather than
+a comparison against a production feed that differs in other ways.
+
+| Deal | before | after | Δ | what moved it |
+|---|---|---|---:|---|
+| AES | 73 / Low | 75 / **Very Low** | +2 | consideration |
+| ALOT | 88 / Very Low | 77 / Very Low | -11 | premium +8 removed; deadline -3; financing |
+| APGE | 76 / Very Low | 66 / **Low** | -10 | premium +6 removed; financing |
+| ATKR | 80 / Very Low | 80 / Very Low | 0 | premium +4 removed, consideration -2 |
+| BOW | 78 / Very Low | 80 / Very Low | +2 | consideration |
+| BWMN | 83 / Very Low | 73 / **Low** | -10 | premium +8 removed; financing |
+| **BZH** | 81 / Very Low | **88** / Very Low | **+7** | **premium -5 removed** |
+| CBZ | 79 / Very Low | 80 / Very Low | +1 | premium +2 removed |
+| CZR | 62 / Low | 65 / Low | +3 | consideration |
+| DSGR | 74 / Low | 73 / Low | -1 | premium +4 removed |
+| **GBCS** | **92 / Very Low** | **74 / High** | **-18** | **deadline -25**; premium +8 removed |
+| GBTG | 72 / Low | 68 / Low | -4 | premium +8 removed |
+| **GSAT** | 65 / Low | **71** / Low | **+6** | **buyer type no longer scored** |
+| HZO | 75 / Very Low | 73 / **Low** | -2 | premium +6 removed |
+| NATH | 85 / Very Low | 89 / Very Low | +4 | deadline -3, consideration |
+| OGN | 73 / Low | 74 / Low | +1 | premium +2 removed |
+| PAYO | 74 / Low | 79 / **Very Low** | +5 | consideration |
+| RAMP | 81 / Very Low | 81 / Very Low | 0 | premium +4 removed, consideration -2 |
+| SLAB | 74 / Low | 76 / **Very Low** | +2 | premium +8 removed |
+
+**17 of 19 deals moved; 8 changed risk band.** Three deals whose agreements read
+WEAK on financing (ALOT, APGE, BWMN) fell because the agreement reading now
+supersedes a press release that knew nothing — they went down for a reason that
+is quoted from the contract.
+
+Landing on the next scan, once the negation fix re-reads the press releases:
+
+```
+CZR   contingent -> committed    65 / Low  ->  80 / Very Low   (+15)
+DSGR  contingent -> committed    73 / Low  ->  88 / Very Low   (+15)
+GBTG  contingent -> committed    68 / Low  ->  83 / Very Low   (+15)
+HZO   contingent -> committed    73 / Low  ->  88 / Very Low   (+15)
+```
+
+### The recurring bug, guarded again
+
+The outside date and the agreement's financing verdict both arrive in the
+agreement pass, *after* the score has been computed. Rebuilding the deal dict
+without recomputing is the fourth-instance pattern in CLAUDE.md, so the score and
+band are now explicitly recomputed after that pass, and the scan prints every
+deal whose score moved as a result.
+
+## What was deliberately NOT done
+
+- **No sub-score carries a number.** Not one. Where a category has evidence but
+  no defensible weight, the evidence is shown and the number is absent.
+- **Four categories — Legal, Shareholder, and often Financing and Regulatory —
+  return "insufficient evidence" rather than a neutral-looking score.** A
+  neutral number is indistinguishable from a measured one.
+- **The regulatory weights were not retuned.** They are unvalidated like the
+  rest; retuning them without evidence would be the mistake this section is
+  about. They are unchanged and now labelled INFERENCE.
+- **BZH's break price was left alone**, as instructed.
+- **`deal_type` was not rewritten in the data.** It is no longer consumed by the
+  score, which was the live defect; correcting the stored label is §7 work.
+- **Probability was not touched.** It is labelled FORECAST and belongs to §31.
+
+Seven suites pass, including `test_provenance.py` — 46 new checks covering both
+sections, each built from the live deal or the exact filing sentence that
+exposed the defect.

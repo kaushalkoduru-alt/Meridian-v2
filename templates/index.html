@@ -1324,6 +1324,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
     <div id="da-premium-note" style="margin:0 2.5rem;"></div>
     <div id="da-deadline" style="margin:0 2.5rem;"></div>
+    <div id="da-explain" style="margin:0 2.5rem;"></div>
 
     <!-- implied probability + break price -->
     <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid rgba(238,228,208,0.10);">
@@ -2027,6 +2028,81 @@ function _daPremiumText(deal){
 // agreement rather than by contract. GBCS is the live case — its deadline
 // expired on 31 August and Black Pearl filed a sixth tender extension the same
 // day, which is exactly that sentence happening.
+// §20. Four kinds of claim, four looks. A PM must never mistake an extracted
+// contractual fact for a model estimate, so the badge carries the class and the
+// tooltip carries why this particular field earned it.
+var _DA_PROV = {
+  fact:      {t:'FACT',      fg:'#5fe0c9', bd:'rgba(95,224,201,0.40)'},
+  model:     {t:'MODEL',     fg:'#8fb8ff', bd:'rgba(143,184,255,0.40)'},
+  inference: {t:'INFERENCE', fg:'#e2b23f', bd:'rgba(226,178,63,0.40)'},
+  forecast:  {t:'FORECAST',  fg:'#f0735e', bd:'rgba(240,115,94,0.40)'}
+};
+function _daBadge(deal, field){
+  var pm = deal && deal.provenance;
+  var p  = pm && pm[field];
+  if(!p) return '';
+  var m = _DA_PROV[p['class']] || _DA_PROV.inference;
+  return '<span title="'+String(p.why||'').replace(/"/g,'&quot;')+'" '
+    + 'style="display:inline-block; margin-left:7px; padding:1px 6px; '
+    + 'font-size:8.5px; letter-spacing:0.13em; font-weight:600; '
+    + 'color:'+m.fg+'; border:1px solid '+m.bd+'; vertical-align:middle;">'
+    + m.t + '</span>';
+}
+// The reason a badge is worth the pixels: this line says, in words, what the
+// number actually is. break_price gets the longest one because it was the
+// worst offender -- a lookup of the pre-announcement close, captioned
+// "Modeled downside case".
+function _daWhy(deal, field){
+  var pm = deal && deal.provenance;
+  var p  = pm && pm[field];
+  return p ? p.why : '';
+}
+
+// §9. Categories as EXPLANATION, never as sub-scores. There is deliberately no
+// number on any row: 39 verified deals with 4 failures cannot validate eight
+// weighted categories, and a number would read as a measurement.
+var _DA_VERDICT = {
+  'strong':                {fg:'#5fe0c9', bd:'rgba(95,224,201,0.35)'},
+  'weak':                  {fg:'#f0735e', bd:'rgba(240,115,94,0.35)'},
+  'mixed':                 {fg:'#e2b23f', bd:'rgba(226,178,63,0.32)'},
+  'evidence, no verdict':  {fg:'#9a9079', bd:'rgba(154,144,121,0.30)'},
+  'insufficient evidence': {fg:'#7d745f', bd:'rgba(125,116,95,0.25)'}
+};
+function _daExplain(deal){
+  var rows = deal && deal.explanation;
+  if(!rows || !rows.length) return '';
+  var have = 0;
+  var body = rows.map(function(r){
+    var m = _DA_VERDICT[r.verdict] || _DA_VERDICT['insufficient evidence'];
+    var none = r.verdict === 'insufficient evidence';
+    if(!none) have++;
+    return '<div style="padding:13px 0; border-top:1px solid rgba(238,228,208,0.07);">'
+      + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
+      +   '<span style="font-size:12.5px; color:'+(none?'#7d745f':'#f3ead7')+'; '
+      +     'font-weight:500; min-width:170px;">'+r.category+'</span>'
+      +   '<span style="padding:2px 9px; font-size:9.5px; letter-spacing:0.11em; '
+      +     'font-weight:600; color:'+m.fg+'; border:1px solid '+m.bd+'; '
+      +     'text-transform:uppercase;">'+r.verdict+'</span>'
+      +   '<span style="font-size:8.5px; letter-spacing:0.13em; color:#7d745f;">'
+      +     (r.provenance_label||'')+'</span>'
+      + '</div>'
+      + (r.evidence||[]).map(function(e){
+          return '<div style="margin-top:7px; padding-left:12px; '
+            + 'border-left:2px solid rgba(238,228,208,0.10); font-size:11.5px; '
+            + 'line-height:1.65; color:#9a9079;">'+e+'</div>';
+        }).join('')
+      + '</div>';
+  }).join('');
+  return '<div style="margin-top:16px; padding:16px 18px; '
+    + 'border:1px solid rgba(238,228,208,0.10);">'
+    + '<div style="font-size:9.5px; letter-spacing:0.16em; color:#8f8772; '
+    +   'text-transform:uppercase; font-weight:600;">Why this risk band</div>'
+    + '<div style="margin-top:6px; font-size:11px; color:#7d745f; line-height:1.6;">'
+    +   have+' of '+rows.length+' categories carry evidence. The rest are shown '
+    +   'as unevidenced rather than given a number \u2014 there is not enough '
+    +   'verified history to weight eight categories honestly.</div>'
+    + body + '</div>';
+}
 function _daDeadline(deal){
   var od = deal && deal.outside_date;
   if(!od || !od.date) return '';
@@ -2234,7 +2310,7 @@ async function renderAnalysis(deal){
 
   // ---- metrics strip ----
   var cells = [
-    { l:'Current Price', v:_daUsd(deal.cp),  c:'#f4eee0' },
+    { l:'Last Close'+_daBadge(deal,'cp'), v:_daUsd(deal.cp),  c:'#f4eee0' },
     { l:'Deal Value',    v:_daUsd(deal.dp),  c:'#f7f1e4' },
     { l:'Gross Spread',  v:_daSgn(deal.sp_pct), c:m.fg },
     { l:'Premium',       v:_daPremiumText(deal),  c:'#e2d8c0' },
@@ -2300,7 +2376,7 @@ async function renderAnalysis(deal){
   var closesCard = ''
     + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(95,224,201,0.22); padding:18px 20px; overflow:hidden;">'
     +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#5fe0c9;"></div>'
-    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#6bbaa8; text-transform:uppercase;">If Deal Closes</div>'
+    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#6bbaa8; text-transform:uppercase;">If Deal Closes'+_daBadge(deal,'dp')+'</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(deal.dp)+'</div>'
     +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+_daSgn(deal.sp_pct)+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?_daSgnUsd(deal.dp-deal.cp)+' / share':'')+'</div>'
@@ -2309,11 +2385,11 @@ async function renderAnalysis(deal){
   var breaksCard = bp!=null ? ''
     + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(240,115,94,0.4); padding:18px 20px; overflow:hidden;">'
     +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#f0735e;"></div>'
-    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#f0735e; text-transform:uppercase;">If Deal Breaks</div>'
+    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#f0735e; text-transform:uppercase;">If Deal Breaks'+_daBadge(deal,'break_price')+'</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(bp)+'</div>'
     +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:'+_daSgnColor(bd)+';">'+(bd!=null?_daSgn(bd):'\u2014')+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.cp!=null)?_daSgnUsd(bp-deal.cp)+' / share':'')+'</div>'
-    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">'+((bd!=null&&bd>0)?'Modeled break sits ABOVE the current price':'Modeled downside case')+'</div>'
+    +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">'+((bd!=null&&bd>0)?'This break price sits ABOVE the current price':_daWhy(deal,'break_price'))+'</div>'
     + '</div>' : '';
   _daSet('da-rr-grid', closesCard + breaksCard);
   var rrEl = document.getElementById('da-rr-grid');
@@ -2346,7 +2422,7 @@ async function renderAnalysis(deal){
     { l:'Acquirer Type',    v:(deal.acquirer_type||'Strategic') },
     { l:'Deal Premium',     v:_daPremiumText(deal), c:'#e2d8c0' },
     { l:'Consideration',    v:(deal.deal_type||'\u2014')+' \u00b7 '+_daUsd(deal.dp)+' / share' },
-    { l:'Transaction Value',v:txVal }
+    { l:'Transaction Value'+_daBadge(deal,'tx_value'),v:txVal }
   ];
   _daSet('da-acq-grid',
     '<div style="display:flex; align-items:baseline; gap:9px;">'
@@ -2369,7 +2445,19 @@ async function renderAnalysis(deal){
   // ---- regulatory path ----
   var rt = [];
   try{ rt = deal.reg_tags ? JSON.parse(deal.reg_tags) : []; }catch(e){ rt = []; }
-  _daTxt('da-reg-count', rt.length ? (rt.length+(rt.length===1?' gating review':' gating reviews')) : 'standard review');
+  _daTxt('da-reg-count', rt.length ? (rt.length+(rt.length===1?' expected review':' expected reviews')) : 'standard review');
+  // These are priors from deal size and sector, not filed regulatory status. A
+  // cleared deal and one facing a second request tag identically, so the panel
+  // has to say so rather than letting the agency names imply a docket.
+  var _rc = document.getElementById('da-reg-count');
+  if(_rc && _rc.parentNode && !document.getElementById('da-reg-prov')){
+    var _sp = document.createElement('div');
+    _sp.id = 'da-reg-prov';
+    _sp.style.cssText = 'margin-top:6px; font-size:10.5px; line-height:1.6; color:#8f8772;';
+    _sp.innerHTML = _daBadge(deal,'reg_tags')
+      + ' <span style="margin-left:4px;">expected review path from deal size and sector — not filed regulatory status</span>';
+    _rc.parentNode.insertBefore(_sp, _rc.nextSibling);
+  }
   var levelMeta = { hi:{fg:'#ff9466',bd:'rgba(255,148,102,0.44)',bg:'rgba(255,148,102,0.14)',t:'HIGH'},
                     md:{fg:'#ffd84a',bd:'rgba(255,216,74,0.42)',bg:'rgba(255,216,74,0.14)',t:'MEDIUM'},
                     lo:{fg:'#4fe6cb',bd:'rgba(79,230,203,0.4)',bg:'rgba(79,230,203,0.13)',t:'LOW'} };
@@ -2416,6 +2504,7 @@ async function renderAnalysis(deal){
   })();
 
   _daSet('da-deadline', _daDeadline(deal));
+  _daSet('da-explain', _daExplain(deal));
 
   // ---- structure notes (deal flags + blended consideration) — neutral facts
   //      about what the price means ----

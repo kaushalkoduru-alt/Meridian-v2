@@ -71,7 +71,7 @@ about a number being misleading, not about a feature being missing.
   Where the two-state model does not apply, say so instead of printing a number.
   *This is the single most important item in the document.*
 
-- [ ] **§20 · Separate fact from model from inference from forecast**
+- [x] **§20 · Separate fact from model from inference from forecast**
   FACT: "the agreement provides a $7B regulatory termination fee."
   MODEL: "estimated break price $28.80."
   INFERENCE: "contractual protection appears strong."
@@ -162,7 +162,7 @@ about a number being misleading, not about a feature being missing.
 
 ## MODIFIED — build it differently than the prompt asks
 
-- [ ] **§9 · Risk score, explainable but not falsely precise**
+- [x] **§9 · Risk score, explainable but not falsely precise**
   The prompt asks for eight weighted sub-scores. It also says "do not create
   fake precision." Those conflict, and the data settles it: 39 verified deals
   with 4 failures could not validate the six factors V3 already has. Eight
@@ -173,8 +173,11 @@ about a number being misleading, not about a feature being missing.
   measured. "Regulatory: weak antitrust covenant, $7B RTF" not "Regulatory: 68".
   Where evidence is insufficient, say so.
 
-  **DEFERRED CORRECTIONS COLLECTED HERE.** Four known-wrong scoring behaviours
-  are live and waiting on this section. They are listed together because each
+  **DEFERRED CORRECTIONS — ALL FOUR ADDRESSED 2026-09-01.** Four known-wrong
+  scoring behaviours were live and waiting on this section. Each is listed
+  below with what it became; the before-and-after across all 19 deals is in
+  AUDIT.md. **17 of 19 deals moved and 8 changed risk band**, the largest
+  being GBCS at 92/Very Low → 74/High. They are listed together because each
   was correct to defer on its own and the set is the argument for moving §9 up
   — the rule agreed was that a fourth would do it, and this is the fourth.
 

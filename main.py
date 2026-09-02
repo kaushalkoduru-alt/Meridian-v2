@@ -20,6 +20,8 @@ import stripe
 from find_announcement import find_announcement_8k_backward
 from deal_direction import (check_direction, direction_report,
                             DIRECTION_ENFORCING, VERDICT_TARGET)
+from provenance import provenance_map
+from explain import explain_deal
 
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
@@ -670,16 +672,100 @@ def edgar_queries(now=None):
 
 # ─── V3 SCORING MODEL ────────────────────────────────────────────────────────
 
+# The phrase "financing condition" appears in the sentence that GRANTS one and
+# in the sentence that DENIES one, and the old scan matched the substring in
+# both. Two live deals were scored `contingent` -- worth -10 each -- on filings
+# that say the exact opposite:
+#
+#   HZO  "The obligations of Parent and Merger Sub to consummate the Merger are
+#         NOT subject to any financing condition."
+#   DSGR "The availability of financing is NOT a condition to the obligations of
+#         Parent ... to consummate the Merger."
+#
+# So the negated forms are matched FIRST and explicitly, and any remaining
+# condition-granting phrase is rejected if a negation sits just before it.
+_FIN_NO_CONDITION = [
+    r'not\s+(?:be\s+)?subject\s+to\s+(?:any\s+|a\s+|the\s+)?financing\s+condition',
+    r'not\s+(?:be\s+)?conditioned\s+(?:on|upon)\s+[^.]{0,50}?financing',
+    r'no\s+financing\s+condition',
+    r'financing\s+(?:is|are)\s+not\s+a\s+condition',
+    r'availability\s+of\s+financing\s+is\s+not\s+a\s+condition',
+    r'not\s+contingent\s+(?:on|upon)\s+[^.]{0,30}?financing',
+    r'without\s+any\s+financing\s+condition',
+]
+_FIN_COMMITTED = [
+    r'committed\s+financing', r'fully\s+committed',
+    r'debt\s+financing\s+committed',
+    r'(?:obtained|received|entered\s+into)\s+[^.]{0,60}?'
+    r'(?:equity|debt)\s+commitment',
+    r'commitment\s+letter',
+    r'cash\s+on\s+hand', r'sufficient\s+cash',
+]
+_FIN_HAS_CONDITION = [
+    r'subject\s+to\s+(?:a\s+|the\s+|any\s+)?financing\s+condition',
+    r'contingent\s+(?:on|upon)\s+(?:obtaining\s+)?financing',
+    r'subject\s+to\s+obtaining\s+financing',
+    r'subject\s+to\s+financing',
+    r'financing\s+condition',
+]
+_FIN_NEGATORS = ('not', 'no ', 'without', 'never', 'free of', 'absent')
+
+
 def extract_financing_signal(text):
-    if not text: return 'unknown'
-    t = text.lower()
-    if any(p in t for p in ['committed financing','fully committed','no financing condition','cash on hand','debt financing committed','all-cash consideration','sufficient cash']):
-        return 'committed'
-    if any(p in t for p in ['highly confident','highly confident letter']):
+    """
+    Whether the buyer's obligation depends on money it has not yet drawn.
+
+    Returns 'committed', 'confident', 'contingent' or 'unknown'. A press
+    release is weak evidence for this and the agreement is strong evidence;
+    `financing_from_commitment` supersedes whatever this returns whenever the
+    agreement has been read.
+    """
+    if not text:
+        return 'unknown'
+    t = re.sub(r'\s+', ' ', text).lower()
+
+    # Denial of a financing condition is the strongest good outcome and must be
+    # tested before any phrase that merely contains "financing condition".
+    for pat in _FIN_NO_CONDITION:
+        if re.search(pat, t):
+            return 'committed'
+    for pat in _FIN_COMMITTED:
+        if re.search(pat, t):
+            return 'committed'
+    if 'highly confident' in t:
         return 'confident'
-    if any(p in t for p in ['contingent on financing','subject to obtaining financing','financing condition','subject to financing']):
-        return 'contingent'
+    for pat in _FIN_HAS_CONDITION:
+        for m in re.finditer(pat, t):
+            # A negation in the words immediately before flips the meaning; the
+            # window is short so an unrelated "not" further up cannot reach.
+            before = t[max(0, m.start() - 45):m.start()]
+            if any(neg in before for neg in _FIN_NEGATORS):
+                return 'committed'
+            return 'contingent'
     return 'unknown'
+
+
+def financing_from_commitment(commitment):
+    """
+    The financing reading taken from the MERGER AGREEMENT rather than from a
+    press release. `check_financing` already parses the agreement's financing
+    condition and its verdict has been sitting unused while the score consumed
+    the weaker source.
+
+    Returns (signal, source) so the provenance label can say which it was.
+    """
+    if not isinstance(commitment, dict):
+        return None, None
+    for term in (commitment.get('terms') or []):
+        if 'financ' not in str(term.get('term', '')).lower():
+            continue
+        v = str(term.get('verdict', '')).upper()
+        if v == 'STRONG':
+            return 'committed', 'agreement'
+        if v == 'WEAK':
+            return 'contingent', 'agreement'
+        return None, None          # UNKNOWN carries no information
+    return None, None
 
 def score_financing_signal(signal):
     if signal == 'committed':  return 10
@@ -725,44 +811,116 @@ def score_deal_premium(break_price, deal_price):
     not easier. Collected in ROADMAP.md under §9 with the other deferred
     corrections.
     """
-    if not break_price or not deal_price or break_price <= 0: return 0
-    premium_pct = ((deal_price - break_price) / break_price) * 100
-    if premium_pct >= 50:   return 8
-    elif premium_pct >= 35: return 6
-    elif premium_pct >= 25: return 4
-    elif premium_pct >= 15: return 2
-    elif premium_pct >= 5:  return 0
-    else:                   return -5
+    # CORRECTED. Returns 0 for every deal: premium size is no longer scored at
+    # all. The bands are kept above in the docstring's description rather than
+    # in code because the argument against them is not that they were mistuned
+    # -- it is that the quantity has no bearing on whether a deal closes. A
+    # tuned version of a wrong input is still a wrong input.
+    #
+    # The premium has NOT been deleted from the product. It is computed, shown
+    # on the deal, and appears in the explanation as evidence about valuation
+    # and standalone downside -- which is what it actually measures.
+    return 0
 
-def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_price=None, deal_price=None, financing_signal='unknown'):
+def score_consideration(deal_type, blended=None):
+    """
+    What the holder actually receives, worth 0 to +8.
+
+    Replaces the `deal_type` band, which paid +10 for All Cash and +5 for
+    Private Equity and so charged five points for the identity of the BUYER.
+    GSAT carried that charge with **Amazon** as its acquirer, because its
+    deal_type had been set to Private Equity by whichever EDGAR query matched
+    first -- an unvalidated label reaching into the score.
+
+    Buyer type is not scored here at all. What is scored is whether the
+    consideration moves: a stock leg re-prices with the acquirer's shares every
+    day, so the payout is genuinely less certain than cash. That is a fact about
+    the deal rather than a guess about the buyer.
+    """
+    if blended:
+        return 4                      # a stock leg moves with the acquirer
+    if deal_type in ('All Cash', 'Tender Offer', 'Private Equity'):
+        return 8
+    return 0
+
+
+def score_deadline(outside_date):
+    """
+    Time, worth 0 to -25 -- the input the score did not have.
+
+    GBCS scored 92 with risk Very Low while sitting two days past its
+    contractual deadline with six tender extensions on file. Nothing in the
+    composite could see that, because nothing in it looked at time to the
+    deadline at all. A score that rises while a deal passes its deadline is
+    measuring something orthogonal to the risk.
+
+    The largest penalty is for a deadline already passed, and it is large on
+    purpose: past the outside date either party may walk without paying a break
+    fee, so the contract has stopped protecting the position and the deal
+    continues only by agreement.
+    """
+    if not isinstance(outside_date, dict) or not outside_date.get('date'):
+        return 0                      # no deadline read; assert nothing
+    if outside_date.get('passed'):
+        return -25
+    d = outside_date.get('days_remaining')
+    if d is None:
+        return 0
+    if d <= 30:
+        return -8
+    if d <= 90:
+        return -3
+    return 0
+
+
+def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_price=None, deal_price=None, financing_signal='unknown', outside_date=None, blended=None):
     score = 50
-    if 0 < spread_pct < 3:       score += 25
-    elif 3 <= spread_pct < 5:    score += 18
-    elif 5 <= spread_pct < 8:    score += 10
+    # HALVED. The spread was 60 points of a 153-point range -- 39% -- and then
+    # get_risk used it AGAIN as the primary gate, so the risk band was largely
+    # the spread wearing a different name and the other factors could barely
+    # move it. It is still the single largest input, which is defensible; it is
+    # no longer counted twice, which was not.
+    if 0 < spread_pct < 3:       score += 12
+    elif 3 <= spread_pct < 5:    score += 9
+    elif 5 <= spread_pct < 8:    score += 5
     elif 8 <= spread_pct < 12:   score += 0
-    elif 12 <= spread_pct < 18:  score -= 15
-    elif 18 <= spread_pct < 25:  score -= 25
-    elif spread_pct >= 25:       score -= 35
-    elif spread_pct < 0:         score -= 25
-    if deal_type == 'All Cash':         score += 10
-    elif deal_type == 'Tender Offer':   score += 8
-    elif deal_type == 'Private Equity': score += 5
+    elif 12 <= spread_pct < 18:  score -= 8
+    elif 18 <= spread_pct < 25:  score -= 13
+    elif spread_pct >= 25:       score -= 18
+    elif spread_pct < 0:         score -= 13
+    score += score_consideration(deal_type, blended)
     if days_since_filed < 90:    score += 10
     elif days_since_filed < 270: score += 0
     elif days_since_filed < 500: score -= 5
     else:                        score -= 15
     score += score_regulatory_complexity(reg_tags or [])
-    score += score_deal_premium(break_price, deal_price)
+    score += score_deal_premium(break_price, deal_price)   # now always 0
     score += score_financing_signal(financing_signal)
-    normalized = ((score - (-35)) / (118 - (-35))) * 100
+    score += score_deadline(outside_date)
+    # Range: 50 -18 +0 -15 -20 -10 -25 = -38 at worst, 50 +12 +8 +10 +5 +10 = 95
+    # at best. Both bounds move with the bands above and are stated here so a
+    # change to any band that is not reflected here shows up as a shifted scale.
+    normalized = ((score - (-38)) / (95 - (-38))) * 100
     return min(100, max(0, round(normalized)))
 
-def get_risk(spread_pct, score):
-    if spread_pct >= 12:  return 'High'
-    if spread_pct >= 8:   return 'High' if score < 60 else 'Medium'
+def get_risk(score, outside_date=None):
+    """
+    The risk band, from the score and from hard facts the score smooths over.
+
+    Spread is deliberately ABSENT. It reaches the score already, and gating on
+    it here as well was the double count: a deal's band was mostly a restatement
+    of its spread, which is why five other factors could not shift it.
+
+    A passed deadline is an override rather than a band, because it is not a
+    matter of degree. Past the outside date the contract has stopped protecting
+    the position, whatever the rest of the composite says.
+    """
+    if isinstance(outside_date, dict) and outside_date.get('passed'):
+        return 'High'
     if score >= 75:       return 'Very Low'
     if score >= 55:       return 'Low'
-    return 'Medium'
+    if score >= 40:       return 'Medium'
+    return 'High'
 
 def get_acquirer_type(deal_type, acquirer):
     """
@@ -1265,10 +1423,11 @@ def apply_blended_to_spread(deal):
     deal['sp_pct_headline'] = old_sp          # kept so the gap stays auditable
     deal['sp_pct'] = new_sp
     deal['ann'] = annualized_spread(new_sp, deal.get('days_to_close'))
-    # get_risk takes the spread as its first argument, so leaving it would band
-    # the deal on a price nobody receives -- the same defect one field over.
+    # get_risk no longer takes the spread at all -- the double count is gone --
+    # but it does take the deadline, so a deal past its outside date keeps its
+    # override here rather than losing it on the blended path.
     if deal.get('score') is not None:
-        deal['risk'] = get_risk(new_sp, deal['score'])
+        deal['risk'] = get_risk(deal['score'], deal.get('outside_date'))
     return {'ticker': deal.get('ticker'), 'blended': b,
             'sp_pct': (old_sp, new_sp), 'ann': (old_ann, deal['ann']),
             'risk': (old_risk, deal.get('risk'))}
@@ -2392,8 +2551,13 @@ def fetch_deals_from_edgar():
                     break_price_method=method or 'calculated'
             break_downside=get_break_downside(round(cp,2),break_price)
             reg_tags=get_regulatory_risk(ticker,acquirer,tx_value,deal_type)
-            sc=score_deal(sp_pct,days,deal_type,reg_tags,break_price,dp,financing_signal)
-            risk=get_risk(sp_pct,sc)
+            # outside_date is not known yet -- it is read in the agreement pass
+            # further down -- so the deadline factor contributes 0 here and the
+            # score is RECOMPUTED once the agreement has been read. See the
+            # rescore block after the commitment loop.
+            sc=score_deal(sp_pct,days,deal_type,reg_tags,break_price,dp,
+                          financing_signal,None,None)
+            risk=get_risk(sc,None)
             # Annualized against THIS deal's time to close, not a constant.
             # None where the close date is unknown or has passed — see
             # annualized_spread. The UI already renders null as an em-dash.
@@ -2963,6 +3127,41 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     print(f"  [Commitment] {_tk}: {_ce}")
 
             _committed = [_d for _d in results if _d.get('commitment')]
+            # The agreement pass has just supplied two inputs the score did not
+            # have when it was first computed: the outside date, and a financing
+            # reading taken from the agreement rather than from a press release.
+            # Rebuilding the deal dict without recomputing here is the recurring
+            # bug in CLAUDE.md -- a field written after its consumer has run.
+            _rescored = []
+            for _d in results:
+                _fs, _fsrc = financing_from_commitment(_d.get('commitment'))
+                if _fs and _fs != _d.get('financing_signal'):
+                    _d['financing_signal'] = _fs
+                    _d['financing_source'] = _fsrc
+                elif not _d.get('financing_source'):
+                    _d['financing_source'] = 'press_release'
+                _od = _d.get('outside_date')
+                _before = (_d.get('score'), _d.get('risk'))
+                try:
+                    _sp = float(_d.get('sp_pct'))
+                    _dy = int(_d.get('days_since_filed') or 0)
+                except (TypeError, ValueError):
+                    continue
+                _d['score'] = score_deal(
+                    _sp, _dy, _d.get('deal_type'),
+                    json.loads(_d['reg_tags']) if isinstance(_d.get('reg_tags'), str)
+                    else (_d.get('reg_tags') or []),
+                    _d.get('break_price'), _d.get('dp'),
+                    _d.get('financing_signal') or 'unknown',
+                    _od, _d.get('blended'))
+                _d['risk'] = get_risk(_d['score'], _od)
+                if (_d['score'], _d['risk']) != _before:
+                    _rescored.append(f"{_d.get('ticker')} {_before[0]}/{_before[1]}"
+                                     f" -> {_d['score']}/{_d['risk']}")
+            if _rescored:
+                print(f"[Score] rescored after the agreement pass: "
+                      f"{', '.join(_rescored)}")
+
             print(f"[Commitment] {_read} agreement(s) read this scan, "
                   f"{len(_committed)} deal(s) with a commitment reading")
             for _d in _committed:
@@ -3430,6 +3629,16 @@ def get_clean_deals():
         # Same round-trip again for the outside date read off the agreement.
         if 'outside_date' in d:
             d['outside_date'] = parse_structured(d.get('outside_date', {}))
+        # §20 and §9, attached AFTER the round-trip above so both read the
+        # parsed dicts rather than repr strings. Neither feeds any stored value:
+        # `provenance` says where each displayed number came from, `explanation`
+        # is the evidence behind the risk in words. Computed per request so a
+        # cached row written before either existed still carries them.
+        try:
+            d['provenance'] = provenance_map(d)
+            d['explanation'] = explain_deal(d)
+        except Exception as _pe:
+            print(f"  [Provenance] {d.get('ticker')}: {_pe}")
     return deals
 
 @app.get("/api/deals")
