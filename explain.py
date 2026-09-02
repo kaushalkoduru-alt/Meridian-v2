@@ -71,14 +71,24 @@ def _find(commitment, *needles):
 
 
 def _ev(term):
-    """The evidence line for one agreement term: what it means, and the words."""
+    """
+    The evidence for one agreement term as {text, quote}.
+
+    The meaning and the quoted language are returned SEPARATELY rather than
+    concatenated, so the page can show the claim and keep the filing language
+    one click away. Concatenating them forced every consumer to render the
+    whole thing or none of it, which is how five quote blocks ended up stacked
+    down one page.
+
+    An evidence item is either a plain string or this dict; both are truthy and
+    `_row` treats them the same.
+    """
     if not term or not term.get('meaning'):
         return None
     m = str(term['meaning'])
     if any(nd in m.lower() for nd in _NON_EVIDENCE):
         return None
-    q = term.get('quote')
-    return '%s%s' % (m, (' — "%s"' % q) if q else '')
+    return {'text': m, 'quote': term.get('quote') or None}
 
 
 def _verdict(*terms):

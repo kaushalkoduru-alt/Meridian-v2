@@ -3823,3 +3823,100 @@ which is the one part of the record that was honest.
 The integrity sweep flagged all three loudly — 7 to 9 absent-field findings each,
 plus PACK's break price above its current price. It was working; nothing was
 gating on it.
+
+
+---
+
+# Filing language, collapsed behind the claim
+
+2026-09-02. §22 density, §44 traceability.
+
+## 1 · Legibility
+
+The quoted words were the dimmest thing on the page, which is backwards — they
+are the evidence. Quote body text is now **#e8e0d0**, the warm off-white used
+for body copy elsewhere. Labels, attribution and the disclosure control stay
+muted.
+
+| Site | was | now |
+|---|---|---|
+| outside date | `#8f8772` | **#e8e0d0** |
+| commitment terms | `#9a9079` | **#e8e0d0** |
+| explanation evidence | `#9a9079` | **#e8e0d0** |
+| structure flags | `#e8e0d0` | unchanged — already correct |
+| premium note | prose, no quote | unchanged |
+
+All of them now render through **one** shared component, so the next quote site
+inherits the treatment instead of inventing a fourth colour. A test asserts
+exactly one `<blockquote>` exists in the template and that it lives inside
+`_daQuote`.
+
+## 2 · Density: collapse in place
+
+**Chosen: collapse each quote behind the claim it supports, expandable, with one
+page-wide control that opens every quote at once.**
+
+The verdict and its plain-language meaning stay visible. The filing language is
+one click away, never more than one click, and never relocated away from the
+claim.
+
+```
+CONTRACTUAL DEADLINE
+Feb 4, 2028   520 days remaining  · extends automatically if regulatory
+                                    conditions are unmet
+If the merger has not closed by this date, either company can walk away
+without paying a break fee. …
+▸ FILING LANGUAGE                       ← was 260 characters of contract text
+```
+
+Seven quote blocks on a rich deal (SLAB), **zero open by default, all seven
+reachable**, and `SHOW ALL FILING LANGUAGE` at the top of the risk panel opens
+them together — auditing a deal through seven separate disclosures would have
+been worse than the wall it replaces.
+
+**A second change did more for density than the quotes did.** The risk panel
+gave all eight categories a full row, including the ones reading *insufficient
+evidence*, so a third of the panel was boilerplate repeating itself. Those are
+now named together on one line at the foot of the panel:
+
+```
+Not evidenced — Legal, Shareholder. Nothing is extracted for these yet, so
+they are shown as unevidenced rather than scored.
+```
+
+§9 requires that an unevidenced category says so. It does not require a full row
+each. The denominator still counts all eight — "6 of 8 categories carry
+evidence" — and a test guards that, because filtering the rows had quietly made
+it read "6 of 6".
+
+### Why not the other two
+
+**Truncate to the operative sentence with a "read more".** Rejected on
+correctness, not taste. Choosing the operative sentence programmatically is the
+same extraction problem that produced five defects in two sessions, and the
+failure mode here is severe: truncating *"the obligations of Parent are **not**
+subject to any financing condition"* at the wrong point inverts it. A quote that
+can change meaning when shortened should not be shortened. It also leaves a
+quote block rendered at every site, so the repeated visual rhythm survives —
+shorter walls, still walls.
+
+**Group all evidence into one section.** Rejected on §44. The traceability chain
+requires a reader to get from a claim to the language behind it; moving the
+evidence to a distant section means scrolling away from the deadline to find the
+deadline's quote and re-matching it by eye. It also concentrates the clutter
+rather than removing it — one large block instead of five small ones, and the
+claim it supports is no longer beside it.
+
+Collapse-in-place is the only one of the three that keeps every quote adjacent
+to its claim, removes the repeated block from the default view, and cannot
+change what a quote says.
+
+## What was not done
+
+No information was removed. Every quote that rendered before still renders, in
+the same place, in a brighter colour, behind one click. `explain.py` now returns
+evidence as `{text, quote}` rather than a concatenation, which is what made
+collapsing possible without dropping the meaning — the two were welded together
+into one string, so any consumer had to show both or neither.
+
+Eleven new checks in `test_provenance.py`. All seven suites pass.

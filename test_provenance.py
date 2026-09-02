@@ -366,5 +366,50 @@ check("an EX-99 exhibit is recognised as the press release",
 check("an 8-K body is not",
       is_press_release_url('/Archives/edgar/data/8146/x/d100857d8k.htm'), False)
 
+print()
+print("=" * 78)
+print("evidence — the quote is separable from the claim")
+print("=" * 78)
+
+_QD = {'ticker': 'T', 'sp_pct': 1.0, 'dp': 10.0, 'deal_type': 'All Cash',
+       'commitment': {'terms': [
+           {'term': 'Reverse termination fee', 'verdict': 'WEAK',
+            'meaning': 'the acquirer pays $400,000 to walk away',
+            'quote': '$400,000 (the Purchaser Termination Fee)'}]}}
+_qrows = X.explain_deal(_QD)
+_cp = next(r for r in _qrows if r['category'] == 'Contractual protection')
+check("an agreement term's evidence is {text, quote}",
+      isinstance(_cp['evidence'][0], dict), True,
+      'concatenating them forced the page to show all of it or none')
+check("the claim is carried separately from the words",
+      _cp['evidence'][0]['text'], 'the acquirer pays $400,000 to walk away')
+check("and the quote is still there, not dropped",
+      _cp['evidence'][0]['quote'].startswith('$400,000'), True,
+      '§44 requires a path from any claim to the filing language')
+
+# The template is where this renders, so the template is where it is asserted.
+_T = io.open(r'templates/index.html', encoding='utf-8').read()
+check("quote body text is the warm off-white used for body copy",
+      "color:#e8e0d0; font-style:normal;'" in _T.replace('  ', ' ')
+      or 'color:#e8e0d0' in _T[_T.index('details.da-q blockquote'):
+                               _T.index('details.da-q blockquote') + 400], True,
+      'it was #8f8772 and #9a9079 — dimmer than the labels around it')
+check("every quote renders through the one shared component",
+      _T.count('function _daQuote(') , 1)
+check("exactly one blockquote is emitted, by the shared component",
+      _T.count("'<blockquote"), 1,
+      'five sections rendered their own; all five call _daQuote now')
+check("and it is inside _daQuote",
+      _T.index("'<blockquote") > _T.index('function _daQuote(')
+      and _T.index("'<blockquote") < _T.index('function _daQuoteToggleAll'), True)
+check("quotes are collapsed by default, not removed",
+      'details class="da-q"' in _T, True)
+check("and one control opens all of them",
+      'function _daQuoteToggleAll' in _T, True,
+      'auditing a deal through six separate disclosures would be worse')
+check("the unevidenced denominator is still all eight categories",
+      "have+' of '+total+' categories carry evidence" in _T, True,
+      'filtering the rows must not shrink the count it reports')
+
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

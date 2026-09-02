@@ -2073,10 +2073,18 @@ function _daExplain(deal){
   var rows = deal && deal.explanation;
   if(!rows || !rows.length) return '';
   var have = 0;
+  // §9 requires that an unevidenced category says so. It does not require that
+  // each one gets a full row: three of eight repeat the same boilerplate down
+  // the page, and the repetition is what buries the six rows that carry
+  // something. They are named together on one line at the foot of the panel --
+  // the information is identical, the vertical cost is a third.
+  var total = rows.length;          // the denominator is all eight, always
+  var bare = rows.filter(function(r){ return r.verdict === 'insufficient evidence'; });
+  rows = rows.filter(function(r){ return r.verdict !== 'insufficient evidence'; });
   var body = rows.map(function(r){
     var m = _DA_VERDICT[r.verdict] || _DA_VERDICT['insufficient evidence'];
-    var none = r.verdict === 'insufficient evidence';
-    if(!none) have++;
+    var none = false;
+    have++;
     return '<div style="padding:13px 0; border-top:1px solid rgba(238,228,208,0.07);">'
       + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
       +   '<span style="font-size:12.5px; color:'+(none?'#7d745f':'#f3ead7')+'; '
@@ -2088,9 +2096,14 @@ function _daExplain(deal){
       +     (r.provenance_label||'')+'</span>'
       + '</div>'
       + (r.evidence||[]).map(function(e){
+          // An evidence item is a plain string, or {text, quote} where the
+          // quoted language is kept separate so it can collapse.
+          var txt = (e && e.text !== undefined) ? e.text : e;
+          var q   = (e && e.quote) ? e.quote : null;
           return '<div style="margin-top:7px; padding-left:12px; '
             + 'border-left:2px solid rgba(238,228,208,0.10); font-size:11.5px; '
-            + 'line-height:1.65; color:#9a9079;">'+e+'</div>';
+            + 'line-height:1.65; color:#9a9079;">' + txt
+            + _daQuote(q, m.bd) + '</div>';
         }).join('')
       + '</div>';
   }).join('');
@@ -2099,10 +2112,78 @@ function _daExplain(deal){
     + '<div style="font-size:9.5px; letter-spacing:0.16em; color:#8f8772; '
     +   'text-transform:uppercase; font-weight:600;">Why this risk band</div>'
     + '<div style="margin-top:6px; font-size:11px; color:#7d745f; line-height:1.6;">'
-    +   have+' of '+rows.length+' categories carry evidence. The rest are shown '
+    +   have+' of '+total+' categories carry evidence. The rest are shown '
     +   'as unevidenced rather than given a number \u2014 there is not enough '
     +   'verified history to weight eight categories honestly.</div>'
-    + body + '</div>';
+    + '<div style="margin-top:9px;"><span id="da-q-all" '
+    +   'onclick="_daQuoteToggleAll()" style="cursor:pointer; font-size:9.5px; '
+    +   'letter-spacing:0.13em; text-transform:uppercase; color:#6bbaa8; '
+    +   'border-bottom:1px dotted rgba(107,186,168,0.5);">'
+    +   'show all filing language</span></div>'
+    + body
+    + (bare.length ? '<div style="margin-top:13px; padding-top:11px; '
+        + 'border-top:1px solid rgba(238,228,208,0.07); font-size:11px; '
+        + 'line-height:1.6; color:#7d745f;">'
+        + '<span style="color:#8f8772;">Not evidenced — </span>'
+        + bare.map(function(r){ return r.category; }).join(', ')
+        + '. Nothing is extracted for these yet, so they are shown as '
+        + 'unevidenced rather than scored.</div>' : '')
+    + '</div>';
+}
+/* ── filing language, collapsed behind the claim ──────────────────────────
+   Five sections carry quotes -- structure flags, commitment terms, the outside
+   date, financing evidence and the premium -- and stacked at equal weight they
+   buried the numbers they exist to support.
+
+   Nothing is REMOVED. §44's traceability chain requires that a reader can get
+   from any claim to the filing language behind it, so every quote is still on
+   the page, one click from the claim it supports, with a shared control that
+   opens all of them at once. What changes is the default: the verdict and its
+   plain-language meaning are visible, and the legal text is available rather
+   than unavoidable.
+
+   The quote body is #e8e0d0 -- the warm off-white used for body copy
+   everywhere else. It was #8f8772 and #9a9079, dimmer than the labels around
+   it, which is exactly backwards: the quoted words are the evidence and were
+   the hardest thing on the page to read. Labels and attribution stay muted. */
+function _daQuoteCSS(){
+  if(document.getElementById('da-q-style')) return;
+  var st = document.createElement('style');
+  st.id = 'da-q-style';
+  st.textContent =
+    'details.da-q{margin:7px 0 0;}'
+  + 'details.da-q>summary{list-style:none; cursor:pointer; display:inline-flex;'
+  +   'align-items:center; gap:6px; font-size:9.5px; letter-spacing:0.13em;'
+  +   'text-transform:uppercase; color:#7d745f; user-select:none;}'
+  + 'details.da-q>summary::-webkit-details-marker{display:none;}'
+  + 'details.da-q>summary:hover{color:#a89e85;}'
+  + 'details.da-q>summary::before{content:"\\25B8"; font-size:8px;'
+  +   'transition:transform .12s ease;}'
+  + 'details.da-q[open]>summary::before{transform:rotate(90deg);}'
+  + 'details.da-q blockquote{margin:7px 0 0; padding:2px 0 2px 12px;'
+  +   'font-family:\'DM Mono\',monospace; font-size:11px; line-height:1.62;'
+  +   'color:#e8e0d0; font-style:normal;}';
+  document.head.appendChild(st);
+}
+function _daQuote(text, accent){
+  if(!text) return '';
+  _daQuoteCSS();
+  var c = accent || 'rgba(238,228,208,0.22)';
+  return '<details class="da-q"><summary>filing language</summary>'
+    + '<blockquote style="border-left:2px solid ' + c + ';">'
+    + String(text).replace(/</g,'&lt;') + '</blockquote></details>';
+}
+// One control for the whole page. Auditing a deal means reading every quote,
+// and doing that through six separate disclosures would be worse than the wall
+// of text this replaces.
+function _daQuoteToggleAll(){
+  var all = document.querySelectorAll('details.da-q');
+  if(!all.length) return;
+  var open = [].every.call(all, function(d){ return d.open; });
+  [].forEach.call(all, function(d){ d.open = !open; });
+  var b = document.getElementById('da-q-all');
+  if(b) b.textContent = open ? 'show all filing language'
+                             : 'hide all filing language';
 }
 function _daDeadline(deal){
   var od = deal && deal.outside_date;
@@ -2133,10 +2214,7 @@ function _daDeadline(deal){
     + '</div>'
     + (od.meaning ? '<div style="margin-top:8px; font-size:11.5px; line-height:1.65; '
         + 'color:' + (passed ? '#e2d8c0' : '#9a9079') + ';">' + od.meaning + '</div>' : '')
-    + (od.quote ? '<blockquote style="margin:9px 0 0; padding:2px 0 2px 12px; '
-        + 'border-left:2px solid ' + col + '66; font-family:\'DM Mono\',monospace; '
-        + 'font-size:10.5px; line-height:1.6; color:#8f8772; font-style:normal;">'
-        + od.quote + '</blockquote>' : '')
+    + _daQuote(od.quote, col + '66')
     + '</div>';
 }
 function _daAnnBounds(deal){
@@ -2581,7 +2659,7 @@ async function renderAnalysis(deal){
         + '<div style="margin-top:8px; font-size:12.5px; line-height:1.55; color:#cdc2a8;">'+f.meaning+'</div>'
         + (f.context ? (
             '<div style="margin-top:9px; font-size:9px; letter-spacing:0.12em; color:#7d745f; text-transform:uppercase;">From the SEC filing</div>'
-            + '<blockquote style="margin:5px 0 0; padding:2px 0 2px 14px; border-left:2px solid '+c+'59; font-family:\'DM Mono\',monospace; font-size:11px; line-height:1.6; color:#e8e0d0; font-style:normal;">“'+f.context+'”</blockquote>'
+            + _daQuote('“'+f.context+'”', c+'59')
           ) : '')
         + '</div>';
     }).join('');
@@ -2744,7 +2822,7 @@ function commitmentHTML(commitment){
       +   '<span style="display:inline-block; padding:3px 7px; font-family:\'DM Mono\',monospace; font-size:9px; letter-spacing:0.11em; text-transform:uppercase; color:'+c+'; background:transparent; border:1px solid '+c+'73;">'+t.verdict+'</span>'
       + '</div>'
       + (t.meaning ? '<div style="margin-top:8px; font-size:12.5px; line-height:1.7; color:#c9c0ad;">'+t.meaning+'</div>' : '')
-      + (t.quote ? '<blockquote style="margin:9px 0 0; padding:2px 0 2px 14px; border-left:2px solid '+c+'80; font-family:\'DM Mono\',monospace; font-size:11.5px; line-height:1.6; color:#9a9079; font-style:normal;">'+t.quote+'</blockquote>' : '')
+      + _daQuote(t.quote, c+'80')
       + '</div>';
   }).join('');
 
