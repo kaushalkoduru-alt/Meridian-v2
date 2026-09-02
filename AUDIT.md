@@ -3122,3 +3122,120 @@ Nothing here is a surprise to the sweep either: `integrity.py` flags BZH's break
 price and premium, and GBCS's passed deadline, on every scan. The rest are
 systemic rather than per-deal, which is why they read as roadmap items and not
 as findings.
+
+
+---
+
+# The last plain bug, and a sweep for invisible fields
+
+2026-09-01. Final work before §30.
+
+## 1 · HZO was one of three, not one
+
+HZO's agreement reads nine months, then "the Outside Date shall automatically
+be extended by an additional three months", then — the part that was never
+read — "provided, that the Outside Date may be so extended on **no more than
+two occasions** pursuant to this sentence (for a **maximum Outside Date that is
+fifteen months** from the date of this Agreement)".
+
+`_duration_extension` compounded *textual occurrences* of a period. The
+agreement states its extension once and permits it twice, so one occurrence was
+found and applied once: 9 + 3 = 12 months. The contract states the answer
+outright and nothing read it.
+
+Sweeping the other three period-from-signing deals as asked found **two more of
+the same family**, each missed by a different gap:
+
+| Deal | What the agreement says | Read as | Actually |
+|---|---|---:|---:|
+| HZO | +3 months, **two occasions**, max **fifteen months** | 2027-08-09 | **2027-11-09** |
+| ATKR | extended **to** 15 months, then again **to** 18 months | 2027-08-02 | **2028-02-02** |
+| RAMP | "extended **for all purposes hereunder** by a period of three (3) months" | 2027-05-16 | **2027-08-16** |
+| ALOT | elective, one occasion, 30 days | 2026-11-13 | 2026-11-13 — correct |
+
+Three distinct causes:
+
+1. **Permitted repeats were never counted.** `_repeats` now reads "no more than
+   two occasions", and `_stated_maximum` reads the agreement's own outer bound
+   — but only when anchored to the agreement date, because an unanchored
+   maximum names no base to count from. Both give fifteen months for HZO, which
+   is the cross-check.
+2. **`_DURATION` required "extended by" adjacently.** RAMP puts five words of
+   boilerplate in between and the entire clause was invisible. The filler
+   allowed is lowercase letters and spaces only, so it cannot cross a comma into
+   an unrelated period.
+3. **An extension can be a destination, not an increment.** ATKR runs "to the
+   first Business Day that is fifteen (15) months after the date of this
+   Agreement", then "again to ... eighteen (18) months". `_ABS_EXTENSION` reads
+   these and counts them **from signing**; adding eighteen months to the base
+   date would have reported 2029.
+
+Among automatic mechanisms the latest date governs, for the same reason a dated
+automatic extension governs over the base it replaces. Elective is untouched:
+someone must act, so the base still stands and the option is reported beside it.
+
+**Verified by re-reading all nineteen filings against production: 3 moved, 16
+unchanged, 0 skipped.** Eight new regression tests, including three that assert
+an unrelated "Maximum Premium" or "maximum levels" is not read as a deadline.
+All six suites pass.
+
+One process note. My first pass called RAMP unchanged — on a document fetched
+with a CIK I had guessed rather than looked up. EDGAR served *something* at that
+path and the extractor returned null, which contradicted the sweep and is the
+only reason I caught it. Same error shape as BOW and DSGR earlier. The correct
+CIK is 0000733269, and RAMP was understated like the other two.
+
+## 2 · What else is computed, stored, and rendered nowhere
+
+The outside date was extracted, validated and invisible for seven turns. Asking
+what else is in that state: of **42 fields on a live deal record, 13 appear
+nowhere in the template.**
+
+**A. Accumulated history nobody can see** — the closest match to the outside
+date's shape, and the largest finding.
+
+| Field | Populated | What it is |
+|---|---|---|
+| `spread_history` | 19/19 | every scan's spread and price, a growing time series |
+| `score_history` | 19/19 | every scan's score and risk band |
+| `sp_pct_at_detection` | 19/19 | the spread when the deal was first found |
+| `score_at_detection` | 19/19 | the score when it was first found |
+| `risk_at_detection` | 19/19 | the risk band when it was first found |
+
+Every one is on all nineteen deals and grows on every scan. Together they answer
+"is this deal better or worse than when we found it", which the page cannot
+currently ask. The `*_at_detection` trio is what CLAUDE.md records as the
+**detection-value freeze** — a bug found, fought and fixed, and the result has
+never been shown to anyone.
+
+**B. Provenance labels** — `break_price_method` (19/19), `tx_value_source`
+(19/19), `acquirer_source` (3/19), `close_date_source` (1/19). §7 groundwork,
+not implemented here as instructed. Worth one observation: the page renders
+"Modeled downside case" while `break_price_method` says `historical` on 18 of
+19. The field that would correct that label is already on the record.
+
+**C. The headline gap** — `sp_pct_headline` (1/19, GSAT) is the pre-blended
+spread, kept deliberately "so the gap stays auditable". It is auditable in the
+JSON and invisible on the page, which is where the gap would matter.
+
+**D. Correctly invisible** — `accession`, `agreement_read` (EDGAR bookkeeping)
+and `ann_basis` (internal to the bounds renderer). No action.
+
+Three further fields are referenced exactly once and are fine: `acquirer_type`,
+`break_downside`, `close_date_capped_to`.
+
+**No change was made to any of this.** It is an inventory, as asked.
+
+## 3 · Nothing is left before §30
+
+The deferred list is now entirely sectioned, with no unassigned remainder:
+
+| Item | Owner |
+|---|---|
+| the four scoring corrections | §9 — moved up, four accumulated |
+| `break_price` as a lookup labelled "modeled" | §4 and §20 |
+| `financing_signal` read from the press release | §30A |
+| `reg_tags` as priors, `tx_value` basis mixing, `cp` staleness | §20 |
+
+HZO was the only plain bug on it and it is fixed — along with the two the sweep
+turned up beside it. **There is no pre-work left.**

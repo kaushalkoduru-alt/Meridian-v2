@@ -261,9 +261,31 @@ _NUMBER_WORDS = {
 # 'by a period of six (6) months' and 'by six (6) months' both appear, as does
 # the bare numeral. Anchored on 'extended' so a stray duration elsewhere in the
 # sentence cannot be read as an extension.
-_DURATION = (r'extended\s+(?:by\s+)?(?:an?\s+(?:additional\s+)?'
+#
+# The words between 'extended' and 'by' are not always absent. RAMP reads
+# "shall automatically be extended for all purposes hereunder by a period of
+# three (3) months" -- five words of boilerplate that made the whole clause
+# invisible and left the deal reporting its unextended base date. The filler is
+# lowercase letters and spaces only, so it cannot cross a comma or a sentence
+# boundary into an unrelated period, and it must still arrive at 'by'.
+_DURATION = (r'extended\s+(?:[a-z][a-z\s]{0,50}?by\s+|by\s+)?'
+             r'(?:an?\s+(?:additional\s+)?'
              r'(?:period\s+of\s+)?)?(?:([A-Za-z][A-Za-z\-]{2,11})\s*)?'
              r'(?:\(\s*(\d{1,3})\s*\)\s*)?(month|day|year)s?\b')
+
+# An extension stated as an ABSOLUTE period from signing rather than as an
+# increment on the base date. ATKR runs to "the first Business Day that is
+# fifteen (15) months after the date of this Agreement" and then, on a second
+# failed condition, "again to ... eighteen (18) months" -- two automatic
+# extensions, neither of which says 'extended by', so _DURATION saw no
+# extension at all and the deal reported twelve months when it has eighteen.
+_ABS_EXTENSION = (r'extended\s+(?:again\s+)?(?:[a-z][a-z\s]{0,50}?\s+)?to\s+'
+                  r'(?:the\s+first\s+Business\s+Day\s+that\s+is\s+|'
+                  r'the\s+date\s+that\s+is\s+|a\s+date\s+that\s+is\s+)?'
+                  r'(?:([A-Za-z][A-Za-z\-]{2,11})\s*)?'
+                  r'(?:\(\s*(\d{1,3})\s*\)\s*)?(month|day|year)s?\s+'
+                  r'(?:after|from|following)\s+the\s+date\s+'
+                  r'(?:of\s+th(?:is|e)\s+Agreement|hereof)')
 
 
 # The plausible size of a period depends on its unit, and a single bound cannot
@@ -307,7 +329,66 @@ _MONTH_LENGTHS = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30,
                   7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31}
 
 
-def _duration_extension(window, base_date):
+# An agreement states its extension ONCE and may permit it more than once.
+# HZO reads "extended by an additional three months ... provided, that the
+# Outside Date may be so extended on no more than two occasions", and counting
+# textual occurrences of the period saw one extension where the contract grants
+# two -- understating the deadline by a full three months.
+_OCCASIONS = (r'(?:no\s+more\s+than|up\s+to|a\s+maximum\s+of)\s+'
+              r'(?:([A-Za-z][A-Za-z\-]{2,11})|(\d{1,2}))\s*'
+              r'(?:\(\s*(\d{1,2})\s*\)\s*)?'
+              r'(?:separate\s+|additional\s+|further\s+)?'
+              r'(?:occasions?|times?)')
+
+# Better than any arithmetic of ours: the agreement stating the outer bound
+# outright -- "for a maximum Outside Date that is fifteen months from the date
+# of this Agreement". That is the contract doing the sum, so it governs.
+#
+# Read ONLY when anchored to the agreement date. An unanchored maximum names no
+# base to count from, and guessing one is how a deadline gets invented.
+_STATED_MAX = (r'maximum\s+(?:Outside|End|Termination|Final|Extended)\s+Date\s+'
+               r'(?:that\s+(?:is|shall\s+be)\s+|of\s+|to\s+be\s+)?'
+               r'(?:([A-Za-z][A-Za-z\-]{2,11})\s*)?'
+               r'(?:\(\s*(\d{1,3})\s*\)\s*)?(month|day|year)s?\s+'
+               r'(?:from|after|following)\s+the\s+date\s+of\s+th(?:is|e)\s+'
+               r'Agreement')
+
+
+def _repeats(window):
+    """
+    How many times the window permits its extension to be taken. 1 unless the
+    agreement says otherwise, so a clause without an occasions proviso is read
+    exactly as before.
+    """
+    m = re.search(_OCCASIONS, window, re.IGNORECASE)
+    if not m:
+        return 1
+    word, numeral, paren = m.groups()
+    k = (int(numeral) if numeral else
+         int(paren) if paren else
+         _NUMBER_WORDS.get((word or '').lower()))
+    # Four extensions of the same period is already beyond anything in the
+    # feed; more than that is a misread of some unrelated count.
+    return k if k and 1 <= k <= 4 else 1
+
+
+def _stated_maximum(window, agreement_date):
+    """
+    The outer deadline the agreement states for itself, or None. Anchored on
+    the agreement date because that is the anchor the clause names.
+    """
+    if not agreement_date:
+        return None
+    m = re.search(_STATED_MAX, window, re.IGNORECASE)
+    if not m:
+        return None
+    period = _period(*m.groups())
+    if not period:
+        return None
+    return _apply_period(agreement_date, *period), m.group(0)[:260]
+
+
+def _duration_extension(window, base_date, agreement_date=None):
     """
     The extension in this window that states a PERIOD rather than a date,
     applied to the base date. Returns (date, kind, quote) or None.
@@ -336,11 +417,45 @@ def _duration_extension(window, base_date):
         elif elective is None:
             elective, elective_span = p, span
 
-    if auto_months:
-        d = base_date
-        for n, unit in auto_months:
-            d = _apply_period(d, n, unit)
-        return d, 'automatic', auto_span
+    # Absolute extensions are counted from SIGNING, not from the base date --
+    # "eighteen months after the date of this Agreement" is a destination, not
+    # an increment, and adding it to the base date would double the term.
+    abs_auto = []
+    if agreement_date:
+        for m in re.finditer(_ABS_EXTENSION, window, re.IGNORECASE):
+            p = _period(*m.groups())
+            if not p:
+                continue
+            if (_classify_extension(window[:m.end()]) or 'elective') != 'automatic':
+                continue
+            abs_auto.append((_apply_period(agreement_date, *p),
+                             window[max(0, m.start() - 170):m.end() + 60]))
+
+    if auto_months or abs_auto:
+        cands = []
+        if auto_months:
+            d = base_date
+            # Only a SINGLE stated period is multiplied by the permitted count.
+            # Two periods in the prose are two distinct mechanisms and already
+            # compound on their own; multiplying those would count each twice.
+            rep = _repeats(window) if len(auto_months) == 1 else 1
+            for n, unit in auto_months:
+                for _ in range(rep):
+                    d = _apply_period(d, n, unit)
+            cands.append((d, auto_span))
+        cands.extend(abs_auto)
+        # The agreement's own statement of its outer bound is the contract
+        # doing the arithmetic, so it stands beside ours rather than under it.
+        stated = _stated_maximum(window, agreement_date)
+        if stated:
+            cands.append(stated)
+        # Every candidate here arrives without anyone acting, so the LAST one
+        # to arrive is the deadline -- the same reason a dated automatic
+        # extension governs over the base date it replaces.
+        cands = [c for c in cands if c[0] >= base_date]
+        if cands:
+            d, span = max(cands, key=lambda c: c[0])
+            return d, 'automatic', span
     if elective:
         return _apply_period(base_date, *elective), 'elective', elective_span
     return None
@@ -490,7 +605,12 @@ def extract_outside_date(agreement_text, announced_date=None, now=None,
         # extends. APGE's sits about 1,100 characters past the definition, well
         # outside the symmetric window that had to classify the AES case.
         _near = flat[max(0, base['position'] - 600):base['position'] + 2500]
-        _dur = _duration_extension(_near, base['date'])
+        # The stated maximum counts from SIGNING, not from the base date, so
+        # the agreement date has to reach here on every path -- not only the
+        # period-from-signing branch that happens to compute it already.
+        _dur = _duration_extension(
+            _near, base['date'],
+            agreement_date or extract_agreement_date(agreement_text))
         if _dur:
             _dur_date, extension_type, _dur_quote = _dur
             if extension_type == 'automatic':

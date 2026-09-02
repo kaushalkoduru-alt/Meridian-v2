@@ -359,5 +359,74 @@ check("without an anchor, a deadline passed last month is kept",
 check("without an anchor, one passed three years ago is refused",
       _plausible(-36, False) is False)
 
+# ---------------------------------------------------------------------------
+# An extension the agreement PERMITS more than once, or states as a maximum, or
+# expresses as a destination rather than an increment. All three understated a
+# live deadline: HZO by three months, ATKR by six, RAMP by three.
+from outside_date import _duration_extension, _repeats, _stated_maximum
+
+_AGD = datetime(2026, 8, 9)
+_BASE = datetime(2027, 5, 9)          # nine months from signing
+
+# HZO: one stated period, two permitted occasions, and a stated maximum.
+_HZO = ("then the Outside Date shall automatically be extended by an "
+        "additional three months and such extended date shall be deemed to be "
+        "the Outside Date for all purposes under this Agreement; provided, "
+        "that the Outside Date may be so extended on no more than two "
+        "occasions pursuant to this sentence (for a maximum Outside Date that "
+        "is fifteen months from the date of this Agreement)")
+check("HZO: the permitted repeat count is read", _repeats(_HZO) == 2,
+      str(_repeats(_HZO)))
+check("HZO: the stated maximum is fifteen months from signing",
+      _stated_maximum(_HZO, _AGD)[0] == datetime(2027, 11, 9))
+check("HZO: the outer deadline is fifteen months, not twelve",
+      _duration_extension(_HZO, _BASE, _AGD)[0] == datetime(2027, 11, 9),
+      'counting occurrences in the prose saw one extension of the two granted')
+check("HZO: an unanchored maximum is not read",
+      _stated_maximum(_HZO, None) is None)
+
+# RAMP: five words of boilerplate between 'extended' and 'by'.
+_RAMP = ("then the Outside Date shall automatically be extended for all "
+         "purposes hereunder by a period of three (3) months")
+check("RAMP: filler between 'extended' and 'by' no longer hides the clause",
+      _duration_extension(_RAMP, datetime(2027, 5, 16),
+                          datetime(2026, 5, 16))[0] == datetime(2027, 8, 16))
+
+# ATKR: two automatic extensions, each a destination measured from signing.
+_ATKR = ("then such date shall, automatically without the action of any "
+         "Person, be extended to the first Business Day that is fifteen (15) "
+         "months after the date of this Agreement (the First Extended End "
+         "Date); and if, as of the First Extended End Date all conditions "
+         "have been satisfied, then the End Date shall, automatically without "
+         "the action of any Person, be extended again to the first Business "
+         "Day that is eighteen (18) months after the date of this Agreement")
+_atkr = _duration_extension(_ATKR, datetime(2027, 8, 2), datetime(2026, 8, 2))
+check("ATKR: 'extended TO a date N months after signing' is an extension",
+      _atkr[0] == datetime(2028, 2, 2),
+      'the later of two automatic destinations governs, counted from signing')
+check("ATKR: an absolute period is a destination, never an increment",
+      _atkr[0] < datetime(2029, 1, 1),
+      'adding 18 months to the base date would report 2029 instead of 2028')
+
+# The elective path is unchanged. The widened filler must not silently promote
+# an extension somebody has to elect into one that arrives on its own -- that
+# would report a holder months of runway they may never get. ALOT is the live
+# case: its 30-day extension needs written notice, and its deadline is
+# unmoved by all of the above.
+_ELEC = ("the End Date may be extended at the election of either party by a "
+         "period of three (3) months upon written notice")
+check("an elective extension is still classified elective",
+      _duration_extension(_ELEC, datetime(2026, 11, 13),
+                          datetime(2026, 6, 16))[1] == 'elective')
+
+# A maximum that is not the deadline's own must not be read as one. Three live
+# agreements say 'Maximum Premium' or 'maximum levels' in their benefits
+# sections, and none of them states an outer deadline.
+for _noise in ("the Maximum Premium, the Surviving Corporation will obtain",
+               "maximum levels of coverage for such Continuing Employees",
+               "maximum out-of-pocket requirements applicable to such"):
+    check("an unrelated 'maximum' is not a deadline: %s" % _noise[:34],
+          _stated_maximum(_noise, _AGD) is None)
+
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")
