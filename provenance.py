@@ -54,6 +54,52 @@ STATIC = {
 }
 
 
+# ── the three tiers of evidence about a deal's terms ────────────────────────
+#
+# These are different documents with different weight, and the detection pass
+# treated the bottom two as interchangeable -- `get_filing_links` returns
+# `ex99 + other`, so the PRESS RELEASE is preferred over the filed 8-K body for
+# every field it extracts, not only financing.
+#
+#   1. agreement        the EX-2 merger agreement. The instrument itself. FACT.
+#   2. filed_disclosure the 8-K Item 1.01 body. The registrant's own filed
+#                       description of that instrument, signed, with liability
+#                       attached. Not marketing, and not the contract either.
+#   3. press_release    the EX-99 exhibit. A summary written for readers.
+#
+# ALOT is the case that forced the distinction: its 8-K body states "The
+# consummation ... is not conditioned on the availability of any financing",
+# while its EX-99 press release says nothing about financing at all. Ranking
+# the release above the body meant reading the weaker document and missing the
+# stronger one entirely.
+SOURCE_TIERS = {
+    'agreement':        (FACT,      'read from the merger agreement\u2019s '
+                                    'financing condition'),
+    'filed_disclosure': (INFERENCE, 'from the 8-K Item 1.01 body \u2014 the '
+                                    'registrant\u2019s filed description of the '
+                                    'agreement, not the agreement itself'),
+    'press_release':    (INFERENCE, 'inferred from press-release wording, not '
+                                    'the agreement'),
+}
+SOURCE_RANK = {'agreement': 3, 'filed_disclosure': 2, 'press_release': 1}
+
+# Why silence is not an answer.
+#
+# A merger agreement is an integrated document, so it is tempting to read "no
+# financing condition found" as "there is no financing condition". This field
+# has produced FOUR separate pattern defects in two sessions -- a missed
+# negation, wrong case, an intervening condition, and a rival-bid context match
+# -- and each one produced confident silence. A fifth would turn a parser gap
+# into a contractual fact.
+#
+# So silence means NO SCORING EVIDENCE EITHER WAY. It never means no condition
+# exists, and the explanation says "insufficient evidence" rather than anything
+# about the deal.
+FINANCING_SILENCE = ('the agreement was read and states nothing this parser '
+                     'could find; that is an absence of evidence, not evidence '
+                     'the condition is absent')
+
+
 def classify(field, deal=None):
     """(class, label, why) for one field on one deal."""
     deal = deal or {}
@@ -88,13 +134,14 @@ def classify(field, deal=None):
 
     if field == 'financing_signal':
         src = (deal.get('financing_source') or '').lower()
-        if src == 'agreement':
-            return (FACT, 'FACT',
-                    'read from the merger agreement’s financing condition')
-        if src == 'press_release':
-            return (INFERENCE, 'INFERENCE',
-                    'inferred from press-release wording, not the agreement')
-        return INFERENCE, 'INFERENCE', 'no financing language found'
+        cls, why = SOURCE_TIERS.get(src, (INFERENCE, 'no financing language found'))
+        if src != 'agreement' and deal.get('agreement_read'):
+            # The instrument was read and says nothing. That is NOT evidence
+            # there is no condition -- see FINANCING_SILENCE -- so the weaker
+            # source is reported and does not score.
+            why += '; the agreement was read and is silent, so this is '\
+                   'reported but not scored'
+        return cls, CLASSES[cls][0], why
 
     if field == 'close_date':
         s = (deal.get('close_date_source') or '').lower()

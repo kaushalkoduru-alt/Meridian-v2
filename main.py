@@ -683,7 +683,8 @@ def edgar_queries(now=None):
 # to Closing". One question answered by two lists is how that happens.
 from deal_commitment import (NO_FINANCING_COND, HAS_FINANCING_COND,
                              COMMITMENT_LETTERS, FINANCING_NEGATORS,
-                             FINANCING_NEGATION_WINDOW)
+                             FINANCING_NEGATION_WINDOW,
+                             financing_condition_state)
 
 _FIN_NO_CONDITION = [pat for pat, _label in NO_FINANCING_COND]
 _FIN_HAS_CONDITION = [pat for pat, _label in HAS_FINANCING_COND]
@@ -711,25 +712,107 @@ def extract_financing_signal(text):
         return 'unknown'
     t = re.sub(r'\s+', ' ', text).lower()
 
-    # Denial of a financing condition is the strongest good outcome and must be
-    # tested before any phrase that merely contains "financing condition".
-    for pat in _FIN_NO_CONDITION:
-        if re.search(pat, t):
-            return 'committed'
+    # The SAME guarded answer check_financing uses -- not a second
+    # implementation over the same patterns. That split is what let this
+    # function read a Superior Proposal clause as a financing condition.
+    state, _label, _quote = financing_condition_state(text)
+    if state == 'none':
+        return 'committed'
     for pat in _FIN_COMMITTED:
         if re.search(pat, t):
             return 'committed'
     if 'highly confident' in t:
         return 'confident'
-    for pat in _FIN_HAS_CONDITION:
-        for m in re.finditer(pat, t):
-            # A negation in the words immediately before flips the meaning; the
-            # window is short so an unrelated "not" further up cannot reach.
-            before = t[max(0, m.start() - FINANCING_NEGATION_WINDOW):m.start()]
-            if any(neg in before for neg in _FIN_NEGATORS):
-                return 'committed'
-            return 'contingent'
+    if state == 'exists':
+        return 'contingent'
     return 'unknown'
+
+
+_EX99 = ('ex99', 'ex-99', 'exhibit99', 'press', 'ex9901', 'ex9902')
+
+
+def is_press_release_url(url):
+    """EX-99 exhibit, as opposed to the 8-K body itself."""
+    u = (url or '').lower()
+    return any(x in u for x in _EX99)
+
+
+def financing_from_filed_disclosure(cik, accession, headers):
+    """
+    The financing reading from the 8-K Item 1.01 BODY.
+
+    get_filing_links returns `ex99 + other`, so the press release is tried
+    first and the loop stops at the first document that passes the gate. The
+    8-K body -- the registrant's own filed description of the agreement's
+    terms -- is therefore usually never opened.
+
+    ALOT is the case. Its 8-K body reads "The consummation of the transactions
+    contemplated by the Merger Agreement is not conditioned on the availability
+    of any financing to Parent or Merger Sub." Its EX-99 press release does not
+    mention financing at all. The stronger document was ranked below the weaker
+    one and never read.
+
+    Returns (signal, 'filed_disclosure') or (None, None). Best-effort: a
+    failure here leaves the weaker reading in place, which is what happened
+    before this existed.
+    """
+    try:
+        for lk in get_filing_links(cik, accession, headers):
+            if is_press_release_url(lk):
+                continue
+            # The EX-2 is the agreement, read by check_financing with its own
+            # verdict. Reading it here would file the contract under the tier
+            # that ranks below it.
+            if _EX2_NAME.search(lk.rsplit('/', 1)[-1].lower()):
+                continue
+            r = requests.get(lk, headers=EDGAR_HEADERS, timeout=10)
+            time.sleep(0.12)
+            body = BeautifulSoup(r.text, 'html.parser').get_text()
+            if 'item 1.01' not in body.lower() and 'merger agreement' not in body.lower():
+                continue
+            sig = extract_financing_signal(body)
+            if sig != 'unknown':
+                return sig, 'filed_disclosure'
+            return None, None
+    except Exception as _e:
+        print(f"  [Financing] filed-disclosure read failed: {_e}")
+    return None, None
+
+
+def financing_evidence_scores(deal):
+    """
+    Whether the financing reading may move the SCORE, as opposed to appearing
+    in the explanation.
+
+    The rule is symmetric, and it is the point: it applies to `committed`
+    exactly as it applies to `contingent`. Seven deals were carrying +10 on a
+    press release while their agreement was silent and one was carrying -10 the
+    same way. Barring only the penalty would have been a bullish thumb on the
+    scale -- the same §20 error pointed the other way.
+
+    Where the agreement was READ, only the agreement scores. Where no agreement
+    was read, the best available weaker document scores, labelled INFERENCE,
+    because it is then the best evidence that exists rather than a summary of
+    something better we declined to open.
+
+    NOTE WHAT THIS DOES NOT SAY. A silent agreement is not evidence that no
+    financing condition exists. This field has produced four separate pattern
+    defects in two sessions, each of which produced confident silence, and a
+    fifth would turn a parser gap into a contractual fact. Silence means there
+    is nothing here to score -- see provenance.FINANCING_SILENCE.
+    """
+    src = (deal.get('financing_source') or '').lower()
+    if src == 'agreement':
+        return True
+    # `agreement_read` is the accession whose exhibit was actually fetched, so
+    # it distinguishes "read and silent" from "never opened".
+    return not deal.get('agreement_read')
+
+
+def scoring_financing_signal(deal):
+    """The signal the score is allowed to see. 'unknown' contributes 0."""
+    sig = deal.get('financing_signal') or 'unknown'
+    return sig if financing_evidence_scores(deal) else 'unknown'
 
 
 def financing_from_commitment(commitment):
@@ -2151,6 +2234,13 @@ def get_filing_links(cik, accession, headers):
         for a in soup.find_all('a',href=True):
             href=a['href']
             if '.htm' in href.lower() and '/Archives/' in href:
+                # EDGAR links a filing's primary document through the
+                # iXBRL VIEWER -- /ix?doc=/Archives/... -- which serves a
+                # JavaScript shell, not the text. Every reader downstream got
+                # an empty document and moved on, which is part of why the 8-K
+                # body was never a real source for anything.
+                if href.startswith('/ix?doc='):
+                    href = href[len('/ix?doc='):]
                 full=f"https://www.sec.gov{href}" if href.startswith('/') else href
                 if any(x in href.lower() for x in ['ex99','ex-99','exhibit99','press','ex9901','ex9902']): ex99.append(full)
                 elif 'index' not in href.lower(): other.append(full)
@@ -2381,6 +2471,7 @@ def fetch_deals_from_edgar():
             continue
         try:
             dp=None; acquirer='Undisclosed'; close_date='TBD'; tx_value=None; financing_signal='unknown'
+            financing_source=None
             links=get_filing_links(cik,accession,headers)
             if not links:
                 acc_clean=accession.replace('-','')
@@ -2466,7 +2557,16 @@ def fetch_deals_from_edgar():
                         tx_value, tx_value_source = compute_equity_tx_fallback(dp, ticker)
                     if tx_value is None:
                         tx_value_source = None
+                    # Tier 3 first, because full_ct is whichever document won
+                    # the gate above and that is usually the press release.
                     financing_signal=extract_financing_signal(full_ct)
+                    financing_source=('press_release' if is_press_release_url(lk)
+                                      else 'filed_disclosure')
+                    # Tier 2 outranks it: the 8-K body is a filed description of
+                    # the agreement, not a summary written for readers.
+                    _fd_sig,_fd_src=financing_from_filed_disclosure(cik,accession,headers)
+                    if _fd_sig and financing_source!='filed_disclosure':
+                        financing_signal,financing_source=_fd_sig,_fd_src
                     # Reclassify deal type from filing text — overrides query-assigned type
                     full_ct_lower = full_ct.lower()
                     has_cash = 'per share in cash' in full_ct_lower or 'per common share in cash' in full_ct_lower
@@ -2560,6 +2660,7 @@ def fetch_deals_from_edgar():
                 'close_date':close_date,'tx_value':tx_value,'tx_value_source':tx_value_source,'break_price':break_price,
                 'break_downside':break_downside,'break_price_method':break_price_method,
                 'financing_signal':financing_signal,
+                'financing_source':financing_source,
                 'accession':accession,'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
                 '_filing_text':full_ct[:10000],  # Temp field for enrichment, stripped before Redis save
             })
@@ -3147,7 +3248,10 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     json.loads(_d['reg_tags']) if isinstance(_d.get('reg_tags'), str)
                     else (_d.get('reg_tags') or []),
                     _d.get('break_price'), _d.get('dp'),
-                    _d.get('financing_signal') or 'unknown',
+                    # Gated. The signal itself is unchanged and still displayed;
+                    # what the SCORE sees is 'unknown' unless the evidence is
+                    # strong enough to move a number.
+                    scoring_financing_signal(_d),
                     _od, _d.get('blended'))
                 _d['risk'] = get_risk(_d['score'], _od)
                 if (_d['score'], _d['risk']) != _before:

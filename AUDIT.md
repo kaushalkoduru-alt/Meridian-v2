@@ -3628,3 +3628,104 @@ carrying it on the weaker of the two sources.
 
 Ten new checks in `test_provenance.py`, each built from the exact sentence that
 exposed the defect. All seven suites pass.
+
+
+---
+
+# Three tiers of evidence, and a symmetric gate
+
+2026-09-02. Priced before shipping, as asked.
+
+## The policy
+
+- The **agreement** (EX-2) scores. It is the instrument.
+- Where the agreement was **read and is silent**, no weaker document scores —
+  in **either** direction. The reading is still shown, labelled INFERENCE.
+- Where **no agreement was read**, the best weaker document scores, labelled
+  INFERENCE, because it is then the best evidence that exists rather than a
+  summary of something better we declined to open.
+
+Symmetry is the whole point. Barring only the penalty would have been a bullish
+thumb on the scale — the same §20 error pointed the other way — and a test
+asserts the reward and the penalty are gated identically.
+
+**Silence is not encoded as absence.** `provenance.FINANCING_SILENCE` states it
+as our limit: *an absence of evidence, not evidence the condition is absent.*
+The category reads insufficient evidence, and the explanation says the agreement
+"states nothing this parser could find", never that no condition exists. Four
+pattern defects in two sessions — missed negation, wrong case, an intervening
+condition, a rival-bid context match — each produced confident silence. A fifth
+would have turned a parser gap into a contractual fact.
+
+## The third tier
+
+`SOURCE_RANK = {agreement: 3, filed_disclosure: 2, press_release: 1}`.
+
+An 8-K Item 1.01 body is the registrant's own filed description of the
+agreement's terms, signed, with liability attached. It is not a press release
+and is no longer classified as one. It is INFERENCE rather than FACT — it
+describes the instrument, it is not the instrument.
+
+**ALOT forced the distinction and then exposed three further defects.** Its 8-K
+body reads *"The consummation of the transactions contemplated by the Merger
+Agreement is not conditioned on the availability of any financing to Parent or
+Merger Sub."* Its EX-99 press release does not mention financing at all.
+
+1. **`get_filing_links` returns `ex99 + other`**, so the press release is tried
+   first and the loop stops at the first document passing the gate. The stronger
+   document was ranked below the weaker one and usually never opened. **This
+   collapse is not specific to financing** — `acquirer`, `close_date`,
+   `tx_value` and `deal_type` all read the same `full_ct`, so every
+   detection-time extractor prefers the press release to the filed 8-K body.
+   Reported, not changed: reordering the tiers for all five fields is a larger
+   change than this one.
+2. **The 8-K body link is an iXBRL VIEWER url** — `/ix?doc=/Archives/...` —
+   which serves a JavaScript shell, not the text. Every reader that reached it
+   got an empty document and moved on. Now stripped in `get_filing_links`, which
+   fixes it for all five extractors at once.
+3. **The consolidation was half done.** The patterns moved into
+   `deal_commitment.py` last session; the GUARDS did not. `extract_financing_signal`
+   imported the lists and reimplemented the matching, so it had the negation
+   window but not the rival-bid context test — and read ALOT's own merger
+   agreement as `contingent` off the Superior Proposal clause that
+   `check_financing` already ignored. Both callers now share
+   `financing_condition_state`: one question, one answer, one set of guards.
+
+## The price
+
+Scan idle before and during the sweep. **13 of 19 deals move, 5 change band.**
+
+| Deal | source now | scores | before → after |
+|---|---|---|---|
+| APGE | agreement | yes | 66/Low → **81/Very Low** |
+| BWMN | agreement | yes | 73/Low → **88/Very Low** |
+| GBTG | agreement | yes | 68/Low → **83/Very Low** |
+| ATKR | agreement | yes | 80 → 88 |
+| **ALOT** | filed_disclosure | **no** | 77 → **84** (the −10 removed) |
+| BOW | press_release | no | 88 → 80 |
+| BZH | filed_disclosure | no | 88 → 80 |
+| DSGR | filed_disclosure | no | 88 → 80 |
+| HZO | filed_disclosure | no | 88 → 80 |
+| NATH | press_release | no | 89 → 82 |
+| GBCS | filed_disclosure | no | 81 → 74 (High either way) |
+| OGN | filed_disclosure | no | 81/Very Low → **74/Low** |
+| SLAB | press_release | no | 76/Very Low → **68/Low** |
+| AES, CBZ, GSAT | filed_disclosure | no | unchanged — were already 0 |
+| CZR, PAYO, RAMP | agreement | yes | unchanged — same value, now FACT |
+
+**Correction to the estimate.** I priced this at "7 deals lose +10". It is
+**eight** — GBCS is the extra, and my earlier count read it while its stored
+signal was still `unknown`; it has since rescanned to `committed`. Three band
+drops were expected and there are **two** (OGN, SLAB), because three of the
+gated deals had enough margin to stay Very Low.
+
+Four deals *gain* — they are last session's agreement re-reads, which now carry
+an `agreement` source and therefore score where before they did not.
+
+**AES, CBZ and GSAT now read `committed` from their 8-K bodies**, where their
+agreements said nothing. None of them moves, because the gate holds. What they
+gain is an evidence line in the explanation that was not there before: the
+filed disclosure says the financing is committed, and the score declines to
+count it. That is the policy working rather than a case it fails to cover.
+
+Thirteen new checks in `test_provenance.py`. All seven suites pass.

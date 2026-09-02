@@ -126,21 +126,35 @@ def explain_deal(deal):
         # The agreement answered it. Strongest case, and the only FACT case.
         rows.append(_row('Financing', v, [agreed], P.FACT))
     else:
-        # The agreement was silent or unread, so whatever the press release
-        # suggests is an INFERENCE and is labelled as one. It never inherits
-        # the agreement's authority just because a term object existed.
-        line = {'committed': 'the press release describes committed financing, '
-                             'or states there is no financing condition',
-                'contingent': 'the press release suggests closing is '
-                              'conditioned on financing not yet drawn',
+        # The agreement was silent or unread, so whatever a weaker document
+        # says is an INFERENCE and is labelled as one. It never inherits the
+        # agreement's authority just because a term object existed.
+        _where = {'filed_disclosure': 'the 8-K Item 1.01 body — the '
+                                      'registrant’s filed description of the '
+                                      'agreement',
+                  'press_release': 'the press release'}.get(src, 'the filing')
+        line = {'committed': '%s describes committed financing, or states '
+                             'there is no financing condition',
+                'contingent': '%s suggests closing is conditioned on '
+                              'financing not yet drawn',
                 'confident': 'a highly confident letter, which is not a '
-                             'commitment'}.get(sig)
+                             'commitment (%s)'}.get(sig)
         if line:
-            line += ' — read from the press release, not the agreement'
+            line = line % _where
+        extra = []
+        if line and deal.get('agreement_read'):
+            # Shown, not scored. And the reason is stated as OUR limit, never
+            # as a finding about the deal: four pattern defects in two sessions
+            # have each produced confident silence, and a fifth would turn a
+            # parser gap into a contractual fact.
+            extra.append('the merger agreement was read and states nothing '
+                         'this parser could find, so the above is reported '
+                         'but does not affect the score — an absence of '
+                         'evidence, not evidence the condition is absent')
         rows.append(_row('Financing',
                          {'committed': STRONG, 'contingent': WEAK,
                           'confident': NEUTRAL}.get(sig),
-                         [line, agreed], P.INFERENCE))
+                         [line, agreed] + extra, P.INFERENCE))
 
     # ---- regulatory --------------------------------------------------------
     # The agreement's antitrust covenant is a FACT and outranks the priors; the

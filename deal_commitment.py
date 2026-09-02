@@ -389,6 +389,41 @@ def check_antitrust_efforts(text):
     return UNKNOWN, "no antitrust efforts language found", None
 
 
+def financing_condition_state(text):
+    """
+    Does THIS deal's closing depend on financing? ('none' | 'exists' | None)
+
+    The patterns were consolidated into this module and the GUARDS were not,
+    which left the job half done: extract_financing_signal imported the lists
+    and reimplemented the matching, so it had the negation window but not the
+    rival-bid context test -- and read ALOT's merger agreement as `contingent`
+    off the Superior Proposal clause that check_financing already ignored.
+
+    One question, one answer, one set of guards. Both callers use this.
+    """
+    flat = re.sub(r'\s+', ' ', text or '')
+    if not flat:
+        return None, None, None
+
+    no_label, no_text = _first_match(flat, NO_FINANCING_COND, re.IGNORECASE)
+    if no_label:
+        return 'none', no_label, no_text
+
+    yes_label, yes_text = _first_match(flat, HAS_FINANCING_COND, re.IGNORECASE)
+    if yes_label and yes_text:
+        _at = flat.lower().find(yes_text.lower())
+        if _at > 0:
+            _before = flat.lower()[max(0, _at - FINANCING_NEGATION_WINDOW):_at]
+            if any(_n in _before for _n in FINANCING_NEGATORS):
+                return None, None, None
+            if any(_p in flat.lower()[max(0, _at - 400):_at + 260]
+                   for _p in ('takeover proposal', 'superior proposal',
+                              'acquisition proposal', 'alternative proposal')):
+                return None, None, None
+        return 'exists', yes_label, yes_text
+    return None, None, None
+
+
 def check_financing(text):
     """
     Absence of a financing condition is the good outcome. Committed letters
@@ -405,28 +440,9 @@ def check_financing(text):
     # Condition" -- which DENIES a condition -- missed `no financing condition`
     # on capitalisation and matched the pattern that asserts one instead.
     # BWMN and APGE were both read WEAK off a sentence saying the opposite.
-    no_label, no_text = _first_match(flat, NO_FINANCING_COND, re.IGNORECASE)
-    yes_label, yes_text = _first_match(flat, HAS_FINANCING_COND, re.IGNORECASE)
-    # "financing condition" reads the same in the sentence that grants one and
-    # the sentence that denies one. The NO patterns above are tried first and
-    # catch most denials outright; this catches the phrasings they do not, so a
-    # denial is never reported as a condition on a technicality of wording.
-    if yes_label and yes_text:
-        _at = flat.lower().find(yes_text.lower())
-        if _at > 0:
-            _before = flat.lower()[max(0, _at - FINANCING_NEGATION_WINDOW):_at]
-            if any(_n in _before for _n in FINANCING_NEGATORS):
-                yes_label, yes_text = None, None
-            # A financing condition named inside the definition of a RIVAL bid
-            # is not a condition on this deal. ALOT's only match sits in its
-            # Superior Proposal test -- "the anticipated timing, conditions
-            # (including any financing condition ...) ... of such Takeover
-            # Proposal" -- describing an offer that does not exist, and it was
-            # charging the deal 10 points for it.
-            elif any(_p in flat.lower()[max(0, _at - 400):_at + 260]
-                     for _p in ('takeover proposal', 'superior proposal',
-                                'acquisition proposal', 'alternative proposal')):
-                yes_label, yes_text = None, None
+    _state, _lab, _txt = financing_condition_state(flat)
+    no_label, no_text = (_lab, _txt) if _state == 'none' else (None, None)
+    yes_label, yes_text = (_lab, _txt) if _state == 'exists' else (None, None)
     letter_label, letter_text = _first_match(flat, COMMITMENT_LETTERS)
 
     if no_label:

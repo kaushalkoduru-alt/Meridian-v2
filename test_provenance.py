@@ -301,5 +301,70 @@ check("and is still named as the source when they AGREE",
       'agreement',
       'skipping the source on agreement badged a contractual fact as INFERENCE')
 
+print()
+print("=" * 78)
+print("financing — three tiers, and a symmetric gate")
+print("=" * 78)
+
+from main import (financing_evidence_scores, scoring_financing_signal,
+                  is_press_release_url, get_filing_links)
+from deal_commitment import financing_condition_state
+
+check("the 8-K body outranks the press release",
+      P.SOURCE_RANK['filed_disclosure'] > P.SOURCE_RANK['press_release'], True,
+      'a filed Item 1.01 disclosure is not marketing copy')
+check("and the agreement outranks both",
+      P.SOURCE_RANK['agreement'] > P.SOURCE_RANK['filed_disclosure'], True)
+check("a filed disclosure is INFERENCE, not FACT",
+      P.classify('financing_signal',
+                 {'financing_source': 'filed_disclosure'})[0], P.INFERENCE,
+      'it describes the instrument; it is not the instrument')
+
+# The gate is symmetric. That is the point of it.
+_read = {'agreement_read': '0001-26-1'}
+check("agreement read + silent: a press-release REWARD does not score",
+      scoring_financing_signal(dict(_read, financing_signal='committed',
+                                    financing_source='press_release')),
+      'unknown')
+check("agreement read + silent: a press-release PENALTY does not score either",
+      scoring_financing_signal(dict(_read, financing_signal='contingent',
+                                    financing_source='press_release')),
+      'unknown',
+      'barring only the penalty would be a bullish thumb on the scale')
+check("agreement read + silent: the 8-K body does not score",
+      financing_evidence_scores(dict(_read, financing_source='filed_disclosure')),
+      False)
+check("no agreement read: the best weaker document DOES score",
+      scoring_financing_signal({'financing_signal': 'contingent',
+                                'financing_source': 'filed_disclosure'}),
+      'contingent',
+      'it is then the best evidence there is, not a summary of something better')
+check("the agreement always scores",
+      financing_evidence_scores(dict(_read, financing_source='agreement')), True)
+
+# Silence is our limit, never a finding about the deal.
+check("silence is described as an absence of evidence",
+      'not evidence the condition is absent' in P.FINANCING_SILENCE, True,
+      'four pattern defects in two sessions each produced confident silence')
+
+# One guarded answer, shared. The patterns were consolidated and the guards
+# were not, so this read a Superior Proposal clause as a financing condition.
+_rival = ('the anticipated timing, conditions (including any financing '
+          'condition or the reliability of any debt or equity funding '
+          'commitments) and prospects for completion of such Takeover Proposal')
+check("the rival-bid guard applies to the press-release classifier too",
+      extract_financing_signal(_rival), 'unknown')
+check("and the shared state function is what both call",
+      financing_condition_state(_rival)[0], None)
+check("a real condition still reaches both",
+      (extract_financing_signal('The Offer is subject to a financing condition.'),
+       financing_condition_state('The Offer is subject to a financing condition.')[0]),
+      ('contingent', 'exists'))
+
+check("an EX-99 exhibit is recognised as the press release",
+      is_press_release_url('/Archives/edgar/data/8146/x/d100857dex991.htm'), True)
+check("an 8-K body is not",
+      is_press_release_url('/Archives/edgar/data/8146/x/d100857d8k.htm'), False)
+
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")
