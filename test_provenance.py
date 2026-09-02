@@ -411,5 +411,51 @@ check("the unevidenced denominator is still all eight categories",
       "have+' of '+total+' categories carry evidence" in _T, True,
       'filtering the rows must not shrink the count it reports')
 
+print()
+print("=" * 78)
+print("verification — a skipped check is not a passed check")
+print("=" * 78)
+
+import verification as V
+
+_OK = {'direction': {'verdict': 'TARGET'}, 'gate': {'verdict': 'VERIFIED'},
+       'agreement_read': '0001-26-1'}
+check("a deal that passed both enforcing checks is verified",
+      V.verification_state(_OK)['verified'], True)
+check("a verified deal shows no banner",
+      V.verification_state(_OK)['headline'], None)
+
+# The exact shape BCRX, GPRE and PACK reached the live feed in.
+_SKIPPED = {'ticker': 'BCRX', 'direction': {}, 'gate': None}
+_vs = V.verification_state(_SKIPPED)
+check("both checks skipped is NOT verified", _vs['verified'], False,
+      'they sat in the feed with a score and a risk band')
+check("and the page says skipped, not failed",
+      'SKIPPED, NOT PASSED' in _vs['headline'], True)
+check("naming which checks did not run", sorted(_vs['skipped']),
+      ['direction', 'gate'])
+check("a failed check reads differently from a skipped one",
+      'FAILED' in V.verification_state(
+          {'direction': {'verdict': 'ACQUIRER'},
+           'gate': {'verdict': 'VERIFIED'}})['headline'], True)
+
+# A cached row round-trips its verdicts through the CSV as bare strings.
+check("verdicts cached as strings still read as passed",
+      V.verification_state({'direction': 'TARGET', 'gate': 'VERIFIED',
+                            'agreement_read': 'a'})['verified'], True,
+      'a bare .get(verdict) on a string crashed this block once before')
+
+# An unread agreement is reported but is not an enforcing check.
+_NOAGR = dict(_OK); _NOAGR.pop('agreement_read')
+check("an unread agreement does not by itself make a deal unverified",
+      V.verification_state(_NOAGR)['verified'], True)
+check("but it is still reported",
+      next(c['state'] for c in V.verification_state(_NOAGR)['checks']
+           if c['name'] == 'agreement'), V.SKIPPED)
+
+_T = io.open(r'templates/index.html', encoding='utf-8').read()
+check("the banner renders above the numbers it qualifies",
+      _T.index('id="da-verification"') < _T.index('id="da-premium-note"'), True)
+
 print("=" * 78)
 print("ALL PASS" if ok else "SOMETHING FAILED")

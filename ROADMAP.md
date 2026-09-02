@@ -140,6 +140,30 @@ about a number being misleading, not about a feature being missing.
   performance exceptions and caps, financing outs, full termination rights by
   party, and a section number for each classification.
 
+- [ ] **§7b · Stamp readings with the extractor version that produced them**
+  `agreement_read` marks a DOCUMENT — the accession whose exhibit was fetched —
+  and a signed agreement never changes, so skipping the re-fetch is correct. The
+  defect is what that marker is used for: it freezes the READINGS derived from
+  the document, with no version attached. `commitment` caches STRONG/WEAK/UNKNOWN
+  verdicts and `outside_date` caches a parsed date, and both are carried forward
+  verbatim while the extractor that produced them improves underneath.
+
+  Every extractor fix is therefore invisible on deals already read, and whether
+  a fix reaches a deal depends on cache state rather than on the fix. HZO, ATKR
+  and RAMP needed markers cleared by hand for the outside-date work. ALOT needed
+  the same this session, while APGE, BWMN and GBTG happened to re-read
+  naturally — **and that is the problem, not the consolation**: the same
+  correction landed on three deals and not a fourth for reasons unrelated to
+  either the deal or the fix.
+
+  **Build:** stamp each cached reading with the version of the extractor that
+  produced it (`commitment_v`, `outside_date_v`), bump the version whenever the
+  patterns change, and re-read when the stored version is behind. Caching on the
+  document is right; caching a verdict against a document is what has to stop.
+  Retires `/api/admin/clear-agreement-markers` as the only release valve.
+
+  *Third occurrence of this shape. It will recur on the next extractor change.*
+
 - [ ] **§7 · Source and auditability**
   Built: the filing quote under every commitment reading and structure flag.
   Missing: section numbers (§7.03(b)), a "view evidence" interaction that goes

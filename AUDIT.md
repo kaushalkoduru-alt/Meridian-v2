@@ -3920,3 +3920,136 @@ collapsing possible without dropping the meaning — the two were welded togethe
 into one string, so any consumer had to show both or neither.
 
 Eleven new checks in `test_provenance.py`. All seven suites pass.
+
+
+---
+
+# A skipped check is not a passed check
+
+2026-09-02.
+
+## 1 · Marking what was never checked
+
+Both enforcing checks fail open, and both are right to:
+
+```python
+if DIRECTION_ENFORCING and anthropic_key:        # never enforce blind
+except Exception as _ge:
+    print("[Gate] error (non-fatal, nothing blocked)")
+```
+
+A missing model key would otherwise mark every deal UNCLEAR and empty the feed;
+an exception in the gate would do the same. **Two fail-open paths, not one** —
+the gate's is an exception handler, which is the quieter of the two because
+nothing about it depends on configuration.
+
+`verification.py` records which checks ran. `verified` is true only when **both**
+enforcing checks passed; a skipped check and a failed check read differently,
+and the deal page carries an amber (skipped) or red (failed) banner **above the
+metrics**, because it is a statement about whether the numbers mean anything:
+
+```
+NOT VERIFIED — A CHECK WAS SKIPPED, NOT PASSED
+This deal entered the feed without direction or gate running. Those checks
+are what confirm the filer is the target and that a real merger announcement
+exists, so nothing on this page has been confirmed yet.
+  SKIPPED · the direction check did not run — it is skipped when no model key
+            is available, so this deal was never tested for whether the filer
+            is the target
+```
+
+It is computed per request from the record itself, so a row cached before this
+existed reports honestly rather than defaulting to verified. **The current feed
+is 19 of 19 verified** — the state function agrees with reality on deals that
+did pass.
+
+An unread agreement is reported but does not by itself make a deal unverified:
+it is a completeness matter, not an enforcing check.
+
+### Should a keyless scan admit deals at all?
+
+**It should — but only as it does now, with the admission marked.**
+
+The case for refusing: a stalled feed is honest and a false one is not. A deal
+that reaches a paying reader with a score, a risk band and a spread has made a
+claim; a deal that never appears has made none. BCRX, GPRE and PACK are the
+argument — three securities presented as merger arbitrage, one of them with a
+51% "spread" that was the gap between a warrant strike and a share price.
+
+The case for admitting, which I think is stronger:
+
+1. **The failure is not confined to new deals.** A keyless scan does not only
+   admit new deals — it stops filtering *existing* ones too, since the direction
+   filter is what removes a deal whose verdict has turned. Refusing new
+   admissions fixes the smaller half and leaves the larger one.
+2. **Refusing hides the outage instead of showing it.** A feed that silently
+   stops growing looks like a quiet market. The three false positives were found
+   because they were visible and wrong; a suppressed deal is found by nobody.
+3. **The real defect was never admission** — it was that admission and
+   verification were indistinguishable afterwards. That is now fixed, and fixing
+   it is what makes admission safe rather than merely tolerable.
+
+So: admit, mark, and let the threshold below decide what is too far gone to show
+at all. If the key outage is persistent rather than transient, the answer is an
+alert on the outage, not a quieter feed.
+
+## 2 · A threshold, proposed and not implemented
+
+**The historical separation is clean.** Findings per deal across the current
+feed, every one of which is verified:
+
+```
+GBCS 3   BZH 2   GSAT 1   ... and 16 deals at 0
+max on a verified deal:  3
+BCRX 8    GPRE 9    PACK 8
+```
+
+Nothing sits between 3 and 8.
+
+**A raw count would still be the wrong rule.** The three false positives scored
+high mostly on *absence* findings — "commitment absent, though 19 of 22 deals
+carry it" — and a legitimate brand-new deal carries roughly seven of those
+before its agreement pass has run. A count-only threshold at 5 blocks the honest
+case it cannot distinguish from the dishonest one.
+
+What separates them is not the count. It is that a legitimate new deal **has**
+its direction and gate verdicts on its first scan, because both run over every
+result each scan. The three did not, because both were skipped.
+
+**Proposed rule — hold a deal when BOTH:**
+
+1. it is **unverified** (an enforcing check skipped or failed), **and**
+2. it carries **5 or more integrity findings**
+
+Neither condition alone works. Unverified alone holds the entire feed during a
+keyless scan. Five findings alone holds a legitimate new deal.
+
+**Applied historically:** holds **0 of 19** on the current feed, and **all three**
+of BCRX, GPRE and PACK. No false holds.
+
+Held is not deleted — a held deal should go to `PENDING_EXCLUSIONS` for
+inspection, the way shadow-mode completions already do, so the first week of
+this rule is observable before it blocks anything.
+
+*Not implemented, as instructed.*
+
+## 3 · The durable cache fix — ROADMAP §7b
+
+`agreement_read` marks a DOCUMENT, and skipping the re-fetch of a signed
+agreement is correct. What is not correct is that the marker freezes the
+READINGS derived from that document, with no version attached: `commitment`
+caches verdicts, `outside_date` caches a parsed date, and both are carried
+forward verbatim while the extractor beneath them improves.
+
+So every extractor fix is invisible on deals already read, and **whether a fix
+reaches a deal depends on cache state rather than on the fix**. HZO, ATKR and
+RAMP needed markers cleared by hand. ALOT needed the same this session while
+APGE, BWMN and GBTG happened to re-read naturally — which is the problem rather
+than the consolation, since the same correction landed on three deals and not a
+fourth for reasons unrelated to either the deal or the fix.
+
+Recorded as **§7b**: stamp each reading with the extractor version that produced
+it, bump on pattern changes, re-read when the stored version is behind. Third
+occurrence of this shape.
+
+Eleven new checks in `test_provenance.py`. All seven suites pass.

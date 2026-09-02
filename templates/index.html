@@ -1322,6 +1322,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 
     <!-- critical numbers strip -->
     <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
+    <div id="da-verification" style="margin:14px 2.5rem 0;"></div>
     <div id="da-premium-note" style="margin:0 2.5rem;"></div>
     <div id="da-deadline" style="margin:0 2.5rem;"></div>
     <div id="da-timing" style="margin:14px 2.5rem 0;"></div>
@@ -2185,6 +2186,39 @@ function _daQuoteToggleAll(){
   if(b) b.textContent = open ? 'show all filing language'
                              : 'hide all filing language';
 }
+// A skipped check is not a passed check.
+//
+// Both enforcing checks fail open -- the direction check is skipped when no
+// model key is present, and an exception in the gate block blocks nothing --
+// and both are right to. What was wrong is that a deal admitted because a
+// check was SKIPPED looked identical to one admitted because it PASSED. BCRX,
+// GPRE and PACK sat in the live feed that way with scores and risk bands, and
+// none of the three was a merger of the filer at all.
+//
+// This sits above the numbers rather than below them, because it is a
+// statement about whether the numbers mean anything.
+function _daVerification(deal){
+  var v = deal && deal.verification;
+  if(!v || v.verified) return '';
+  var failed = (v.failed || []).length > 0;
+  var col = failed ? '#f0735e' : '#e2b23f';
+  var rows = (v.checks || []).filter(function(c){ return c.state !== 'passed'; });
+  return '<div style="padding:14px 17px; border:1px solid ' + col + '; '
+    + 'background:rgba(' + (failed ? '240,115,94' : '226,178,63') + ',0.08);">'
+    + '<div style="font-size:10px; letter-spacing:0.16em; color:' + col + '; '
+    +   'text-transform:uppercase; font-weight:600;">' + v.headline + '</div>'
+    + '<div style="margin-top:8px; font-size:12px; line-height:1.65; '
+    +   'color:#e8e0d0;">' + v.detail + '</div>'
+    + rows.map(function(c){
+        return '<div style="margin-top:7px; padding-left:12px; '
+          + 'border-left:2px solid ' + col + '55; font-size:11px; '
+          + 'line-height:1.6; color:#9a9079;">'
+          + '<span style="color:' + col + '; text-transform:uppercase; '
+          +   'letter-spacing:0.1em; font-size:9.5px;">' + c.state + '</span> \u00b7 '
+          + c.detail + '</div>';
+      }).join('')
+    + '</div>';
+}
 function _daDeadline(deal){
   var od = deal && deal.outside_date;
   if(!od || !od.date) return '';
@@ -2642,6 +2676,7 @@ async function renderAnalysis(deal){
       + '</div>';
   })();
 
+  _daSet('da-verification', _daVerification(deal));
   _daSet('da-deadline', _daDeadline(deal));
   _daSet('da-explain', _daExplain(deal));
 

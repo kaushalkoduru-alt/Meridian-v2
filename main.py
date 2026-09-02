@@ -22,6 +22,7 @@ from deal_direction import (check_direction, direction_report,
                             DIRECTION_ENFORCING, VERDICT_TARGET)
 from provenance import provenance_map
 from explain import explain_deal
+from verification import verification_state
 
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
@@ -3754,6 +3755,10 @@ def get_clean_deals():
         try:
             d['provenance'] = provenance_map(d)
             d['explanation'] = explain_deal(d)
+            # Which enforcing checks actually ran. Computed per request from
+            # the record itself, so a cached row written before this existed
+            # still reports honestly rather than defaulting to verified.
+            d['verification'] = verification_state(d)
         except Exception as _pe:
             print(f"  [Provenance] {d.get('ticker')}: {_pe}")
     return deals
