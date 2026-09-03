@@ -3259,7 +3259,12 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                 _before = (_d.get('score'), _d.get('risk'))
                 try:
                     _sp = float(_d.get('sp_pct'))
-                    _dy = int(_d.get('days_since_filed') or 0)
+                    # The deal dict stores this as 'days_old' (set at line ~2678);
+                    # 'days_since_filed' is the score_deal PARAMETER name and was
+                    # never a key here, so this read returned None on every deal
+                    # and the rescore scored all of them as 0 days old -- a flat
+                    # +10 "fresh deal" bonus that the initial scan had not given.
+                    _dy = int(float(_d.get('days_old') or 0))
                 except (TypeError, ValueError):
                     continue
                 _d['score'] = score_deal(
