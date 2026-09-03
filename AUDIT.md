@@ -4053,3 +4053,145 @@ it, bump on pattern changes, re-read when the stored version is behind. Third
 occurrence of this shape.
 
 Eleven new checks in `test_provenance.py`. All seven suites pass.
+
+---
+
+# §30 A/B/C — confirmation sweep, and a rescore that scored every deal as new
+
+The three modeling corrections were checked against the code and the live
+19-deal feed (`deals.json`, fetched 2026-09-03). Backend logic was already
+correct on all three; the surviving instances were in presentation, plus one
+unrelated scoring bug the sweep surfaced.
+
+## A · All-cash does not mean financing secured
+
+**Logic — complete.** `score_deal` no longer takes financing from consideration.
+`score_consideration` scores only whether the payout moves (stock leg → +4, cash
+of any kind → +8); financing reaches the score through `scoring_financing_signal`,
+which is agreement-first and gates a press-release signal to `unknown` once the
+agreement has been read and found silent. The two are independent inputs.
+
+**Presentation — two live violations, fixed.**
+- Methodology page, Factor 02, read *"All Cash — financing secured +10"*. That is
+  the banned inference printed as a scoring rule. Retitled **Consideration** with
+  the current bands and a note that buyer category is not scored.
+- `getScoreBreakdown` in `index.html` (rendered in the deal page's score panel)
+  was a stale client-side copy of a scoring engine two rewrites old — it still
+  had a `Deal Type` row paying All Cash +10. Rewritten to mirror the current
+  `score_deal` exactly (verified against all 19 deals via the running server).
+
+The deal page already showed **Consideration** and **Financing Signal** as
+separate rows — that half was done.
+
+## B · Private equity does not mean financing risk
+
+**Logic — complete.** `get_acquirer_type` reads the buyer string only and never
+consults `deal_type`; `acquirer_type` is display-only (passed to
+`get_regulatory_risk` as a dead parameter and to nothing that scores).
+`reg_tags` are priors from deal size, sector and acquirer nationality — there is
+no private-equity bucket. `score_consideration` gives a PE take-private the same
++8 as any cash deal.
+
+**Presentation — four live instances, fixed.**
+- Methodology Factor 02, *"Private Equity — financing dependent +5"* — removed
+  with the retitle above.
+- `getScoreBreakdown` `Deal Type` row paid Private Equity +5 — gone in the
+  rewrite; the financing row is now gated the way the backend gates it.
+- `getRiskFactors` pushed a standing risk factor for every PE deal
+  (*"PE acquisitions depend on financing conditions… break risk for leveraged
+  buyouts"*). Removed. Financing risk is surfaced from the contractual
+  `contingent` signal, which is already a separate factor.
+- Landing page, "Why deals break": *"especially in a private equity deal"* →
+  reworded to point at whether financing is contractually committed, not at the
+  buyer's category.
+
+`finDesc`'s "standard in PE deals" was left — it describes what a highly-confident
+letter is, not a risk judgement.
+
+## C · A large premium is not evidence a deal will close
+
+**Logic — complete.** `score_deal_premium` returns 0 for every deal; premium is
+computed and shown but contributes nothing to the score. Premium is still used
+for break-price reversal and standalone-downside display, which §30C permits.
+
+**Presentation — two live violations, fixed.**
+- Methodology Factor 05 was a full premium→points ladder
+  (*"50%+ over pre-announcement +8"* … *"Under 5% — acquirer can walk −5"*).
+  Replaced with a single *"Any premium, any size +0"* row and a note on what
+  premium actually measures.
+- `getScoreBreakdown` carried the same ladder client-side (+8 to −5). Removed;
+  the row now reads `+0 — not scored (§30C)`.
+
+The teal-above-25% styling was already gone (`_daPremium` applies no colour
+scale) and the deal page's premium note already states what it measures — those
+were done.
+
+## Surfaced by the sweep — the rescore scored every deal as freshly filed
+
+Verifying the corrected `getScoreBreakdown` against `score_deal` exposed a
+separate live bug. `main.py` line 3262, in the post-agreement rescore:
+
+```
+_dy = int(_d.get('days_since_filed') or 0)
+```
+
+The deal dict has no `days_since_filed` key — the value is stored as `days_old`
+(line ~2678); `days_since_filed` is the *parameter* name on `score_deal`. So the
+read returned `None` on every deal and the rescore — which runs every scan and
+overwrites the score — passed **0 days** to `score_deal`, a flat `+10` "fresh
+deal" bonus the initial scan never gave.
+
+Fixed to read `days_old`. This is the seventh instance of the CLAUDE.md shape:
+reader and writer disagree on the field name.
+
+## The fix priced — before/after on the live feed
+
+Committed as `d58c617`, deployed to Railway, and the feed rescanned
+(2026-09-03 ~18:55). Every deal whose score moved, and only those:
+
+| Deal | Before | After | Δ | Band |
+|------|--------|-------|---|------|
+| GSAT | 68 Low       | 61 Low       | −7 | — |
+| SLAB | 71 Low       | 64 Low       | −7 | — |
+| CZR  | 80 Very Low   | 73 Low       | −7 | Very Low → **Low** |
+| NATH | 82 Very Low   | 74 Low       | −8 | Very Low → **Low** |
+| RAMP | 74 Low       | 66 Low       | −8 | — |
+| OGN  | 74 Low       | 66 Low       | −8 | — |
+| AES  | 75 Very Low   | 68 Low       | −7 | Very Low → **Low** |
+| GBTG | 83 Very Low   | 75 Very Low   | −8 | — (75 is the Very Low floor) |
+
+The other 11 deals did not move. Every deal that moved has `days_old ≥ 90`
+(PAYO at 80 days correctly kept its `+10`); every move is exactly the `−7`/`−8`
+that removing a spurious `+10` raw produces after normalization. Nothing moved
+for any other reason.
+
+The three band changes are the bug being **removed**, not introduced: the
+phantom `+10` had pushed CZR, NATH and AES up into Very Low, and their correct
+band is Low. A "Very Low" merger-arb deal that is actually 7 points lower is the
+kind of false comfort §29 says to delete.
+
+## §30 confirmed — box checked
+
+Against the rescanned live feed (all 19 deals):
+
+- **A.** No score reflects financing certainty inferred from consideration.
+  GSAT is `deal_type` Private Equity, financing `committed` from a filed
+  disclosure — and its live score is 61, the value with financing gated to
+  `unknown` because the agreement was read and is silent. Consideration (+8 for
+  the cash payout) and financing (0) are independent, and the deal page renders
+  them as separate rows.
+- **B.** No score reflects buyer category. BWMN and ALOT carry
+  `acquirer_type: Private Equity` (correctly derived from the buyer string, not
+  from `deal_type`); BWMN scores 88, identical to strategic all-cash ATKR.
+  GSAT's acquirer resolves to Strategic despite the Private Equity `deal_type`.
+  `reg_tags` are size/sector/nationality priors with no PE bucket. The
+  `getScoreBreakdown` PE band and the `getRiskFactors` leveraged-buyout factor
+  are gone from the deployed page.
+- **C.** `score_deal_premium` returns 0 for all 19; every live score recomputes
+  exactly with premium removed from the sum. The methodology premium ladder and
+  the `getScoreBreakdown` premium ladder are gone from the deployed page; the
+  deal page shows the premium with a note that it measures downside, not close
+  probability. No premium-size colour scale.
+
+All three hold in logic and presentation on the live feed, and the `days_old`
+correction is live. **§30 box checked.**

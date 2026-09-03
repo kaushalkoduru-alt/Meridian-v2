@@ -350,7 +350,13 @@ deliberately.
 
 ## NOW — correctness and trust (P0)
 
-- [ ] **§30 · Critical modeling corrections**
+- [x] **§30 · Critical modeling corrections** — A/B/C confirmed clean in logic
+  and presentation against the rescanned live feed 2026-09-03. Scoring logic was
+  already correct; the surviving instances were in the methodology page and the
+  client-side `getScoreBreakdown`, now rewritten to mirror `score_deal`. The
+  sweep also caught the rescore reading `days_since_filed` (not a dict key) and
+  scoring every deal as 0 days old — fixed, 8 deals re-priced, before/after in
+  AUDIT.md.
 
   **A. All-cash does not mean financing secured.** An all-cash deal can still
   run on debt, bridge, credit facilities, equity, or asset sales. Separate
