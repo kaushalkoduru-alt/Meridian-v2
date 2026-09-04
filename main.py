@@ -4513,6 +4513,95 @@ async def track_record_chart(ticker: str, start: str = "2024-01-01", end: str = 
     return JSONResponse(content={"prices": [], "spy": [], "etf": etf})
 
 
+# ─── IMPLIED PROBABILITY, AND WHETHER THE TRADE PAYS ────────────────────────
+#
+# Two separate questions, kept separate:
+#
+#   1. WILL IT CLOSE — the implied probability of closing, read from where the
+#      stock sits between the modeled break and the deal price:
+#          p = (current - break) / (deal - break)
+#      This is a fact about the deal. It does not depend on anyone's funding
+#      cost, and it is always published when the two-state gate passes.
+#
+#   2. IS THERE ANYTHING HERE — the annualized return if it closes. The BASE
+#      CASE is UNLEVERED — carry = 0 — because that is the return on capital and
+#      it assumes nobody's funding cost:
+#          gross = (deal + dividends - current) / current * 365/days
+#      The levered case is shown ALONGSIDE, not instead: at r financing,
+#          net = gross - r
+#      Applying r to the whole position assumes 100% borrowing. Real merger-arb
+#      runs a blend of capital and debt, and a cash allocator's carry is zero,
+#      so "0 of 19 profitable" as a headline would bake in maximum leverage as
+#      the default — an assumption presented as a fact (§20). Unlevered leads;
+#      the carry drag is shown as what leverage costs.
+#
+# The BREAK-EVEN probability is the leverage lens: the close probability (1)
+# would need for the LEVERED position's expected value to be zero:
+#     p_breakeven = (current*(1 + r*T) - break - dividends) / (deal - break)
+# It is a threshold for the financed case, not a verdict on the deal. With
+# r = 0 it collapses to the implied probability and net = gross.
+#
+# Break is assumed to resolve at the same horizon as close; we do not know when
+# a deal breaks and assuming "today" would understate carry asymmetrically.
+
+# ASSUMPTION, not a constant, and NOT the base case: the annualized cost of
+# carry on a FULLY FINANCED long. 5.5% is one trader borrowing the whole
+# position at roughly 2026 short-term funding plus a spread. The feed's base
+# case is unlevered (carry = 0); this rate drives the "at 5.5% financing"
+# figure shown beside it. Not user-adjustable yet. Feeds ONLY this endpoint —
+# nothing scores off it.
+IMPLIED_PROB_CARRY_RATE = 0.055
+
+
+def _implied_prob_horizon(deal):
+    """
+    (days, label) for the holding period. Guidance ('expected to close in Q3
+    2026') where the filing gives one, the contractual outside date otherwise,
+    and a 30-day floor labelled as such when both have already passed. The
+    label ships with the number so the reader knows which clock was used.
+    """
+    cd = deal.get('close_date')
+    dtc = deal.get('days_to_close')
+    if cd and cd != 'TBD' and isinstance(dtc, (int, float)) and dtc > 0:
+        return float(dtc), 'guidance'
+    od = deal.get('outside_date') or {}
+    odr = od.get('days_remaining')
+    if isinstance(odr, (int, float)) and odr > 0:
+        return float(odr), 'deadline'
+    return 30.0, 'both horizons passed, floored to 30 days'
+
+
+def _target_dividend_to_close(ticker, years):
+    """
+    Dividend per share the target is expected to pay before close, from its
+    current declared rate pro-rated over the holding period.
+
+    Returns (dollars, annual_rate, source). A company with no dividend on record
+    returns (0.0, 0.0, 'no dividend on record') — stated, not assumed silently.
+    A failed lookup returns (0.0, None, 'dividend lookup unavailable') so the
+    caller can flag that the figure is incomplete rather than zero.
+
+    Note: a merger agreement can restrict dividends during the pendency. This
+    uses the declared rate as-is; where it matters the agreement is the
+    authority.
+    """
+    try:
+        info = yf.Ticker(ticker).info or {}
+    except Exception as e:
+        print(f"[ImpliedProb] dividend lookup failed for {ticker}: {e}")
+        return 0.0, None, 'dividend lookup unavailable'
+    rate = info.get('dividendRate')
+    if rate is None:
+        rate = info.get('trailingAnnualDividendRate')
+    try:
+        rate = float(rate) if rate is not None else 0.0
+    except (TypeError, ValueError):
+        rate = 0.0
+    if rate <= 0:
+        return 0.0, 0.0, 'no dividend on record'
+    return round(rate * years, 4), rate, 'declared rate, pro-rated'
+
+
 @app.get("/api/implied-probability/{ticker}")
 async def implied_probability(ticker: str):
     try:
@@ -4545,28 +4634,78 @@ async def implied_probability(ticker: str):
                          "prices: " + why + ". The break price is a model estimate, "
                          "not an observed floor."),
             })
+
+        days, horizon_label = _implied_prob_horizon(deal)
+        years = days / 365.0
+        r = IMPLIED_PROB_CARRY_RATE
+        carry = round(cp * r * years, 3)
+        dividend, div_rate, div_source = _target_dividend_to_close(ticker, years)
+
+        # 1. WILL IT CLOSE — implied probability, undiscounted. Independent of
+        #    funding cost, always published when the gate passes.
         prob = round(((cp - bp) / (dp - bp)) * 100, 1)
+
+        # 2. IS THERE ANYTHING HERE — base case is UNLEVERED (carry = 0): the
+        #    return on capital, no funding-cost assumption. The levered figure
+        #    is derived alongside.
+        dollar_spread = round(dp + dividend - cp, 3)
+        gross_return_annual = round((dollar_spread / cp) * (365.0 / days) * 100, 1)
+        net_carry_return_annual = round(gross_return_annual - r * 100, 1)
+        positive_unlevered = gross_return_annual > 0
+
+        # The leverage lens: the close probability the FINANCED position would
+        # need to break even at r. A threshold for the levered case, not a
+        # verdict on the deal.
+        breakeven_prob = round(((cp * (1 + r * years) - bp - dividend)
+                                / (dp - bp)) * 100, 1)
+
+        assumptions = {
+            "horizon_days": round(days),
+            "horizon_basis": horizon_label,
+            "carry_rate": r,
+            "carry_cost": carry,
+            "dividend": dividend,
+            "dividend_annual_rate": div_rate,
+            "dividend_source": div_source,
+        }
+
         if prob >= 90:
-            signal = "Very High"
-            color = "green"
+            signal, color = "Very High", "green"
         elif prob >= 75:
-            signal = "High"
-            color = "teal"
+            signal, color = "High", "teal"
         elif prob >= 55:
-            signal = "Moderate"
-            color = "amber"
+            signal, color = "Moderate", "amber"
         else:
-            signal = "Low"
-            color = "red"
+            signal, color = "Low", "red"
+
+        below_carry = net_carry_return_annual < 0
         return JSONResponse(content={
             "probability": prob,
-            "model_applies": True,
             "signal": signal,
             "color": color,
+            "model_applies": True,
             "current_price": cp,
             "deal_price": dp,
             "break_price": bp,
-            "method": deal.get('break_price_method', 'historical')
+            "method": deal.get('break_price_method', 'historical'),
+            "dollar_spread": dollar_spread,
+            "gross_return_annual": gross_return_annual,
+            "unlevered_return_annual": gross_return_annual,
+            "positive_unlevered": positive_unlevered,
+            "net_carry_return_annual": net_carry_return_annual,
+            "below_carry": below_carry,
+            "breakeven_prob": breakeven_prob,
+            "leverage_note": (
+                f"Base case is unlevered: {gross_return_annual:.1f}%/yr is the "
+                f"return on capital, no borrowing assumed. Financing the whole "
+                f"position at {r*100:.1f}%/yr costs ${carry:.2f}/share and nets "
+                f"{net_carry_return_annual:+.1f}%/yr"
+                + (f" — carry exceeds the ${dollar_spread:.2f} spread, so the "
+                   f"fully financed trade loses money even if it closes."
+                   if below_carry else ".")
+                + " Real merger-arb runs a blend of capital and debt, so the "
+                  "effective carry sits between the two."),
+            "assumptions": assumptions,
         })
     except Exception as e:
         print(f"Implied probability error {ticker}: {e}")

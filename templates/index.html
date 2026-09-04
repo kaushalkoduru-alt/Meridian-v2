@@ -2544,30 +2544,64 @@ async function renderAnalysis(deal){
       + '<div style="margin-top:12px; font-size:12px; line-height:1.6; color:#9a9079;">Break price unavailable for this deal. Downside cannot be modeled without a pre-announcement reference price.</div>');
   }
 
-  // ---- implied probability (existing API) ----
+  // ---- market-implied close probability, and is there anything here ----
+  // Three figures, each labelled with WHOSE number it is and what it assumes.
+  // (1) MARKET's, backed out of the price under a two-outcome model, not a
+  // Meridian forecast, and it inherits the break-price estimate (section 20).
+  // (2) the return if it closes: BASE CASE is UNLEVERED (return on capital, no
+  // funding-cost assumption); the "at 5.5% financing" figure is shown beside
+  // it, not instead -- applying carry to the whole position assumes 100%
+  // borrowing, which would be an assumption presented as a fact (section 20).
+  // (3) break-even probability -- the threshold for the FINANCED case only.
   _daSet('da-implied-prob', '<div style="font-size:12px; color:#7d745f;">Calculating\u2026</div>');
   try{
     var probData = await fetch('/api/implied-probability/'+deal.ticker).then(function(r){ return r.json(); });
-    if(probData && probData.probability !== null && probData.probability !== undefined){
-      var colorMap = { green:'#5a9e6a', teal:'#4fe6cb', amber:'#ffd84a', red:'#ff9466' };
+    if(probData && probData.model_applies && probData.probability != null){
+      var colorMap = { green:'#5a9e6a', teal:'#4fe6cb', amber:'#ffd84a', red:'#ff9466', grey:'#9a9079' };
       var pc = colorMap[probData.color] || '#4fe6cb';
-      var distressed = probData.signal === 'Distressed';
+      var A = probData.assumptions || {};
+      var belowBE = probData.probability < probData.breakeven_prob;
+      var tk = deal.ticker;
+      var cr = (A.carry_rate*100).toFixed(1);
+      var g = probData.gross_return_annual;
+      var n = probData.net_carry_return_annual;
+      var gCol = g > 0 ? '#5a9e6a' : '#ff9466';
+      var nCol = n >= 0 ? '#7d9e88' : '#c98f6a';
       _daSet('da-implied-prob',
-        '<div style="display:flex; align-items:baseline; gap:14px;">'
-        +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:44px; line-height:0.85; color:'+pc+';">'+(distressed?'\u2014':probData.probability+'%')+'</div>'
-        +   '<div style="font-family:\'Playfair Display\',serif; font-style:italic; font-size:14px; color:#9a9079; max-width:240px; line-height:1.35;">'+(distressed?'the tape is pricing this below its unaffected price':'the odds the tape is pricing in right now')+'</div>'
+        '<div style="color:#8f8772; font-size:9.5px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:7px;">Market-implied close probability</div>'
+        + '<div style="display:flex; align-items:baseline; gap:14px;">'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:44px; line-height:0.85; color:'+pc+';">'+probData.probability+'%</div>'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-style:italic; font-size:13.5px; color:#9a9079; max-width:250px; line-height:1.4;">the <span style="color:#cdc2a8;">market\u2019s</span> number, not Meridian\u2019s \u2014 backed out of where '+tk+' trades, taking the spread at face value</div>'
         + '</div>'
-        + '<div style="margin-top:14px; padding:12px 15px; background:rgba(0,0,0,0.28); border:1px solid rgba(238,228,208,0.08); font-size:12.5px; line-height:1.85; color:#cdc2a8;">'
-        +   '<div style="color:#8f8772; font-size:9.5px; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:5px;">Formula</div>'
-        +   '<div>P<span style="color:#7d745f;">(close)</span> = (Price \u2212 Break) \u00f7 (Deal \u2212 Break)</div>'
-        +   '<div style="color:#efe7d6;">= ('+_daUsd(probData.current_price)+' \u2212 '+_daUsd(probData.break_price)+') \u00f7 ('+_daUsd(probData.deal_price)+' \u2212 '+_daUsd(probData.break_price)+')</div>'
+        + '<div style="margin-top:10px; padding:11px 14px; background:rgba(0,0,0,0.28); border:1px solid rgba(238,228,208,0.08); font-size:12px; line-height:1.75; color:#cdc2a8;">'
+        +   '<div>(Price \u2212 Break) \u00f7 (Deal \u2212 Break) = ('+_daUsd(probData.current_price)+' \u2212 '+_daUsd(probData.break_price)+') \u00f7 ('+_daUsd(probData.deal_price)+' \u2212 '+_daUsd(probData.break_price)+')</div>'
+        +   '<div style="margin-top:6px; color:#8f8772; font-size:11px; line-height:1.55;">Two outcomes only: close at '+_daUsd(probData.deal_price)+' or break to '+_daUsd(probData.break_price)+'. The break price is a <span style="color:#cdc2a8;">modeled estimate</span> (\u00a720), so this probability moves as that estimate changes and is only as firm as it is.</div>'
         + '</div>'
-        + '<div style="margin-top:12px; padding-top:11px; border-top:1px dashed rgba(95,224,201,0.28); font-size:11.5px; line-height:1.5; color:#8f8772;">This is the <span style="color:#cdc2a8;">market\u2019s</span> implied probability, derived from price. Meridian\u2019s own close-probability estimate is in development.</div>');
+        + '<div style="margin-top:18px; color:#8f8772; font-size:9.5px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:7px;">Return if it closes \u2014 unlevered</div>'
+        + '<div style="display:flex; align-items:baseline; gap:12px;">'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; line-height:0.85; color:'+gCol+';">'+(g>=0?'+':'\u2212')+Math.abs(g).toFixed(1)+'%<span style="font-size:15px; color:#7d745f;">/yr</span></div>'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-style:italic; font-size:12.5px; color:#9a9079; max-width:255px; line-height:1.4;">return on <span style="color:#cdc2a8;">capital</span>, no borrowing assumed \u2014 a Meridian calc, assumes the deal closes at '+_daUsd(probData.deal_price)+'. Ignores break risk.</div>'
+        + '</div>'
+        + '<div style="margin-top:10px; padding:11px 14px; background:rgba(0,0,0,0.28); border:1px solid rgba(238,228,208,0.08); font-size:11.5px; line-height:1.75; color:#9a9079;">'
+        +   '<div>Spread <span style="color:#cdc2a8;">'+_daUsd(probData.dollar_spread)+'</span> / share over '+A.horizon_days+' days ('+A.horizon_basis+') = <span style="color:'+gCol+';">'+(g>=0?'+':'\u2212')+Math.abs(g).toFixed(1)+'%/yr</span> unlevered'+(A.dividend>0?' (incl. '+_daUsd(A.dividend)+' dividend)':'')+'</div>'
+        +   '<div style="margin-top:4px;">At <span style="color:#cdc2a8;">'+cr+'% financing</span> (fully levered): less '+_daUsd(A.carry_cost)+' / share carry = <span style="color:'+nCol+';">'+(n>=0?'+':'\u2212')+Math.abs(n).toFixed(1)+'%/yr</span></div>'
+        +   '<div style="margin-top:4px; color:#7d745f; font-size:11px;">Dividend to close '+_daUsd(A.dividend)+' / share \u2014 '+A.dividend_source+(A.dividend_annual_rate?' ('+_daUsd(A.dividend_annual_rate)+'/yr)':'')+'</div>'
+        + '</div>'
+        + '<div style="margin-top:18px; color:#8f8772; font-size:9.5px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:7px;">Break-even close probability \u2014 if financed at '+cr+'%</div>'
+        + '<div style="display:flex; align-items:baseline; gap:12px;">'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-weight:600; font-size:26px; line-height:0.85; color:'+(belowBE?'#e2b23f':'#9a9079')+';">'+probData.breakeven_prob+'%</div>'
+        +   '<div style="font-family:\'Playfair Display\',serif; font-style:italic; font-size:12.5px; color:#9a9079; max-width:265px; line-height:1.4;">a <span style="color:#cdc2a8;">threshold for the levered case</span>, not a verdict \u2014 unlevered, the return above is the answer</div>'
+        + '</div>'
+        + '<div style="margin-top:9px; font-size:11.5px; line-height:1.6; color:'+(belowBE?'#e2b23f':'#8f8772')+';">'
+        +   (belowBE ? 'A fully financed position needs the market-implied '+probData.probability+'% to reach '+probData.breakeven_prob+'% to break even at '+cr+'% carry \u2014 it does not, so the <span style="color:#cdc2a8;">levered</span> trade is EV-negative. Unlevered it returns '+(g>=0?'+':'\u2212')+Math.abs(g).toFixed(1)+'%/yr.'
+                     : 'The market-implied '+probData.probability+'% <span style="color:#cdc2a8;">clears</span> the '+probData.breakeven_prob+'% a financed position needs at '+cr+'% carry.')
+        + '</div>'
+        + '<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(95,224,201,0.28); font-size:11px; line-height:1.6; color:#8f8772;">'+probData.leverage_note+' Break is assumed to resolve at the same horizon as close.</div>');
     } else {
-      _daSet('da-implied-prob', '<div style="font-size:12px; line-height:1.6; color:#9a9079;">Break price unavailable \u2014 implied probability cannot be calculated for this deal.</div>');
+      _daSet('da-implied-prob', '<div style="font-size:12px; line-height:1.6; color:#9a9079;">'+((probData && probData.note) || 'Break price unavailable \u2014 a market-implied close probability cannot be calculated for this deal.')+'</div>');
     }
   }catch(e){
-    _daSet('da-implied-prob', '<div style="font-size:12px; color:#9a9079;">Unable to calculate implied probability.</div>');
+    _daSet('da-implied-prob', '<div style="font-size:12px; color:#9a9079;">Unable to calculate the market-implied close probability.</div>');
   }
 
   // ---- risk / reward cards ----

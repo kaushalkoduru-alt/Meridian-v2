@@ -4195,3 +4195,144 @@ Against the rescanned live feed (all 19 deals):
 
 All three hold in logic and presentation on the live feed, and the `days_old`
 correction is live. **§30 box checked.**
+
+---
+
+# §31 companion — implied probability, and a separate "is the trade worth doing"
+
+External feedback from someone who trades the strategy: the implied probability
+`(current − break) / (deal − break)` treats a dollar at close as a dollar today.
+
+**First pass (rejected on review):** folded carry and dividends into the
+probability itself — `p = (current·(1+r·T) − break − div)/(deal − break)`. On a
+tight spread this pushes p above 100%, and the endpoint then suppressed the
+probability entirely ("spread below carry") on 12 of 19 deals. That conflated
+two different questions: a deal can have a knowable ~90% close probability AND be
+a losing trade at 5.5% carry. Hiding the first behind the second is wrong.
+
+**Shipped design — two figures, kept separate:**
+
+1. **Implied probability of closing** — `(current − break) / (deal − break)`,
+   unchanged from before. A fact about the deal, independent of funding cost,
+   always published when the two-state gate passes. This number did not move.
+
+2. **Return net of carry, annualized** —
+   `(deal + dividends − current)/current × 365/days − r`. Goes negative exactly
+   when the carry cost exceeds the dollar spread. This is where "bad trade at
+   this funding cost" lives.
+
+3. **Break-even probability** (the bridge) —
+   `(current·(1+r·T) − break − div)/(deal − break)`. The close probability #2
+   would need for expected value to be zero. When the implied probability is
+   below it, the position is EV-negative at that carry even if it is more likely
+   than not to close. With `r = 0` and no dividend, break-even equals the
+   implied probability and `net` is the plain annualized spread — the
+   pre-existing figures.
+
+Break is assumed to resolve at the same horizon as close.
+
+## Assumptions — stated on the page, not baked in
+
+- **Carry rate:** `IMPLIED_PROB_CARRY_RATE = 0.055`, unchanged through all
+  revisions. It is NOT the base case — the headline return is unlevered (carry
+  = 0). This rate drives only the "at 5.5% financing" figure shown beside it and
+  the break-even threshold. Rendered with the footer *"Real merger-arb runs a
+  blend of capital and debt, so the effective carry sits between the two."* Not
+  user-adjustable yet. Feeds only this endpoint; nothing scores off it.
+- **Horizon:** guidance where the filing gives an expected-close period
+  (`days_to_close` from the stated period end, 14 of 19); the contractual
+  outside date where guidance is "TBD" (HZO, ATKR, BWMN, DSGR, BOW); a 30-day
+  floor labelled as such where both have passed (GBCS). Basis ships per deal.
+- **Dividends:** target's current declared rate (`yfinance dividendRate`, then
+  `trailingAnnualDividendRate`), pro-rated over T. Four payers — NATH $2.00/yr,
+  ATKR $1.32, AES $0.704, OGN $0.08. The other 15 return `no dividend on record`
+  (D=0, stated); a failed lookup returns `dividend lookup unavailable`. Merger
+  agreements can restrict dividends in the pendency; the rate is used as-is and
+  the note says the agreement is the authority.
+
+*(An earlier revision of this pass folded carry into the probability and then
+into the headline return; both were corrected on review. The two subsections
+below are the final state. The 19-deal table is under "Base case is unlevered".)*
+
+## Labelling — whose number, what model, what weak input (§31/§20)
+
+Second review point: "Implied P(close) 51.4%" read as a Meridian forecast. It is
+not — it is what the market price backs out to under a two-outcome model taking
+the spread at face value. Each of the three figures now carries its ownership
+and its assumptions on the page, no hover required:
+
+- **Market-implied close probability** — *"the market's number, not Meridian's —
+  backed out of where {ticker} trades, taking the spread at face value."*
+  Caption: *"Two outcomes only: close at {deal} or break to {break}. The break
+  price is a modeled estimate (§20), so this probability moves as that estimate
+  changes and is only as firm as it is."*
+- **Return if it closes — unlevered** — *"return on capital, no borrowing
+  assumed — a Meridian calc, assumes the deal closes at {deal}. Ignores break
+  risk."* With *"At 5.5% financing (fully levered): … = {net}%/yr"* beneath.
+- **Break-even close probability — if financed at 5.5%** — *"a threshold for the
+  levered case, not a verdict — unlevered, the return above is the answer."*
+
+## Base case is unlevered — "0 of 19 profitable" was maximum leverage as default
+
+Third review point: with the net-of-carry figure as the headline, every deal on
+the feed read as a losing trade. That was not a market statement — it was 5.5%
+carry applied to the *whole* position, i.e. 100% financing assumed silently.
+Real merger-arb runs a blend of capital and debt, and a cash allocator's carry
+is zero. Presenting the fully-levered number as the base case is the §20 error
+in a new place: an assumption shown as a fact.
+
+Fixed by flipping the presentation (the 5.5% constant is unchanged):
+
+- **Headline** is now the **unlevered return** — `(deal + div − price)/price ×
+  365/days`, carry = 0. The return on capital, no funding-cost assumption.
+- **Beneath it**, *"At 5.5% financing (fully levered): less ${carry}/share carry
+  = {net}%/yr"* — the levered case, shown as what borrowing costs, not as the
+  verdict.
+- The footer states it plainly: *"Real merger-arb runs a blend of capital and
+  debt, so the effective carry sits between the two."*
+- Break-even probability retitled *"if financed at 5.5%"* and captioned as a
+  threshold for the levered case only.
+
+**With gross as the base case: 18 of 18 applicable deals show a positive
+unlevered return** (BZH is gated — modeled break ≥ current). Range 0.4%/yr
+(APGE) to 31.8%/yr (NATH); the substantive ones are NATH 31.8, GBCS 8.5, GSAT
+7.7, AES 7.2, RAMP 6.1, SLAB 5.7, then a tail of sub-3% names. At 5.5%
+financing, 6 stay positive (GSAT, SLAB, NATH, RAMP, AES, GBCS). "Is there
+anything worth looking at" — unlevered, yes; the honest answer is 18, not 0.
+
+| Deal | P(close) | unlevered %/yr | at 5.5% fin. | break-even p |
+|------|---------:|---------------:|-------------:|------------:|
+| GSAT | 51.4 | **+7.7** | +2.2 | 86.2 |
+| SLAB | 89.0 | **+5.7** | +0.2 | 99.5 |
+| CZR  | 41.0 | **+3.6** | −1.9 | 131.7 |
+| NATH | 63.1 | **+31.8** | +26.3 | 67.4 |
+| PAYO | 64.6 | **+4.2** | −1.3 | 111.5 |
+| RAMP | 91.5 | **+6.1** | +0.6 | 99.2 |
+| OGN  | 91.7 | **+3.5** | −2.0 | 105.7 |
+| HZO  | 95.2 | **+1.3** | −4.2 | 114.8 |
+| ATKR | 94.1 | **+2.4** | −3.1 | 118.4 |
+| AES  | 83.2 | **+7.2** | +1.7 | 88.2 |
+| BWMN | 97.5 | **+1.4** | −4.1 | 107.6 |
+| DSGR | 96.0 | **+2.6** | −2.9 | 104.4 |
+| BZH  | — gated (modeled break ≥ current) | | | |
+| CBZ  | 94.9 | **+2.4** | −3.1 | 106.7 |
+| GBCS | 98.4 | **+8.5** | +3.0 | 99.4 |
+| BOW  | 95.3 | **+0.8** | −4.7 | 126.9 |
+| GBTG | 99.2 | **+1.0** | −4.5 | 103.9 |
+| APGE | 99.9 | **+0.4** | −5.1 | 101.1 |
+| ALOT | 99.9 | **+0.5** | −5.0 | 100.9 |
+
+**Not shipped — held for review.** Working tree only; no commit, no deploy, no
+rescan. §3 stays open (blocked on the break-price engine), no ROADMAP box.
+
+## Items 2 and 3 of the feedback — noted, not done
+
+- **Break price is a bare unaffected-price lookup (18 of 19).** Correct, and it
+  is §4 — the break-price engine (sector move, operating performance, earnings,
+  lost synergies). The largest remaining roadmap item, not a quick fix. Not
+  started.
+- **"Validate the risk score."** Cannot be done: 39 deals with 4 breaks cannot
+  backtest a scoring model, which is why §9 stopped presenting the score as a
+  measurement and the methodology page says the weights are analyst-set, not
+  backtested. No surviving copy reads as a validated probability. If one turns
+  up it is a §31 wording fix, not a validation exercise.
