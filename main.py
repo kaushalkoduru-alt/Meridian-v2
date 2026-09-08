@@ -1885,6 +1885,31 @@ def _flex(phrase):
     phrases like 'has agreed to acquire' normally appear lowercase mid-sentence."""
     return f'[{phrase[0].upper()}{phrase[0].lower()}]{re.escape(phrase[1:])}'
 
+
+# What may sit between the acquirer's capitalized name and the "acquire" verb
+# without the name being a different party. Press releases routinely write
+#   `American Family Mutual Insurance Company, S.I. (together with its
+#    affiliates, "American Family") has agreed to acquire ...`
+# — an entity-type suffix and a parenthetical defined term, both dropped by a
+# capitalized run that stops at the first comma. BOW, DSGR and CBZ all read
+# "Undisclosed" because every pattern demanded the name be adjacent to the verb.
+# Bounded on every branch (no bare `\s+` or `.*`), and it never crosses a
+# sentence: nothing here matches a period followed by a space.
+_ACQ_GAP = (
+    r"(?:"
+    r"\s*,?\s*(?:LLC|L\.L\.C\.|Inc\.?|Corp\.?|Ltd\.?|N\.?A\.?|"
+    r"L\.?P\.?|S\.[A-Z]\.|(?:[A-Z]\.){1,4})"          # ", S.I."  ", LLC"  ", N.A."
+    r"|\s*\([^)]{0,180}\)"                              # "(together with ... "X")"
+    r"|\s*,\s*an?\s+[a-z][a-z\s]{2,55}?(?=[,(])"        # ", a Delaware corporation,"
+    r"|\s*,"
+    r")*\s*"
+)
+
+# The acquire trigger, case-insensitive so a title-case headline ("to Acquire")
+# or an all-caps one ("TO ACQUIRE CBIZ") is caught. CAPRUN before it stays
+# case-sensitive, which is what bounds the name.
+_ACQ_VERB_STRONG = r"(?i:(?:has\s+)?agreed\s+to\s+acquire|agrees\s+to\s+acquire|will\s+acquire)"
+
 def extract_acquirer(clean_text, target_name=''):
     text = clean_text[:15000]
     for g in [
@@ -1911,6 +1936,14 @@ def extract_acquirer(clean_text, target_name=''):
         rf'{_flex("by")}\s+{_CAPRUN}\s+{_flex("for")}\s+(?:\$|[Aa]pproximately)',
         # New: catches "advised by [Acquirer]" when acquirer manages funds/affiliates
         rf'[Aa]dvised\s+by\s+{_CAPRUN}',
+        # Name separated from the verb by an entity suffix and/or a parenthetical
+        # defined term, and the verb in any case (headline or body). BOW/CBZ.
+        rf'{_CAPRUN}{_ACQ_GAP}{_ACQ_VERB_STRONG}',
+        rf'{_CAPRUN}{_ACQ_GAP}(?i:to\s+acquire)\s+(?:all\s+)?(?:of\s+)?(?:the\s+)?{_CAPWORD}',
+        # Sponsor take-private: "to be taken private by affiliates of X". The
+        # sponsor is named only in the headline/press release — the agreement
+        # caption names the merger shells, which BAD_PHRASES already rejects. DSGR.
+        rf'(?i:taken\s+private\s+by)\s+(?:affiliates\s+of\s+|funds?\s+(?:managed|advised)\s+by\s+|entities\s+(?:controlled|managed)\s+by\s+)?{_CAPRUN}',
     ]
 
     BAD_PHRASES = [
@@ -1936,7 +1969,18 @@ def extract_acquirer(clean_text, target_name=''):
             if not (2 < len(m) < 60): continue
             if any(b in m.lower() for b in BAD_PHRASES): continue
             if not m[0].isupper(): continue
-            if m.upper() == m and len(m) > 5: continue
+            # An all-caps run used to be rejected outright as caption/header
+            # noise, but a real name is all-caps in a headline ("GRANT THORNTON
+            # ADVISORS TO ACQUIRE CBIZ") or an execution-version caption. Reject
+            # only if it carries a connective word no company name has;
+            # otherwise title-case it for display (short tokens kept upper, so
+            # "LKCM" survives as itself).
+            if m.upper() == m and len(m) > 5:
+                if {'AND', 'OF', 'THE', 'BY', 'AMONG', 'BETWEEN', 'PLAN',
+                    'AGREEMENT', 'DATED', 'MERGER', 'FORM', 'REPORT',
+                    'PURSUANT'} & set(m.split()):
+                    continue
+                m = ' '.join(w if len(w) <= 4 else w.title() for w in m.split())
             if len(m.split()) > 7: continue
             if target_words:
                 cand_words = set(m.lower().split()) - STOP_WORDS
@@ -3766,7 +3810,27 @@ def get_clean_deals():
             d['verification'] = verification_state(d)
         except Exception as _pe:
             print(f"  [Provenance] {d.get('ticker')}: {_pe}")
-    return deals
+
+    # Step 4: an unverified deal never displays. `verified` is True only when
+    # BOTH enforcing checks — direction and gate — actually passed; a skipped
+    # check is not a passed one. This is the filter the "unverified AND >=5
+    # findings" hold in AUDIT.md was meant to be, minus the finding-count
+    # condition: verification is the floor, and integrity findings are a
+    # separate signal that does not get a vote here. BCRX/GPRE/PACK were each
+    # hand-added to EXCLUDED_TICKERS because this line did not exist; CBRL was
+    # the fourth. A deal whose verification_state could not be computed
+    # (the except above) has no 'verification' key and is dropped too — fail
+    # closed, not open.
+    kept, dropped = [], []
+    for d in deals:
+        if (d.get('verification') or {}).get('verified') is True:
+            kept.append(d)
+        else:
+            dropped.append(d.get('ticker'))
+    if dropped:
+        print(f"  [CleanDeals] withheld {len(dropped)} unverified deal(s) from "
+              f"the feed: {', '.join(str(t) for t in dropped)}")
+    return kept
 
 @app.get("/api/deals")
 async def get_deals():
