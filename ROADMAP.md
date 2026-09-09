@@ -106,15 +106,21 @@ about a number being misleading, not about a feature being missing.
 
 ## NOW — high value, moderate effort (P1)
 
-- [ ] **§4 · Break-price engine**
-  Replace "unaffected price" with a framework: unaffected price, recent
-  unaffected range, sector movement, company developments, standalone value,
-  termination fee economics, cash burn, litigation and transaction costs,
-  regulatory remedies, financing, alternative outcomes.
-  Base / bull / bear breaks, but only where the data supports scenarios.
-  Label it a model estimate, never a floor.
-  *Scoped: implement base break properly first. Bull/bear only where real
-  inputs exist, not as three guesses wearing a range.*
+- [x] **§4 · Break-price engine** — the fix was a label, not a model.
+  [BREAK_PRICE.md](BREAK_PRICE.md) worked each of the eleven named inputs by
+  availability: only unaffected price and a pre-announcement range band are
+  honestly obtainable for a solo operator; the rest are unbuilt sub-projects or
+  guesses. The proposed base model (unaffected x sector drift) was tested
+  against the 4 historical breaks (TGNA, IRBT, CPRI, CCRN) and **lost** — worse
+  in 3 of 4, because a target in a live deal decouples from its sector. The
+  comparison's real finding: **both methods overshoot — bare unaffected sat
+  32-69% above the actual post-break price in 3 of 4.** Shipped: `break_price`
+  relabelled everywhere as an optimistic estimate biased high (never a floor),
+  a `break_price_band` (30/60/90-day pre-announcement range), a run-up flag for
+  a contaminated anchor (fires on GSAT/PAYO/OGN/BZH/CBZ), and a downstream check
+  confirming nothing still treats it as a hard floor. No numeric haircut — N=4
+  cannot size one. §3 stays open (it consumes this number); §5/§14 still
+  blocked on it as a *scenario* engine, which the data does not support.
 
 - [ ] **§8 · Data freshness**
   LAST VERIFIED and LAST UPDATED per critical field, and a LIVE / RECENT /

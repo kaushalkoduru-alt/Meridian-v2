@@ -40,9 +40,9 @@ check("AES's verified unaffected price is also a FACT",
       P.FACT)
 check("a genuinely estimated break price is a MODEL",
       P.classify('break_price', {'break_price_method': 'comparables'})[0], P.MODEL)
-check("the inference is named in the why, not hidden",
-      'inference' in P.classify('break_price',
-                                {'break_price_method': 'historical'})[2], True)
+check("the why names it an estimate, and names the upward bias (§4)",
+      all(s in P.classify('break_price', {'break_price_method': 'historical'})[2]
+          for s in ('estimate', 'below this level', 'worse')), True)
 
 # tx_value: two different quantities under one label.
 check("a filed transaction value is a FACT",

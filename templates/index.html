@@ -1184,7 +1184,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
     </div>
     <div style="background:linear-gradient(180deg, #1c1a13, #16140e); border:1px solid rgba(95,224,201,0.22); padding:28px 26px;">
-      <p style="margin:0; font-size:16px; line-height:1.75; color:#e2d8c0; font-family:'DM Mono',monospace; ">Say a deal shows a <b style="color:#5fe0c9;">spread of 4.2%</b> and a risk rating of <b style="color:#5fe0c9;">Very Low</b>. That means the stock is trading 4.2% below the price the buyer agreed to pay. If the deal closes, and a Very Low rating means Meridian sees strong odds it will, you earn that 4.2% when it does. If that takes about six months, that is more than 8% on an annual basis. And because Meridian also shows you the break price, the level the stock would likely fall to if the deal collapsed, you know your downside before you risk a single dollar.</p>
+      <p style="margin:0; font-size:16px; line-height:1.75; color:#e2d8c0; font-family:'DM Mono',monospace; ">Say a deal shows a <b style="color:#5fe0c9;">spread of 4.2%</b> and a risk rating of <b style="color:#5fe0c9;">Very Low</b>. That means the stock is trading 4.2% below the price the buyer agreed to pay. If the deal closes, and a Very Low rating means Meridian sees strong odds it will, you earn that 4.2% when it does. If that takes about six months, that is more than 8% on an annual basis. And because Meridian also shows you the break price — an optimistic estimate of where the stock lands if the deal collapsed, on the evidence a high one — you have a floor to reason from, knowing the real fall is likely worse.</p>
     </div>
   </section>
 
@@ -1243,7 +1243,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <div id="deal-list" style="background:#161310; overflow:hidden;"></div>
     <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; font-size:10px; letter-spacing:0.12em; color:#6f6753; text-transform:uppercase; flex-wrap:wrap; gap:8px;">
       <span>Spread = (deal &#8722; last) / last &#183; Annualized est. on expected close horizon</span>
-      <span>Break price shown is an estimate of unaffected downside</span>
+      <span>Break price is an optimistic downside estimate — historically the stock fell further</span>
     </div>
   </section>
 
@@ -1347,7 +1347,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   <div class="da-section" style="position:relative;">
     <div id="da-rr-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px;"></div>
     <div id="da-position-table" style="margin-top:14px; background:#161310; border:1px solid rgba(238,228,208,0.1); overflow:hidden;"></div>
-    <div style="margin-top:9px; font-size:9.5px; letter-spacing:0.1em; color:#6f6753; text-transform:uppercase;">Returns shown are on the current spread. Break-price downside is a modeled estimate.</div>
+    <div style="margin-top:9px; font-size:9.5px; letter-spacing:0.1em; color:#6f6753; text-transform:uppercase;">Returns shown are on the current spread. Break-price downside is an optimistic estimate — the real fall is likely worse.</div>
   </div>
 
   <!-- ============ 3 · ACQUIRER & REGULATORY ============ -->
@@ -1417,7 +1417,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div style="display:flex; flex-direction:column; gap:7px; font-size:10.5px; letter-spacing:0.04em; color:#e8e0d0; line-height:1.5;">
         <div>&#183; Data sourced from SEC EDGAR and Yahoo Finance</div>
         <div>&#183; Spread = (deal &#8722; last) / last</div>
-        <div>&#183; Break price is a modeled estimate of unaffected downside</div>
+        <div>&#183; Break price is an optimistic estimate of downside — biased high, true fall likely worse</div>
         <div>&#183; Prices refresh hourly alongside deal data</div>
         <div>&#183; For informational purposes only. Not financial advice</div>
         <div>&#183; Past model performance does not guarantee future results</div>
@@ -2524,20 +2524,33 @@ async function renderAnalysis(deal){
   _daSet('da-timing', _daTimingRows(deal));
 
   // ---- break price box ----
+  // NOT a floor. \u00a74's comparison (BREAK_PRICE.md) found this number sat ABOVE
+  // the real post-break price on all 4 historical breaks, 3 of them 30-70%
+  // above. It is an optimistic estimate of where the stock lands if the deal
+  // dies, biased high, low confidence. The band and the run-up flag carry the
+  // uncertainty; no numeric haircut is applied because N=4 cannot size one.
   if(bp!=null){
     var bdTxt = (bd!=null) ? _daSgn(bd)+' from current' : '';
-    // bp - cp, not abs(cp - bp): negative where the break sits below the
-    // current price, positive where it sits above. The sign is the finding.
     var perSh = (deal.cp!=null && bp!=null) ? ' \u00b7 '+_daSgnUsd(bp-deal.cp)+' / share' : '';
+    var _bnd = deal && deal.break_price_band;
+    var bandTxt = (_bnd && _bnd.lo90!=null)
+      ? 'Pre-announcement range: '+_daUsd(_bnd.lo30)+'\u2013'+_daUsd(_bnd.hi30)+' (30d), '
+        +_daUsd(_bnd.lo90)+'\u2013'+_daUsd(_bnd.hi90)+' (90d).'
+      : '';
+    var runupTxt = (_bnd && _bnd.anchor === 'run-up')
+      ? ' <span style="color:#e2b23f;">The anchor itself ran up '+_bnd.runup_pct
+        +'% over its 90-day mean before filing \u2014 leak or rumour is in this number, so trust the range, not the point.</span>'
+      : '';
     _daSet('da-break-box',
       '<div style="position:absolute; top:0; right:0; bottom:0; width:3px; background:linear-gradient(180deg, #f0735e, rgba(240,115,94,0.15));"></div>'
       + '<div style="display:flex; align-items:center; gap:8px;">'
       +   '<span style="width:6px; height:6px; transform:rotate(45deg); background:#f0735e;"></span>'
-      +   '<div style="font-size:10px; letter-spacing:0.2em; color:#f0735e; text-transform:uppercase;">Break Price \u00b7 Downside Floor</div>'
+      +   '<div style="font-size:10px; letter-spacing:0.2em; color:#f0735e; text-transform:uppercase;">Break Price \u00b7 Optimistic Estimate</div>'
       + '</div>'
       + '<div style="margin-top:10px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:44px; line-height:0.85; color:#f0735e;">'+_daUsd(bp)+'</div>'
-      + '<div style="margin-top:9px; font-size:13px; color:#f3b9ad; letter-spacing:0.02em;">'+bdTxt+perSh+'</div>'
-      + '<div style="margin-top:12px; font-size:11.5px; line-height:1.5; color:#cbb8ac;">Modeled estimate of where the stock trades if the deal collapses, based on the pre-announcement price.</div>');
+      + '<div style="margin-top:9px; font-size:13px; color:#f3b9ad; letter-spacing:0.02em;">at least '+bdTxt+perSh+'</div>'
+      + (bandTxt ? '<div style="margin-top:10px; font-size:11px; line-height:1.5; color:#a89a8f;">'+bandTxt+'</div>' : '')
+      + '<div style="margin-top:12px; font-size:11.5px; line-height:1.55; color:#cbb8ac;">A model estimate (\u00a720), not a floor, of where the stock lands if the deal dies \u2014 the pre-announcement close. On the 4 historical breaks the stock landed <span style="color:#f3b9ad;">below</span> this level every time, so true downside is likely worse than shown. Low confidence, biased high.'+runupTxt+'</div>');
   } else {
     _daSet('da-break-box',
       '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">Break Price</div>'
@@ -2575,7 +2588,7 @@ async function renderAnalysis(deal){
         + '</div>'
         + '<div style="margin-top:10px; padding:11px 14px; background:rgba(0,0,0,0.28); border:1px solid rgba(238,228,208,0.08); font-size:12px; line-height:1.75; color:#cdc2a8;">'
         +   '<div>(Price \u2212 Break) \u00f7 (Deal \u2212 Break) = ('+_daUsd(probData.current_price)+' \u2212 '+_daUsd(probData.break_price)+') \u00f7 ('+_daUsd(probData.deal_price)+' \u2212 '+_daUsd(probData.break_price)+')</div>'
-        +   '<div style="margin-top:6px; color:#8f8772; font-size:11px; line-height:1.55;">Two outcomes only: close at '+_daUsd(probData.deal_price)+' or break to '+_daUsd(probData.break_price)+'. The break price is a <span style="color:#cdc2a8;">modeled estimate</span> (\u00a720), so this probability moves as that estimate changes and is only as firm as it is.</div>'
+        +   '<div style="margin-top:6px; color:#8f8772; font-size:11px; line-height:1.55;">Two outcomes only: close at '+_daUsd(probData.deal_price)+' or break to about '+_daUsd(probData.break_price)+'. That break level is an <span style="color:#cdc2a8;">optimistic estimate</span> (\u00a720) \u2014 on the 4 historical breaks the stock landed below it every time \u2014 so this probability is only as firm as that number.</div>'
         + '</div>'
         + '<div style="margin-top:18px; color:#8f8772; font-size:9.5px; letter-spacing:0.18em; text-transform:uppercase; margin-bottom:7px;">Return if it closes \u2014 unlevered</div>'
         + '<div style="display:flex; align-items:baseline; gap:12px;">'
@@ -2617,9 +2630,9 @@ async function renderAnalysis(deal){
   var breaksCard = bp!=null ? ''
     + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(240,115,94,0.4); padding:18px 20px; overflow:hidden;">'
     +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#f0735e;"></div>'
-    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#f0735e; text-transform:uppercase;">If Deal Breaks'+_daBadge(deal,'break_price')+'</div>'
+    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#f0735e; text-transform:uppercase;">If Deal Breaks \u00b7 At Best'+_daBadge(deal,'break_price')+'</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(bp)+'</div>'
-    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:'+_daSgnColor(bd)+';">'+(bd!=null?_daSgn(bd):'\u2014')+'</div>'
+    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:'+_daSgnColor(bd)+';">'+(bd!=null?(bd<0?'at least ':'')+_daSgn(bd):'\u2014')+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.cp!=null)?_daSgnUsd(bp-deal.cp)+' / share':'')+'</div>'
     +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">'+((bd!=null&&bd>0)?'This break price sits ABOVE the current price':_daWhy(deal,'break_price'))+'</div>'
     + '</div>' : '';
@@ -3203,7 +3216,7 @@ function renderDeals(deals){
       +   '<div style="margin-top:20px; display:grid; grid-template-columns:repeat('+mcols+',1fr); gap:8px; padding-top:16px; border-top:1px solid rgba(238,228,208,0.10);">'
       +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Last Price</div><div style="margin-top:6px; font-size:16px; color:#efe7d6;">'+usd(d.cp)+'</div></div>'
       +     (PRICING_DISPLAY ? '' : '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Deal Price</div><div style="margin-top:6px; font-size:16px; color:#f7f1e4; font-weight:500;">'+usd(d.dp)+'</div></div>')
-      +     '<div><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Break Price</div><div style="margin-top:6px; font-size:16px; color:#f0735e;">'+usd(d.break_price)+'</div></div>'
+      +     '<div title="Optimistic estimate of the break level — historically the stock fell further. Low confidence."><div style="font-size:10.5px; letter-spacing:0.1em; color:#ada284; text-transform:uppercase;">Break Price <span style="color:#8f8772;">(opt.)</span></div><div style="margin-top:6px; font-size:16px; color:#f0735e;">'+usd(d.break_price)+'</div></div>'
       +   '</div>'
       +   explainerStripHTML(pv)
       + '</div>';

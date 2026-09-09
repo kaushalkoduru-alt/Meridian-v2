@@ -383,6 +383,24 @@ def save_cache(records):
 
         if len(clean) >= 3:
             merged = rolling_merge(clean)
+            # Backfill the pre-announcement band for any deal that does not yet
+            # carry one -- carried-forward deals never pass through the fresh-hit
+            # path where it is computed. Runs the yfinance lookup once per deal,
+            # ever: once written, every branch above finds it and this is a
+            # no-op. A deal whose lookup fails is retried next scan (cheap).
+            _bf = 0
+            for _d in merged:
+                if parse_structured(_d.get('break_price_band', {})):
+                    continue
+                _tk, _fd = _d.get('ticker'), _d.get('filed')
+                if not _tk or not isinstance(_fd, str):
+                    continue
+                _b = unaffected_band(_tk, _fd)
+                if _b:
+                    _d['break_price_band'] = _b
+                    _bf += 1
+            if _bf:
+                print(f"[BreakBand] backfilled {_bf} deal(s) with a pre-announcement band")
             # The return value is checked. Ignoring it is what let a failed
             # Redis write print "Cache saved" for days while the enrichment
             # silently never persisted.
@@ -1093,6 +1111,52 @@ def get_break_price(ticker, filed_date):
 def get_break_downside(current_price, break_price):
     if not break_price or not current_price: return None
     return round(((break_price-current_price)/current_price)*100,2)
+
+
+def unaffected_band(ticker, filed_date):
+    """
+    The pre-announcement price context around the break-price anchor: the
+    30/60/90-day close range before the deal was filed, and how far the last
+    pre-announcement close sat above the 90-day mean.
+
+    §4's comparison (BREAK_PRICE.md) settled two things about `break_price`:
+    it is a single pre-announcement close, and on all four historical breaks it
+    OVERSTATED where the stock actually landed. This band does not fix the bias
+    -- N=4 cannot size a haircut, and a made-up discount is the sector model's
+    error in another form -- it communicates the uncertainty honestly. A wide
+    band, or a large run-up, is the signal the point should not be trusted.
+
+    Returns {lo30, hi30, lo60, hi60, lo90, hi90, mean90, last_pre, runup_pct,
+    anchor} or None. `anchor` is 'run-up' when the last close is >=15% over the
+    90-day mean (leak/rumor in the anchor itself), else 'clean'.
+    """
+    try:
+        filed = datetime.strptime(filed_date, '%Y-%m-%d')
+    except (TypeError, ValueError):
+        return None
+    try:
+        h = yf.Ticker(ticker).history(
+            start=(filed - timedelta(days=130)).strftime('%Y-%m-%d'),
+            end=filed.strftime('%Y-%m-%d'))
+        closes = [round(float(x), 2) for x in h['Close'].tolist()]
+    except Exception:
+        return None
+    if len(closes) < 5:
+        return None
+
+    # Trading-day windows: ~21 / ~42 / ~63 sessions back from the filing.
+    w30, w60, w90 = closes[-21:], closes[-42:], closes[-63:]
+    mean90 = round(sum(w90) / len(w90), 2)
+    last_pre = closes[-1]
+    runup = round((last_pre / mean90 - 1) * 100, 1) if mean90 else 0.0
+    return {
+        'lo30': min(w30), 'hi30': max(w30),
+        'lo60': min(w60), 'hi60': max(w60),
+        'lo90': min(w90), 'hi90': max(w90),
+        'mean90': mean90, 'last_pre': last_pre,
+        'runup_pct': runup,
+        'anchor': 'run-up' if runup >= 15 else 'clean',
+    }
 def calculate_break_price(deal_price, premium_pct=None, current_price=None, spread_pct=None):
     # Method 1: deal premium reversal (most reliable)
     if premium_pct and premium_pct > 0:
@@ -2374,6 +2438,21 @@ def fetch_deals_from_edgar():
     except Exception as _pae:
         print(f"[Commitment] could not capture prior agreement readings: {_pae}")
 
+    # Same capture, same reason, for the pre-announcement price band. It is a
+    # function of the ticker and the original filing date -- neither changes for
+    # a live deal -- so recomputing it every scan is one wasted yfinance call
+    # per deal per hour. Captured here so a re-detected deal keeps it without a
+    # refetch; a genuinely new deal computes it once below.
+    _prior_bands = {}
+    try:
+        for _row in (load_cache() or []):
+            _tk = _row.get('ticker')
+            _bd = parse_structured(_row.get('break_price_band', {}))
+            if _tk and isinstance(_bd, dict) and _bd:
+                _prior_bands[_tk] = _bd
+    except Exception as _pbe:
+        print(f"[BreakBand] could not capture prior bands: {_pbe}")
+
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Background EDGAR scan started.")
     headers={'User-Agent':'Kaushal Koduru kaushalkoduru@gmail.com'}
     all_hits=[]
@@ -2692,6 +2771,9 @@ def fetch_deals_from_edgar():
             # price is a different provenance and must not be labelled as one.
             break_price_method=('verified_unaffected'
                                 if ticker in VERIFIED_UNAFFECTED_PRICES else 'historical')
+            # The pre-announcement range band around that anchor. Prior wins to
+            # avoid a refetch; a new deal computes it once.
+            break_price_band=_prior_bands.get(ticker) or unaffected_band(ticker,src['file_date'])
             if not break_price:
                 premium_pct=None
                 pass
@@ -2722,6 +2804,7 @@ def fetch_deals_from_edgar():
                 'score':sc,'risk':risk,'score_at_detection':sc,'risk_at_detection':risk,'filed':src['file_date'],'days_old':days,
                 'close_date':close_date,'tx_value':tx_value,'tx_value_source':tx_value_source,'break_price':break_price,
                 'break_downside':break_downside,'break_price_method':break_price_method,
+                'break_price_band':break_price_band,
                 'financing_signal':financing_signal,
                 'financing_source':financing_source,
                 'accession':accession,'reg_tags':json.dumps(reg_tags),'fetched':datetime.utcnow().strftime('%Y-%m-%dT%H:%M'),
@@ -3796,6 +3879,9 @@ def get_clean_deals():
         # Same round-trip again for the outside date read off the agreement.
         if 'outside_date' in d:
             d['outside_date'] = parse_structured(d.get('outside_date', {}))
+        # And for the pre-announcement price band around the break-price anchor.
+        if 'break_price_band' in d:
+            d['break_price_band'] = parse_structured(d.get('break_price_band', {}))
         # §20 and §9, attached AFTER the round-trip above so both read the
         # parsed dicts rather than repr strings. Neither feeds any stored value:
         # `provenance` says where each displayed number came from, `explanation`
@@ -4695,8 +4781,9 @@ async def implied_probability(ticker: str):
                 "break_price": bp,
                 "method": deal.get('break_price_method', 'historical'),
                 "note": ("A close-or-break probability cannot be read from these "
-                         "prices: " + why + ". The break price is a model estimate, "
-                         "not an observed floor."),
+                         "prices: " + why + ". The break price is an optimistic "
+                         "model estimate, not an observed floor -- on the 4 "
+                         "historical breaks the stock landed below it every time."),
             })
 
         days, horizon_label = _implied_prob_horizon(deal)

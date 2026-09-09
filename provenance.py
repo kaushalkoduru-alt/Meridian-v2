@@ -114,12 +114,18 @@ def classify(field, deal=None):
     if field == 'break_price':
         m = (deal.get('break_price_method') or '').lower()
         if m in ('historical', 'verified_unaffected'):
-            # The number is an observed close. Calling it modelled overstates
-            # what stands behind it; calling the DOWNSIDE a fact would overstate
-            # it in the other direction, which is why the two are split.
+            # The number is an observed close. What is inferred is that the
+            # stock returns to it on a break -- and §4's comparison
+            # (BREAK_PRICE.md) showed that inference runs OPTIMISTIC: all four
+            # historical breaks landed BELOW the pre-announcement price, three
+            # of them 30-70% below. So the price is a fact; the downside it
+            # implies is a model estimate that is biased high, and the label
+            # says both.
             return (FACT, 'FACT',
-                    'the pre-announcement close, looked up — that the stock '
-                    'returns to it on a break is the inference, not this price')
+                    'the pre-announcement close, looked up. That the stock '
+                    'returns to it on a break is an optimistic estimate: on '
+                    'the 4 historical breaks the stock landed below this level '
+                    'every time, so true downside is likely worse than shown')
         return MODEL, 'MODEL', 'estimated from comparable broken deals'
 
     if field == 'tx_value':
@@ -157,7 +163,8 @@ def classify(field, deal=None):
 # Fields whose displayed label used to imply a stronger class than the value
 # has. Kept as data so the sweep can assert they stay corrected.
 CORRECTED = {
-    'break_price':      'card footer said "Modeled downside case" on a lookup',
+    'break_price':      'card footer said "Modeled downside case" on a lookup; '
+                        'now labelled an optimistic estimate, biased high (§4)',
     'financing_signal': 'press-release keyword scan presented as a reading of '
                         'the agreement',
     'reg_tags':         'size-and-sector priors presented as regulatory status',
