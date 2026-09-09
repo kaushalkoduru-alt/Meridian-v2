@@ -361,10 +361,12 @@ point is.
 ## 3. Contaminated-anchor flag
 
 `anchor: 'run-up'` when the last pre-announcement close sits ≥15% above the
-90-day mean — leak or rumour is in the anchor itself. The box then says so and
-tells the reader to trust the range, not the point. On the current feed this
-fires for **GSAT, PAYO, OGN, BZH, CBZ** (AES is a sixth, already hand-set via
-`verified_unaffected` to its band floor).
+90-day mean — leak or rumour is in the raw anchor. The box then says so and
+tells the reader to trust the range, not the point. On the rescanned feed
+(2026-09-09) this fires for **GSAT (+16.8%), PAYO (+33.4%), OGN (+51.1%),
+AES (+17.9%), BZH (+19.3%), CBZ (+36.1%)** — 6 of 18. For AES the box instead
+notes the price shown is the hand-verified `verified_unaffected` level, set
+below that run-up, not a point to distrust.
 
 ## 4. Downstream consistency check
 

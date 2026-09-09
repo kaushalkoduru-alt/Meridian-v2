@@ -2537,9 +2537,14 @@ async function renderAnalysis(deal){
       ? 'Pre-announcement range: '+_daUsd(_bnd.lo30)+'\u2013'+_daUsd(_bnd.hi30)+' (30d), '
         +_daUsd(_bnd.lo90)+'\u2013'+_daUsd(_bnd.hi90)+' (90d).'
       : '';
+    var _verif = deal && deal.break_price_method === 'verified_unaffected';
     var runupTxt = (_bnd && _bnd.anchor === 'run-up')
-      ? ' <span style="color:#e2b23f;">The anchor itself ran up '+_bnd.runup_pct
-        +'% over its 90-day mean before filing \u2014 leak or rumour is in this number, so trust the range, not the point.</span>'
+      ? ' <span style="color:#e2b23f;">The pre-announcement close ran up '+_bnd.runup_pct
+        +'% over its 90-day mean \u2014 leak or rumour was in the raw anchor. '
+        + (_verif
+            ? 'The price shown here is a hand-verified unaffected level, set below that run-up.'
+            : 'Trust the range, not the point.')
+        + '</span>'
       : '';
     _daSet('da-break-box',
       '<div style="position:absolute; top:0; right:0; bottom:0; width:3px; background:linear-gradient(180deg, #f0735e, rgba(240,115,94,0.15));"></div>'

@@ -117,7 +117,8 @@ about a number being misleading, not about a feature being missing.
   32-69% above the actual post-break price in 3 of 4.** Shipped: `break_price`
   relabelled everywhere as an optimistic estimate biased high (never a floor),
   a `break_price_band` (30/60/90-day pre-announcement range), a run-up flag for
-  a contaminated anchor (fires on GSAT/PAYO/OGN/BZH/CBZ), and a downstream check
+  a contaminated anchor (fires on GSAT/PAYO/OGN/BZH/CBZ, and AES whose
+  hand-verified price already sits below the run-up), and a downstream check
   confirming nothing still treats it as a hard floor. No numeric haircut — N=4
   cannot size one. §3 stays open (it consumes this number); §5/§14 still
   blocked on it as a *scenario* engine, which the data does not support.
