@@ -248,3 +248,122 @@ delta 0.
   parsed exhibit index), OGN 7.875% (no ref) and its euro notes (ref matched, no
   clause located — a real put the locator likely missed; null is safe).
 - **No put appeared where the chain couldn't prove one.** CBZ/BZH/NATH unchanged.
+
+---
+
+## Field-by-field verification — feed targets a credit member would open (2026-09-10)
+
+Beyond the three hand-read targets. Each row: extracted | filing | match. "Reconciles
+but wrong" = the tranche total bridges to delta 0 yet a specific field is off —
+the errors reconciliation cannot catch.
+
+### CZR — Caesars, 10-K 0001590895-26-000011, Note 9 "Long-Term Debt" ($ in millions)
+
+12 tranches, bridges to **delta 0** (net $11,792 / face $11,905). Table is
+Final Maturity · Rates · Face Value · Book Value.
+
+| field | extracted | filing | match |
+|---|---|---|---|
+| every tranche face | 160 / 637 / 386 / 2,031 / 2,849 / 2,000 / 1,500 / 1,200 / 1,100 / 40 / 2 | same, verbatim from Face Value column | ✓ |
+| every tranche net | 160 / 636 / 381 / 2,002 / 2,820 / 1,986 / 1,486 / 1,192 / 1,087 / 40 / 2 | same, Book Value column | ✓ |
+| rates (notes) | 7.00 / 6.50 / 4.625 / 6.00 fixed; SID bonds 4.30 | table Rates column | ✓ |
+| rates (term loans / revolver) | Adjusted Term SOFR + 2.25% / Base + 1.25%, leverage step-downs | prose, verbatim | ✓ |
+| CVA Delayed Draw Term Loan rate | "Term SOFR plus an applicable margin" (vague) | footnote gives the specific margin schedule | **thin — margin not pulled** |
+| maturities | month/day added from prose (e.g. 2028-01-31, 2030-02-15) | table gives year only; prose confirms | ✓ (spot-check dates) |
+| seniority | "Secured / Unsecured Debt (per table heading)"; notes "rank equally with first-priority lien / senior unsecured obligations" | table sub-headers + prose | ✓ |
+| CEI Senior Notes due 2027 | shown as a **$0 tranche**, 8.125%, redeemed 2025-07-08 | table row is all "N/A / — / —"; 8.125% & redemption are in prose | cosmetic — a dead $0 row |
+| **change of control** | **null on all 12** | 101% put confirmed — EX-10.1 (7.00%/2030) §4.08: "repurchase … at 101% of the principal amount" | **MISS (parser)** |
+
+CoC miss cause: CZR's 10-K lists each indenture as "Indenture (4.625% CEI Senior
+Notes due 2029) … **Previously filed on Form 8-K filed on** September 27, 2021" —
+no "incorporated by reference to Exhibit N". `_parse_indenture_refs` requires that
+phrasing, so it parses **0 refs** and never looks. The puts are real and standard.
+
+### OGN — Organon, 10-K 0001628280-26-011125, Note 12 ($ in millions)
+
+10 tranches, bridges to **delta 0** ($8,644 total principal, one −$81 adjustment).
+
+| field | extracted | filing | match |
+|---|---|---|---|
+| every tranche face | 1,543 / 843 / 2,100 / 1,470 / 1,582 / 500 / 500 / 179 / 0 / 8 | same, verbatim from the table | ✓ |
+| net per tranche | null (table shows principal only + one aggregate adj) | matches table structure | ✓ |
+| term-loan rates | Term SOFR + 2.25% (floor 0.50%); EURIBOR + 2.75% (floor 0.00%) | prose after Amendment No. 3, verbatim | ✓ |
+| note coupons | 4.125 / 2.875 / 5.125 / 6.750 / 7.875 fixed | table | ✓ |
+| maturities | year only (2028 / 2031 / 2034) | footnote gives year only ("due 2028") | ✓ (faithful; dates are in the indentures, not the footnote) |
+| seniority | secured / unsecured per tranche; **7.875% → null** | prose: "7.875% **senior unsecured** notes due 2034" | 7.875% seniority **MISS** (in prose, not pulled) |
+| CoC 4.125% / 5.125% / 6.750% | 101% put, right indentures (EX-10.6 / 10.7 / EX-4.1) | confirmed | ✓ |
+| **CoC 2.875% euro notes** | **null** | **101% put — EX-10.5** §"Change of Control Offer … equal to 101% of the aggregate principal amount" | **WRONG** |
+| **CoC 7.875% notes** | **null** ("no matching indenture reference") | **101% put — EX-4.3** ("INDENTURE Dated as of May 17, 2024 … Upon Change of Control … offer to purchase") | **WRONG** |
+
+CoC miss causes: (1) the 2.875% euro indenture reference line is longer than
+`_parse_indenture_refs`' ~480-char window (extra parties — Elavon, UK Branch), so
+the "Exhibit 10.5" token is truncated and the parser falls through to a shorter
+later row → matches **First Supplemental Indenture EX-10.8 (8 KB)** instead of the
+base **EX-10.5 (584 KB)**. (2) The 7.875% (EX-4.3, same May-2024 8-K as the
+6.750%) row isn't picked up at all.
+
+### GSAT — Globalstar, 10-K 0001366868-26-000012, Note 7 ($ in thousands)
+
+3 "tranches", all Customer funding/repayment agreements (not notes or loans).
+Bridges to **delta 0** (principal $410,022 + $73,766 = carrying $483,788).
+
+| field | extracted | filing | match |
+|---|---|---|---|
+| principal / carrying, each row | 221,625 → 307,670 · 182,147 → 169,983 · 6,250 → 6,135 | verbatim from the Principal / Carrying Value columns | ✓ |
+| **net > face on "2024 Debt Repayment"** | net $307,670 vs face $221,625 (+$86,045) | **correct** — a real premium/accretion from the Apple-funded retirement of the old 13% notes, not a bug | ✓ |
+| 2023 Funding Agreement capacity | $252,000 | prose ("up to $252 million") | ✓ |
+| rates | 2021 "no interest"; 2023/2024 "fees at an undisclosed fixed rate" | footnote states no numeric rate for 2023/2024 | ✓ (faithful) |
+| seniority | first-priority lien over substantially all assets | verbatim | ✓ |
+| CoC | null | bilateral agreements, no indenture; not in the located section | acceptable |
+
+Faithful read of an exotic structure. A credit member should read these as bespoke
+Customer arrangements, not marketable debt.
+
+### AVNS — Avanos, 10-K 0001606498-26-000004, Note 10 "Debt" ($ in millions)
+
+1 term loan + 1 undrawn revolver. Bridges to **delta 0**.
+
+| field | extracted | filing | match |
+|---|---|---|---|
+| Term Loan Facility face | $100.8 | table | ✓ |
+| rate | 5.79% WAIR; SOFR + 1.50–2.00% by leverage; 5.6% effective | verbatim | ✓ |
+| maturity | 2027-06-24 | "will mature on June 24, 2027" | ✓ |
+| seniority | senior secured, first-priority lien | verbatim | ✓ |
+| undrawn revolver | $0 drawn / $375.0M / $4.1M LCs | verbatim | ✓ |
+| CoC | null | no indenture; standard credit-agreement negative covenants only | correct |
+
+Clean.
+
+---
+
+## Coverage check 1 — null / incomplete where debt actually exists
+
+| target | verdict | detail |
+|---|---|---|
+| **ALOT** | **MISS** | Has a Credit Agreement — "Term Loan" $9.5M + "Term A-2 Loan" $9.6M + a revolver. `_HEAD_PAT` finds **zero** candidates: ALOT titles the note **"Note 8—Credit Agreement and Debt Facilities"**, which leads with "Credit Agreement"; the patterns key on Debt / Borrowings / Long-Term Debt / Credit Facilities, not "Credit Agreement". |
+| **GBTG** | **MISS** | Has a **$1,386M senior secured term loan** (net $1,367M, matures July 2031) + $51M other borrowings; total debt net $1,418M. The FS note "(13) Long-term Debt" is at char 504,056, but `_score_heading` picked an earlier MD&A cross-reference ("see note 13 - Long-term Debt") and fed the model MD&A prose → "no tranche-level disclosure". |
+| **AES** | **WRONG FOOTNOTE** | Landed on **Schedule I** ("2. Debt — Senior and Unsecured Notes and Loans Payable", 3,831 chars) — the Parent-Company-only condensed schedule. Reported total "Subtotal $5,984M" ≈ AES's $6.0B *recourse* debt, with 10 notes and no label that it excludes the **$23.2B of non-recourse project debt** disclosed elsewhere. The consolidated debt footnote (split "Recourse Debt" / "Non-Recourse Debt") was not located. A credit analyst reads AES's debt as ~$29B, not $6B. |
+| PAYO | null SAFE | No term loan, notes, or drawn facility anywhere. Only "debt-like" balance-sheet lines are Skuad/PayEco acquisition earnout & deferred-payment liabilities. Genuinely debt-free. |
+| APGE | null SAFE | Biotech, recent IPO. No debt on the balance sheet or in any footnote. |
+| CPRX | null SAFE | Cash-rich pharma, term loan repaid in prior years. No current debt. |
+
+## Coverage check 2 — OGN euro notes
+
+**The put exists.** Read EX-10.5 directly (the base 2.875% Senior Secured Notes
+indenture, 584 KB): *"the Issuers shall make an offer to purchase all of the Notes
+… (a 'Change of Control Offer') at a price in cash … equal to 101% of the
+aggregate principal amount thereof plus accrued and unpaid interest."* Same clause
+in EX-4.3 for the 7.875%. So OGN carries the 101% put on **all five** note series,
+not three. The locator needs: (a) window widened from ~480 to ≥900 chars so a long
+reference line doesn't truncate before the exhibit token; (b) a base
+"Indenture Dated as of …" preferred over a "Supplemental Indenture" on a coupon
+match. `_parse_indenture_refs` also needs a second phrasing — "… Previously filed
+on Form 8-K filed on <date>" (no exhibit number) — to reach CZR's indentures.
+
+**Not applied — verification only.** Fixes to make before display: (1) widen the
+indenture-reference parser (window + phrasing + supplemental de-prioritisation) —
+recovers OGN ×2 and CZR ×4+ CoC puts; (2) `_HEAD_PAT` to accept "Credit
+Agreement …" as a debt-note heading — recovers ALOT; (3) `_score_heading` to
+reject MD&A cross-reference context ("see note NN") — recovers GBTG; (4) skip
+Schedule I / Parent-Company condensed debt schedules, or label them recourse-only
+— fixes AES.
