@@ -4837,45 +4837,22 @@ async def implied_probability(ticker: str):
         # the model does not apply there is no probability to publish, and
         # saying why is more useful than any number would be.
         applies, why = two_state_applies(cp, dp, bp)
-        if not applies:
-            return JSONResponse(content={
-                "probability": None,
-                "model_applies": False,
-                "signal": "Model does not apply",
-                "color": "grey",
-                "current_price": cp,
-                "deal_price": dp,
-                "break_price": bp,
-                "method": deal.get('break_price_method', 'historical'),
-                "note": ("A close-or-break probability cannot be read from these "
-                         "prices: " + why + ". The break price is an optimistic "
-                         "model estimate, not an observed floor -- on the 4 "
-                         "historical breaks the stock landed below it every time."),
-            })
 
+        # The return math does NOT need the two-state probability model — the
+        # spread, the horizon and the carry rate are enough. Computed for every
+        # deal so "return if it closes" and the financing line still render when
+        # the market-implied probability itself can't be priced (break >= price).
         days, horizon_label = _implied_prob_horizon(deal)
         years = days / 365.0
         r = IMPLIED_PROB_CARRY_RATE
         carry = round(cp * r * years, 3)
         dividend, div_rate, div_source = _target_dividend_to_close(ticker, years)
 
-        # 1. WILL IT CLOSE — implied probability, undiscounted. Independent of
-        #    funding cost, always published when the gate passes.
-        prob = round(((cp - bp) / (dp - bp)) * 100, 1)
-
-        # 2. IS THERE ANYTHING HERE — base case is UNLEVERED (carry = 0): the
-        #    return on capital, no funding-cost assumption. The levered figure
-        #    is derived alongside.
         dollar_spread = round(dp + dividend - cp, 3)
         gross_return_annual = round((dollar_spread / cp) * (365.0 / days) * 100, 1)
         net_carry_return_annual = round(gross_return_annual - r * 100, 1)
         positive_unlevered = gross_return_annual > 0
-
-        # The leverage lens: the close probability the FINANCED position would
-        # need to break even at r. A threshold for the levered case, not a
-        # verdict on the deal.
-        breakeven_prob = round(((cp * (1 + r * years) - bp - dividend)
-                                / (dp - bp)) * 100, 1)
+        below_carry = net_carry_return_annual < 0
 
         assumptions = {
             "horizon_days": round(days),
@@ -4886,22 +4863,18 @@ async def implied_probability(ticker: str):
             "dividend_annual_rate": div_rate,
             "dividend_source": div_source,
         }
+        leverage_note = (
+            f"Base case is unlevered: {gross_return_annual:.1f}%/yr is the "
+            f"return on capital, no borrowing assumed. Financing the whole "
+            f"position at {r*100:.1f}%/yr costs ${carry:.2f}/share and nets "
+            f"{net_carry_return_annual:+.1f}%/yr"
+            + (f" — carry exceeds the ${dollar_spread:.2f} spread, so the "
+               f"fully financed trade loses money even if it closes."
+               if below_carry else ".")
+            + " Real merger-arb runs a blend of capital and debt, so the "
+              "effective carry sits between the two.")
 
-        if prob >= 90:
-            signal, color = "Very High", "green"
-        elif prob >= 75:
-            signal, color = "High", "teal"
-        elif prob >= 55:
-            signal, color = "Moderate", "amber"
-        else:
-            signal, color = "Low", "red"
-
-        below_carry = net_carry_return_annual < 0
-        return JSONResponse(content={
-            "probability": prob,
-            "signal": signal,
-            "color": color,
-            "model_applies": True,
+        common = {
             "current_price": cp,
             "deal_price": dp,
             "break_price": bp,
@@ -4912,18 +4885,45 @@ async def implied_probability(ticker: str):
             "positive_unlevered": positive_unlevered,
             "net_carry_return_annual": net_carry_return_annual,
             "below_carry": below_carry,
-            "breakeven_prob": breakeven_prob,
-            "leverage_note": (
-                f"Base case is unlevered: {gross_return_annual:.1f}%/yr is the "
-                f"return on capital, no borrowing assumed. Financing the whole "
-                f"position at {r*100:.1f}%/yr costs ${carry:.2f}/share and nets "
-                f"{net_carry_return_annual:+.1f}%/yr"
-                + (f" — carry exceeds the ${dollar_spread:.2f} spread, so the "
-                   f"fully financed trade loses money even if it closes."
-                   if below_carry else ".")
-                + " Real merger-arb runs a blend of capital and debt, so the "
-                  "effective carry sits between the two."),
+            "leverage_note": leverage_note,
             "assumptions": assumptions,
+        }
+
+        if not applies:
+            # No priceable probability, but the return figures above still stand.
+            return JSONResponse(content={**common,
+                "probability": None,
+                "model_applies": False,
+                "signal": "Not priceable",
+                "color": "grey",
+                "breakeven_prob": None,
+                "note": ("A close-or-break probability cannot be read from these "
+                         "prices: " + why + ". The break price is an optimistic "
+                         "model estimate, not an observed floor -- on the 4 "
+                         "historical breaks the stock landed below it every time."),
+            })
+
+        # WILL IT CLOSE — implied probability, undiscounted; and the close
+        # probability a fully financed position would need to break even at r.
+        prob = round(((cp - bp) / (dp - bp)) * 100, 1)
+        breakeven_prob = round(((cp * (1 + r * years) - bp - dividend)
+                                / (dp - bp)) * 100, 1)
+
+        if prob >= 90:
+            signal, color = "Very High", "green"
+        elif prob >= 75:
+            signal, color = "High", "teal"
+        elif prob >= 55:
+            signal, color = "Moderate", "amber"
+        else:
+            signal, color = "Low", "red"
+
+        return JSONResponse(content={**common,
+            "probability": prob,
+            "model_applies": True,
+            "signal": signal,
+            "color": color,
+            "breakeven_prob": breakeven_prob,
         })
     except Exception as e:
         print(f"Implied probability error {ticker}: {e}")
