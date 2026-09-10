@@ -1417,10 +1417,9 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
 
     <!-- implied probability + break price -->
-    <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid var(--dr-line);">
-      <div class="da-section" style="position:relative; padding:20px 22px; border-right:1px solid var(--dr-line);">
-        <div style="font-family:'DM Mono',monospace; font-size:9.5px; letter-spacing:0.16em; color:var(--dr-accent); text-transform:uppercase;">Market&#8211;Implied Close Probability</div>
-        <div id="da-implied-prob" style="margin-top:8px;"></div>
+    <div id="da-prob-break-grid" style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid var(--dr-line);">
+      <div class="da-section" id="da-prob-cell" style="position:relative; padding:20px 22px; border-right:1px solid var(--dr-line);">
+        <div id="da-implied-prob"></div>
       </div>
       <div id="da-break-box" style="position:relative; padding:20px 22px; border-left:2px solid var(--dr-crit);"></div>
     </div>
@@ -2652,16 +2651,27 @@ function _daTimingRows(deal){
 }
 function _daSet(id, html){ var e=document.getElementById(id); if(e) e.innerHTML = html; }
 function _daTxt(id, txt){ var e=document.getElementById(id); if(e) e.textContent = txt; }
-// When there is no market-implied probability, drop the 3fr/2fr split so the
-// break box doesn't sit beside a near-empty column — stack them full width.
-function _daCollapseProbRow(){
-  var cell = document.getElementById('da-implied-prob');
-  cell = cell && cell.closest('.da-section');
-  var grid = cell && cell.parentElement;
-  if(!grid) return;
-  grid.style.gridTemplateColumns = '1fr';
-  cell.style.borderRight = 'none';
-  cell.style.borderBottom = '1px solid var(--dr-line)';
+// When there is no market-implied probability, don't give it a section at all:
+// hide the cell and hand the break box the full width. The reason it can't be
+// computed is about the break price, so it rides along as a caption there.
+function _daHideProbCell(){
+  var cell = document.getElementById('da-prob-cell');
+  var grid = document.getElementById('da-prob-break-grid');
+  if(cell) cell.style.display = 'none';
+  if(grid) grid.style.gridTemplateColumns = '1fr';
+}
+// Prepend __daNoProbNote as a caption on the break box (idempotent).
+function _daApplyBreakNote(){
+  var box = document.getElementById('da-break-box');
+  if(!box || !window.__daNoProbNote) return;
+  if(box.querySelector('.da-noprob')) return;
+  var n = document.createElement('div');
+  n.className = 'da-noprob';
+  n.style.cssText = "font-family:'DM Sans',system-ui,sans-serif; font-size:12px; "
+    + "line-height:1.5; color:#8d988d; margin-bottom:12px; padding-bottom:11px; "
+    + "border-bottom:1px solid var(--dr-line);";
+  n.textContent = window.__daNoProbNote;
+  box.insertBefore(n, box.firstChild);
 }
 
 async function renderAnalysis(deal){
@@ -2774,6 +2784,7 @@ async function renderAnalysis(deal){
       '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">Break Price</div>'
       + '<div style="margin-top:12px; font-size:12px; line-height:1.6; color:#9a9079;">Break price unavailable for this deal. Downside cannot be modeled without a pre-announcement reference price.</div>');
   }
+  _daApplyBreakNote();  // if the probability model didn't apply, its one-line reason rides here
 
   // ---- market-implied close probability, and is there anything here ----
   // Three figures, each labelled with WHOSE number it is and what it assumes.
@@ -2786,10 +2797,12 @@ async function renderAnalysis(deal){
   // (3) break-even probability -- the threshold for the FINANCED case only.
   _daSet('da-implied-prob', '<div style="font-size:12px; color:#8d988d;">Calculating\u2026</div>');
   (function(){  // reset the prob/break split in case a prior render collapsed it
-    var _c = document.getElementById('da-implied-prob'); _c = _c && _c.closest('.da-section');
-    var _grid = _c && _c.parentElement;
+    window.__daNoProbNote = '';
+    var _c = document.getElementById('da-prob-cell');
+    var _grid = document.getElementById('da-prob-break-grid');
+    if(_c) _c.style.display = '';
     if(_grid){ _grid.style.gridTemplateColumns = 'minmax(0,3fr) minmax(0,2fr)';
-      _c.style.borderRight = '1px solid var(--dr-line)'; _c.style.borderBottom = 'none'; }
+      if(_c){ _c.style.borderRight = '1px solid var(--dr-line)'; _c.style.borderBottom = 'none'; } }
   })();
   try{
     var probData = await fetch('/api/implied-probability/'+deal.ticker).then(function(r){ return r.json(); });
@@ -2835,17 +2848,27 @@ async function renderAnalysis(deal){
         + '</div>'
         + '<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(95,224,201,0.28); font-size:11px; line-height:1.6; color:#8f8772;">'+probData.leverage_note+' Break is assumed to resolve at the same horizon as close.</div>');
     } else {
-      // Model doesn't apply (usually break price >= current). One line of prose,
-      // and collapse the 3fr/2fr split so the break box beside it isn't sitting
-      // next to a near-empty column.
-      _daSet('da-implied-prob', '<div style="font-family:\'DM Sans\',system-ui,sans-serif; font-size:12.5px; line-height:1.6; color:#8d988d; max-width:62ch;">'
-        + ((probData && probData.note) || 'A market-implied close probability cannot be calculated for this deal \u2014 no usable break price to price downside against.')
-        + '</div>');
-      _daCollapseProbRow();
+      // Model doesn't apply (usually break price >= current). Don't give it a
+      // section of its own \u2014 hide the cell, hand the break box the whole width,
+      // and stash a one-liner that renders as a caption on the break box.
+      _daHideProbCell();
+      var _bp = (probData && probData.break_price != null) ? probData.break_price : bp;
+      if(_bp != null && deal.cp != null){
+        window.__daNoProbNote = 'No market\u2011implied close probability: the break estimate '
+          + _daUsd(_bp) + ' sits at or above the last close ' + _daUsd(deal.cp)
+          + ', so the spread leaves no downside for the model to price.';
+      } else {
+        window.__daNoProbNote = 'No market\u2011implied close probability \u2014 there is no usable break price to price downside against.';
+      }
     }
   }catch(e){
-    _daSet('da-implied-prob', '<div style="font-family:\'DM Sans\',system-ui,sans-serif; font-size:12.5px; color:#8d988d;">The market-implied close probability could not be calculated.</div>');
-    _daCollapseProbRow();
+    _daHideProbCell();
+    window.__daNoProbNote = 'The market\u2011implied close probability could not be calculated.';
+  }
+  // If the break box already rendered (it runs after this await), refresh its
+  // caption now that we know there's a note.
+  if(window.__daNoProbNote && document.getElementById('da-break-box').innerHTML){
+    _daApplyBreakNote();
   }
 
   // ---- risk / reward cards ----
