@@ -478,3 +478,72 @@ thereof, plus accrued and unpaid interest".
 | NATH | ok | 0 | 1 term loan, CoC event-of-default noted |
 | GSAT | ok | 0 | 3 funding arrangements, no indenture path |
 | AVNS | ok | 0 | term loan + undrawn revolver |
+
+---
+
+## Wired into the feed and the deal page (2026-09-10)
+
+Verified across every deal with real debt, so it now runs in the scan and shows
+on the pro page.
+
+### Pipeline
+
+- **`EXTRACTOR_VERSION`** (`capital_structure.py`) stamped onto every result.
+  The scan carries a cached reading forward only while the version matches;
+  bump it and every deal re-reads. Same invalidation the commitment /
+  outside_date fields get, keyed to the code rather than the filing — a signed
+  10-K's debt note does not change, our reading of it does.
+- **Scan** (`fetch_deals_from_edgar`, right after the merger-agreement reads):
+  `_prior_capital_structure` restores a version-matched cached reading;
+  otherwise `assess_capital_structure(ticker, cik, llm_fn)` runs. The extractor
+  fetches the target's own most-recent 10-K (a different document from the
+  agreement), locates the debt note, reads the tranches, and runs the EX-4
+  indenture pass for change-of-control. Result cached on the deal record as
+  `capital_structure`, written to Redis as JSON and to the CSV as a dict repr.
+- **Serve** (`get_clean_deals`): `parse_structured('capital_structure')` undoes
+  the CSV repr round-trip, same as `commitment` / `outside_date`. Nothing about
+  this field feeds the score, the gate, or the direction check.
+
+### Display — `templates/index.html`, `capStructureHTML()`
+
+A collapsed **`[TICKER] · Capital Structure`** row between Deal Commitment and
+Why This Risk Band, with a "Debt" jump-nav link. On expand the tranches cascade
+in — `csRise`, 85 ms per tranche, senior first (ranked off the structured
+`instrument_type`, not the seniority prose, which routinely says "effectively
+subordinated to … secured indebtedness" on a senior note). One animation, honours
+`prefers-reduced-motion`.
+
+Each tranche: instrument, face amount, rate (the fixed coupon or the floating
+formula, verbatim — never forced to one number), maturity, seniority where
+stated, and a change-of-control chip — **PUT · 101%** / **REPAID AT CLOSE** /
+**ACCELERATES ON COC** — with the operative sentence and the indenture filing
+quote in a disclosure, the way commitment quotes work. Null change-of-control
+renders nothing. Undrawn facilities sit below the real debt, dimmed, tagged
+UNDRAWN. A total-debt line on face. Every figure carries the 10-K accession,
+heading and as-of date (§20).
+
+The three states render distinctly:
+
+| state | render |
+|---|---|
+| **complete** (`ok`) | full stack, total labelled "reconciles to the filed total" |
+| **incomplete** | amber "Partial — total understated" banner with the reason **above** the stack; the total is shown but labelled "partial, understates … excludes the debt named above" — never presented as whole. This is the AES failure the guard caught; the display must not re-introduce it. |
+| **not disclosed** (`not_disclosed` / `unavailable`) | "Capital structure not disclosed" + reason, no table |
+
+Zero-principal tranches (a note redeemed mid-year, kept by the extractor for the
+reconciliation bridge) are dropped from the rendered stack.
+
+### Rendered and checked — BZH / AES / PAYO
+
+- **BZH — complete.** 3 senior notes (5.875%/27, 7.250%/29, 7.500%/31) each
+  **PUT · 101%** with the Section 4.08 quote from EX-4.1; junior subordinated
+  notes last with the floating formula; undrawn $365M revolver below; **Total
+  debt · face $1.06B — reconciles to the filed total**. Source: 10-K
+  0000915840-25-000075, "(7) Borrowings", as of 2025-09-30.
+- **AES — incomplete.** Amber banner: "reconciles to $5,984M, but the 10-K
+  discloses ~$23,200M of non-recourse / subsidiary debt it does not include".
+  Revolver, then 6 senior notes, then commercial paper, then 2 subordinated
+  notes. **Total debt shown · partial, understates $6.03B.** Source: "12.
+  OBLIGATIONS".
+- **PAYO — not disclosed.** "Capital structure not disclosed. / no long-term-debt
+  footnote could be located in the target's most recent 10-K." No table.

@@ -2438,6 +2438,30 @@ def fetch_deals_from_edgar():
     except Exception as _pae:
         print(f"[Commitment] could not capture prior agreement readings: {_pae}")
 
+    # Same capture, same reason, for the capital-structure reading. It is taken
+    # off the target's own most-recent 10-K debt footnote, which does not change
+    # between scans — so a cached reading is carried forward and the extractor
+    # only re-runs when its code version has moved (capital_structure.
+    # EXTRACTOR_VERSION), the same invalidation the commitment reading gets.
+    # A stale-version or failed reading is dropped so this scan re-reads it.
+    _prior_capital_structure = {}
+    try:
+        import capital_structure as _cs_mod
+        for _row in (load_cache() or []):
+            _tk = _row.get('ticker')
+            if not _tk:
+                continue
+            _pv = parse_structured(_row.get('capital_structure', {}))
+            if not isinstance(_pv, dict) or not _pv.get('status'):
+                continue
+            if _pv.get('extractor_version') != _cs_mod.EXTRACTOR_VERSION:
+                continue  # newer extractor — re-read
+            if _pv.get('status') == 'unavailable':
+                continue  # no model layer when it last ran — retry
+            _prior_capital_structure[_tk] = _pv
+    except Exception as _pce:
+        print(f"[CapStructure] could not capture prior readings: {_pce}")
+
     # Same capture, same reason, for the pre-announcement price band. It is a
     # function of the ticker and the original filing date -- neither changes for
     # a live deal -- so recomputing it every scan is one wasted yfinance call
@@ -3501,6 +3525,45 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         except Exception as _cme:
             print(f"[Commitment] error (non-fatal, nothing changed): {_cme}")
 
+        # ── CAPITAL STRUCTURE ───────────────────────────────────────────────
+        # The target's debt, tranche by tranche, from its own most-recent 10-K
+        # debt footnote. Runs here, after the agreement reads, because it is the
+        # same enrichment shape: an expensive model read of an SEC document,
+        # cached on the deal record, re-run only when it must be. The extractor
+        # fetches the target's 10-K itself (a different document from the merger
+        # agreement just read) and returns one of three honest states — ok /
+        # incomplete / not_disclosed — plus the change-of-control read taken
+        # from each note's EX-4 indenture. Nothing here blocks or rescoring a
+        # deal; it is a disclosure section, wired the way commitment is.
+        try:
+            import capital_structure as _cs
+            _cs_llm = _cs.anthropic_llm_fn(anthropic_key, max_tokens=20000)
+            _cs_restored = _cs_read = 0
+            for _d in results:
+                _tk = _d.get('ticker')
+                _cached = _prior_capital_structure.get(_tk)
+                if _cached:
+                    _d['capital_structure'] = _cached
+                    _cs_restored += 1
+                    continue
+                try:
+                    _r = _cs.assess_capital_structure(
+                        _tk, cik=SEC_CIK_MAP.get(_tk or '', '') or None,
+                        llm_fn=_cs_llm)
+                    _d['capital_structure'] = _r
+                    _cs_read += 1
+                    _nt = len(_r.get('tranches') or [])
+                    print(f"  [CapStructure] {_tk}: {_r.get('status')}"
+                          + (f" — {_nt} tranche(s)" if _nt else "")
+                          + (f"  ·  {_r.get('reason')}" if _r.get('reason') else ""))
+                except Exception as _cse1:
+                    print(f"  [CapStructure] {_tk}: {_cse1}")
+            print(f"[CapStructure] {_cs_restored} restored from cache, "
+                  f"{_cs_read} read this scan "
+                  f"(extractor {_cs.EXTRACTOR_VERSION})")
+        except Exception as _cse:
+            print(f"[CapStructure] pass failed (non-fatal, nothing changed): {_cse}")
+
         try:
             from deal_gate import gate_deal, gate_report, GATE_ENFORCING, VERDICT_VERIFIED
             
@@ -3879,6 +3942,10 @@ def get_clean_deals():
         # Same round-trip again for the outside date read off the agreement.
         if 'outside_date' in d:
             d['outside_date'] = parse_structured(d.get('outside_date', {}))
+        # And for the capital-structure reading — a dict on a fresh scan, a
+        # repr string once it has been through the CSV fallback.
+        if 'capital_structure' in d:
+            d['capital_structure'] = parse_structured(d.get('capital_structure', {}))
         # And for the pre-announcement price band around the break-price anchor.
         if 'break_price_band' in d:
             d['break_price_band'] = parse_structured(d.get('break_price_band', {}))

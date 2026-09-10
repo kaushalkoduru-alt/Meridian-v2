@@ -63,6 +63,13 @@ import requests
 
 SEC_HEADERS = {"User-Agent": "Kaushal Koduru kaushalkoduru@gmail.com"}
 
+# Bump whenever the extraction logic changes in a way that could move a reading.
+# The scan stores this on the cached result and re-runs the extractor for any
+# deal whose cached version does not match — the same invalidation discipline the
+# commitment / outside_date readings get, keyed to the code rather than the
+# filing (a signed 10-K's debt note does not change; our reading of it does).
+EXTRACTOR_VERSION = "2026-09-10.1"
+
 # ── status values the caller renders ─────────────────────────────────────────
 OK           = "ok"             # tranches found and they reconcile
 INCOMPLETE   = "incomplete"     # tranches found but they do NOT reconcile
@@ -1066,6 +1073,17 @@ def reconcile(parsed):
 
 def assess_capital_structure(ticker, company=None, cik=None,
                              llm_fn=None, fetch=None, filing=None):
+    """Public entry — stamps EXTRACTOR_VERSION on every result so the scan can
+    tell a cached reading apart from one taken by newer code."""
+    r = _assess_capital_structure(ticker, company=company, cik=cik,
+                                  llm_fn=llm_fn, fetch=fetch, filing=filing)
+    if isinstance(r, dict):
+        r["extractor_version"] = EXTRACTOR_VERSION
+    return r
+
+
+def _assess_capital_structure(ticker, company=None, cik=None,
+                              llm_fn=None, fetch=None, filing=None):
     """
     Top-level. Returns a dict the caller can render or store.
 
@@ -1095,7 +1113,8 @@ def assess_capital_structure(ticker, company=None, cik=None,
         return {"status": NOT_DISCLOSED, "ticker": ticker,
                 "source": {"accession": filing["accession"], "form": filing["form"],
                            "filed": filing["filed"], "url": filing["doc_url"]},
-                "reason": "10-K found but its debt footnote could not be located"}
+                "reason": "no long-term-debt footnote could be located in the "
+                          "target's most recent 10-K"}
 
     try:
         raw = llm_fn(build_prompt(ticker, company, section))

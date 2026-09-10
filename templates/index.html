@@ -1335,7 +1335,47 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 #page-analysis .dr-fold-inner{padding:14px 18px 4px;}
 @keyframes drFoldIn{from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;}}
 
+/* capital structure — the tranche cascade. One beat per tranche, senior first,
+   top to bottom. Deliberate, not bouncy: a short rise + fade, linear stagger,
+   set from JS on open so it replays each time the section is expanded. */
+#page-analysis .cs-tranche{border-top:1px solid var(--dr-line); padding:13px 0;}
+#page-analysis .cs-tranche:first-child{border-top:0;}
+#page-analysis .cs-name{font-family:'DM Sans',system-ui,sans-serif; font-size:13.5px;
+  color:var(--dr-ink); font-weight:500; letter-spacing:.01em;}
+#page-analysis .cs-tag{font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.14em;
+  color:var(--dr-faint); margin-left:6px;}
+#page-analysis .cs-grid{margin-top:9px; display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:9px 22px;}
+#page-analysis .cs-lines{margin-top:9px;}
+#page-analysis .cs-f{font-family:'DM Mono',monospace; font-size:11px; line-height:1.55;}
+#page-analysis .cs-f .k{color:var(--dr-label); text-transform:uppercase; letter-spacing:.1em;
+  font-size:9px; display:block; margin-bottom:2px;}
+#page-analysis .cs-f .v{color:var(--dr-ink);}
+#page-analysis .cs-f.cs-wide .v{color:var(--dr-label); font-size:10.5px; line-height:1.6;}
+#page-analysis .cs-coc{margin-top:10px; padding-top:9px; border-top:1px dotted var(--dr-line2);}
+#page-analysis .cs-chip{display:inline-block; font-family:'DM Mono',monospace; font-size:9px;
+  letter-spacing:.12em; text-transform:uppercase; padding:3px 8px; border:1px solid currentColor;}
+#page-analysis .cs-undrawn{padding:9px 0; border-top:1px dashed var(--dr-line2); opacity:.62;}
+#page-analysis .cs-undrawn .cs-name{font-size:11.5px; color:var(--dr-label); font-weight:400;}
+#page-analysis .cs-total{margin-top:12px; padding-top:12px; border-top:1px solid var(--dr-line2);
+  display:flex; align-items:baseline; justify-content:space-between; gap:14px;
+  font-family:'DM Mono',monospace;}
+#page-analysis .cs-total .k{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--dr-label);}
+#page-analysis .cs-total .v{font-size:17px; color:var(--dr-ink);}
+#page-analysis .cs-src{margin-top:12px; font-family:'DM Mono',monospace; font-size:9.5px;
+  letter-spacing:.08em; color:var(--dr-faint);}
+#page-analysis .cs-src a{color:var(--dr-label); text-decoration:none; border-bottom:1px solid var(--dr-line2);}
+#page-analysis .cs-src a:hover{color:var(--dr-accent);}
+#page-analysis .cs-caveat{padding:13px 15px; border:1px solid var(--dr-warn);
+  background:rgba(207,161,81,0.08); font-size:11.5px; line-height:1.6; color:var(--dr-ink);}
+#page-analysis .cs-caveat .h{font-size:9.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--dr-warn); font-weight:600; display:block; margin-bottom:6px;}
+#page-analysis .cs-none{font-family:'DM Mono',monospace; font-size:12px; line-height:1.65; color:var(--dr-label);}
+@keyframes csRise{from{opacity:0; transform:translateY(7px);} to{opacity:1; transform:none;}}
+
 @media (prefers-reduced-motion:reduce){
+  #page-analysis .cs-tranche,#page-analysis .cs-undrawn{animation:none!important; opacity:1!important;}
+  #page-analysis .cs-undrawn{opacity:.62!important;}
   #page-analysis .dr-fold.open .dr-fold-body{animation:none;}
   #page-analysis .dr-chev{transition:none;}
 }
@@ -1378,6 +1418,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <a href="#dr-s-acq">Acquirer</a>
     <a href="#da-structure-section">Structure</a>
     <a href="#da-commitment-section">Commitment</a>
+    <a href="#da-capstructure-section">Debt</a>
     <a href="#dr-s-explain">Risk band</a>
     <a href="#dr-s-score">Score</a>
   </nav>
@@ -1506,6 +1547,29 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </div>
 
+  <!-- ============ 3.65 · CAPITAL STRUCTURE (target debt; hidden when no reading) ============ -->
+  <div id="da-capstructure-section" class="dr-sec" style="display:none; scroll-margin-top:56px;">
+    <div class="dr-sec-head">
+      <span class="dr-eye">Capital Structure</span>
+      <span class="dr-fn">the target&#8217;s debt, tranche by tranche</span>
+      <span class="dr-rule"></span>
+    </div>
+    <div class="dr-fold" data-fold data-cascade="daCascadeCapStructure">
+      <button class="dr-fold-bar" type="button" aria-expanded="false">
+        <span>
+          <span class="dr-fold-lead"><b id="da-cs-lead">Capital Structure</b></span>
+          <span class="dr-fold-meta" id="da-cs-meta">the debt that sits ahead of the equity &middot; click to open</span>
+        </span>
+        <span class="dr-chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="dr-fold-body"><div><div class="dr-fold-inner">
+        <div class="da-section" style="position:relative;">
+          <div id="da-capstructure" style="border:1px solid var(--dr-line); padding:14px 22px;"></div>
+        </div>
+      </div></div></div>
+    </div>
+  </div>
+
   <!-- ============ 3.7 · WHY THIS RISK BAND (explanation; hidden when no evidence) ============ -->
   <div id="dr-s-explain" class="dr-sec" style="scroll-margin-top:56px;">
     <div class="dr-sec-head">
@@ -1583,6 +1647,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     var open = (force === undefined) ? !fold.classList.contains('open') : force;
     fold.classList.toggle('open', open);
     if(bar) bar.setAttribute('aria-expanded', open ? 'true' : 'false');
+    // a section can name a function to run each time it is opened — the
+    // capital-structure cascade re-arms its per-tranche animation this way,
+    // so it plays on every expand and not only the first.
+    if(open && fold.dataset.cascade && typeof window[fold.dataset.cascade] === 'function'){
+      setTimeout(window[fold.dataset.cascade], 20);
+    }
   }
   document.querySelectorAll('#page-analysis .dr-fold[data-fold] .dr-fold-bar').forEach(function(bar){
     bar.addEventListener('click', function(){ toggle(bar.closest('.dr-fold')); });
@@ -3056,6 +3126,26 @@ async function renderAnalysis(deal){
     commitSection.style.display = 'none';
   }
 
+  // ---- capital structure (target debt, from its own 10-K) ----
+  var csSection = document.getElementById('da-capstructure-section');
+  var csHtml = (typeof capStructureHTML === 'function')
+             ? capStructureHTML(deal.capital_structure, deal.ticker) : '';
+  if(csHtml){
+    var _cs = deal.capital_structure || {};
+    var _nt = (_cs.tranches || []).length;
+    var _leadEl = document.getElementById('da-cs-lead');
+    var _metaEl = document.getElementById('da-cs-meta');
+    if(_leadEl) _leadEl.textContent = (deal.ticker || '') + ' · Capital Structure';
+    if(_metaEl) _metaEl.textContent =
+        _cs.status === 'ok'         ? (_nt + ' tranche' + (_nt===1?'':'s') + ' · reconciles to the filed total · click to open')
+      : _cs.status === 'incomplete' ? 'partial — the stack understates total debt · click to open'
+      :                              'not disclosed in the target’s filings · click to open';
+    if(csSection) csSection.style.display = '';
+    _daSet('da-capstructure', csHtml);
+  } else if(csSection){
+    csSection.style.display = 'none';
+  }
+
   // ---- V3 score: overall + real factor bars ----
   _daSet('da-score-overall',
     '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">V3 Composite</div>'
@@ -3203,6 +3293,203 @@ function commitmentHTML(commitment){
   }
   return html;
 }
+
+// ── CAPITAL STRUCTURE ────────────────────────────────────────────────────────
+// The target's debt, from its own most-recent 10-K debt footnote, read by the
+// extractor in capital_structure.py. Three honest states, all rendered
+// distinctly: ok (full stack, reconciles), incomplete (partial — say so, never
+// show the partial total as if it were whole), not_disclosed (no table, say so).
+function _csEsc(s){ return String(s==null?'':s).replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _csAmt(v, unit){
+  if(v===null||v===undefined||v==='') return null;
+  var n = Number(v); if(isNaN(n)) return null;
+  var m = unit==='thousands' ? n/1000 : (unit==='billions' ? n*1000 : n); // -> $M
+  if(Math.abs(m) >= 1000){
+    var b = Math.round((m/1000)*100)/100;
+    return '$'+b.toLocaleString(undefined,{maximumFractionDigits:2})+'B';
+  }
+  return '$'+Math.round(m).toLocaleString()+'M';
+}
+// seniority order for the cascade: secured first, then bank debt, then senior
+// unsecured, then subordinated, then everything else. Ranks off the model's
+// structured instrument_type — the seniority PROSE is unreliable for this
+// (a senior note's disclosure routinely says "effectively subordinated to …
+// secured indebtedness", which is not the same as being subordinated debt).
+// Original order breaks ties.
+function _csRank(t){
+  switch((t.instrument_type||'').toLowerCase()){
+    case 'senior_secured_notes':                        return 1;
+    case 'term_loan': case 'revolver': case 'mortgage':
+    case 'abl': case 'credit_facility':                 return 2;
+    case 'senior_notes':                                return 3;
+    case 'convertible':                                 return 4;
+    case 'junior_subordinated': case 'subordinated':    return 6;
+  }
+  var s = (t.seniority||'').toLowerCase();
+  if(/\bjunior\b|\bsubordinated\b/.test(s) && !/effectively\s+subordinated/.test(s)) return 6;
+  if(/first[\s-]?(priority|lien)|senior\s+secured/.test(s)) return 1;
+  return 5;
+}
+function _csCoCChip(text){
+  var s = String(text||'');
+  if(/101\s*%/.test(s))            return {label:'PUT · 101%', col:'var(--dr-pos)'};
+  if(/\b100\s*%/.test(s))          return {label:'PUT · 100%', col:'var(--dr-pos)'};
+  if(/paid|repaid|repay|discharg|pay all outstanding|effective time|at close|at the closing/i.test(s))
+                                   return {label:'REPAID AT CLOSE', col:'var(--dr-label)'};
+  if(/terminat|acceler|due and payable|event of default|immediately due/i.test(s))
+                                   return {label:'ACCELERATES ON COC', col:'var(--dr-warn)'};
+  return {label:'SEE NOTE', col:'var(--dr-label)'};
+}
+function _csField(k, v){                       // short value → grid cell
+  if(v===null||v===undefined||v==='') return '';
+  return '<div class="cs-f"><span class="k">'+k+'</span><span class="v">'+_csEsc(v)+'</span></div>';
+}
+function _csRow(k, v){                         // long value → full-width row
+  if(v===null||v===undefined||v==='') return '';
+  return '<div class="cs-f cs-wide"><span class="k">'+k+'</span><span class="v">'+_csEsc(v)+'</span></div>';
+}
+// a generic tranche name ("Senior Unsecured Note") gains its fixed coupon as a
+// prefix so a stack of six is not six identical lines
+function _csDisplayName(t){
+  var n = t.name || 'Debt tranche';
+  var rt = (t.rate && t.rate.text) || '';
+  var m = rt.match(/^\s*(\d+\.?\d*)\s*%/);
+  if(m && n.indexOf(m[1]) === -1 && /note|loan|debt|bond|facilit|borrowing|obligation/i.test(n))
+    n = m[1] + '% ' + n;
+  return n;
+}
+function _csTrancheHTML(t, unit, i, undrawn){
+  var cls  = undrawn ? 'cs-undrawn' : 'cs-tranche';
+  var face = undrawn ? null : _csAmt(t.face_amount!=null ? t.face_amount : t.drawn, unit);
+  var net  = (!undrawn && t.net_amount!=null && Number(t.net_amount)!==Number(t.face_amount))
+             ? _csAmt(t.net_amount, unit) : null;
+  var cap  = _csAmt(t.capacity, unit);
+  var rate = (t.rate && t.rate.text) ? t.rate.text : null;
+  var h = '<div class="'+cls+'" data-cs-row style="animation:csRise .32s ease both; animation-delay:'+(i*0.085).toFixed(3)+'s;">';
+  h += '<div class="cs-name">'+_csEsc(undrawn ? (t.name || 'Undrawn facility') : _csDisplayName(t))
+     + (undrawn ? ' <span class="cs-tag">UNDRAWN</span>' : '')
+     + '</div>';
+  h += '<div class="cs-grid">';
+  if(undrawn){
+    h += _csField('drawn', '$0 borrowed');
+    h += _csField('capacity', cap);
+    h += _csField('maturity', t.maturity);
+  } else {
+    h += _csField('face', face || '—');
+    if(net) h += _csField('net of discount', net);
+    if(cap) h += _csField('facility size', cap);
+    h += _csField('maturity', t.maturity);
+    if(t.issuance_date) h += _csField('issued', t.issuance_date);
+  }
+  h += '</div>';
+  if(rate)        h += '<div class="cs-lines">' + _csRow('rate', rate) + '</div>';
+  if(t.seniority) h += '<div class="cs-lines">' + _csRow('seniority', t.seniority) + '</div>';
+  if(!undrawn && t.change_of_control){
+    var chip = _csCoCChip(t.change_of_control);
+    h += '<div class="cs-coc">'
+       + '<span class="cs-chip" style="color:'+chip.col+';">'+chip.label+'</span>'
+       + '<div style="margin-top:7px; font-size:11px; line-height:1.6; color:var(--dr-label); font-family:\'DM Mono\',monospace;">'+_csEsc(t.change_of_control)+'</div>'
+       + (t.change_of_control_source ? '<div style="margin-top:4px; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--dr-faint);">from '+_csEsc(t.change_of_control_source)+'</div>' : '')
+       + _daQuote(t.change_of_control_quote, chip.col)
+       + '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+function capStructureHTML(cs, ticker){
+  if(!cs || !cs.status || cs.status === 'unavailable') return '';
+  var src = cs.source || {};
+  var srcHtml = '';
+  if(src.accession){
+    var label = (src.form || '10-K') + ' ' + src.accession
+              + (src.filed ? ' · filed ' + src.filed : '')
+              + (src.heading ? ' · “' + _csEsc(src.heading) + '”' : '');
+    srcHtml = '<div class="cs-src">Source · '
+            + (src.url ? '<a href="'+_csEsc(src.url)+'" target="_blank" rel="noopener">'+label+'</a>' : label)
+            + (cs.as_of ? ' · figures as of ' + _csEsc(cs.as_of) : '')
+            + '</div>';
+  }
+
+  // NOT DISCLOSED — no table, say so plainly.
+  if(cs.status === 'not_disclosed'){
+    return '<div class="cs-none"><b style="color:var(--dr-ink);">Capital structure not disclosed.</b><br>'
+         + _csEsc(cs.reason || 'No readable debt footnote in the target’s filings.')
+         + '</div>' + srcHtml;
+  }
+
+  var unit = cs.currency_unit;
+  // a tranche carrying no principal (a note fully redeemed during the year, say)
+  // is not part of the current structure — the extractor keeps it for the
+  // reconciliation bridge, the display drops it. Undrawn revolvers are already
+  // split out upstream into undrawn_facilities.
+  var _z = function(v){ return v==null || Number(v)===0; };
+  var tranches = (cs.tranches || []).slice()
+    .filter(function(t){ return !(_z(t.face_amount) && _z(t.net_amount) && _z(t.drawn)); })
+    .map(function(t,idx){ return {t:t, idx:idx}; });
+  tranches.sort(function(a,b){ var r = _csRank(a.t) - _csRank(b.t); return r !== 0 ? r : a.idx - b.idx; });
+
+  var html = '';
+
+  // INCOMPLETE — the caveat leads, before the partial stack.
+  if(cs.status === 'incomplete'){
+    html += '<div class="cs-caveat" style="margin-bottom:14px;">'
+          + '<span class="h">Partial — total understated</span>'
+          + _csEsc(cs.reason || 'The tranches below do not bridge to the filing’s consolidated debt total.')
+          + '</div>';
+  }
+
+  var rows = tranches.map(function(o,i){ return _csTrancheHTML(o.t, unit, i, false); }).join('');
+  html += rows || '<div class="cs-none">No individual tranches could be read from the footnote.</div>';
+
+  // undrawn facilities — below real debt, visually subordinate
+  var und = cs.undrawn_facilities || [];
+  if(und.length){
+    html += '<div style="margin-top:12px; font-family:\'DM Mono\',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--dr-faint);">Undrawn capacity — not debt</div>';
+    html += und.map(function(u,i){ return _csTrancheHTML(u, unit, tranches.length + i, true); }).join('');
+  }
+
+  // total debt line, on face
+  var faceTotal = null;
+  if(cs.stated_face_total && cs.stated_face_total.amount != null){
+    faceTotal = { amt: _csAmt(cs.stated_face_total.amount, unit), sub: cs.stated_face_total.label || 'as stated in the filing' };
+  } else {
+    var sum = 0, any = false;
+    (cs.tranches || []).forEach(function(t){
+      var f = t.face_amount != null ? t.face_amount : t.drawn;
+      if(f != null && !isNaN(Number(f))){ sum += Number(f); any = true; }
+    });
+    if(any) faceTotal = { amt: _csAmt(sum, unit), sub: 'sum of tranche face amounts' };
+  }
+  if(faceTotal){
+    if(cs.status === 'incomplete'){
+      html += '<div class="cs-total" style="color:var(--dr-warn);">'
+            + '<span class="k" style="color:var(--dr-warn);">Total debt shown · partial, understates</span>'
+            + '<span class="v" style="color:var(--dr-warn);">'+faceTotal.amt+'</span></div>'
+            + '<div style="margin-top:4px; font-family:\'DM Mono\',monospace; font-size:9px; letter-spacing:.1em; color:var(--dr-faint);">'+_csEsc(faceTotal.sub)+' — excludes the debt named above</div>';
+    } else {
+      html += '<div class="cs-total">'
+            + '<span class="k">Total debt · face</span>'
+            + '<span class="v">'+faceTotal.amt+'</span></div>'
+            + '<div style="margin-top:4px; font-family:\'DM Mono\',monospace; font-size:9px; letter-spacing:.1em; color:var(--dr-faint);">'+_csEsc(faceTotal.sub)
+            + (cs.reconciliation && cs.reconciliation.ok ? ' · reconciles to the filed total' : '')+'</div>';
+    }
+  }
+
+  return html + srcHtml;
+}
+// re-arm the per-tranche animation each time the section opens
+window.daCascadeCapStructure = function(){
+  var wrap = document.getElementById('da-capstructure');
+  if(!wrap) return;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  [].forEach.call(wrap.querySelectorAll('[data-cs-row]'), function(r,i){
+    if(reduce){ r.style.animation = 'none'; r.style.opacity = ''; return; }
+    r.style.animation = 'none';
+    void r.offsetWidth;                       // force reflow so the restart takes
+    r.style.animation = 'csRise .32s ease both';
+    r.style.animationDelay = (i*0.085).toFixed(3) + 's';
+  });
+};
 
 // ── DEAL STRUCTURE FLAGS ──────────────────────────────────────────────────────
 // flag -> short badge label. Amber = changes what a holder receives; muted =
