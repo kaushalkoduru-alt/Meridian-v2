@@ -367,3 +367,114 @@ Agreement …" as a debt-note heading — recovers ALOT; (3) `_score_heading` to
 reject MD&A cross-reference context ("see note NN") — recovers GBTG; (4) skip
 Schedule I / Parent-Company condensed debt schedules, or label them recourse-only
 — fixes AES.
+
+---
+
+## Phase 10 — the three problems reconciliation could not catch, fixed
+
+All four fixes from "Coverage check" above are now applied. Not wired in, not
+displayed. Re-verified field-by-field against real filings.
+
+### 1. AES — wrong footnote (the serious one)
+
+`_score_heading` now penalises a heading whose preceding ~7 KB carries Schedule I
+/ "Condensed Financial Information of Registrant" / "Parent Company Only" context
+(−12), and `_HEAD_PAT` was widened so AES's real consolidated note heading
+("12. OBLIGATIONS") is a candidate at all. AES now lands on **"12. OBLIGATIONS"**,
+not Schedule I's "2. Debt".
+
+It still only extracts the recourse table ($5,984M) — the $23.2B of non-recourse
+project debt is disclosed by aggregate rate-category, not as tranches, so the
+model correctly refuses to invent tranche rows for it. The new
+`consolidated_total_guard` catches exactly this: it scans the full 10-K for a
+disclosed non-recourse / subsidiary-debt figure, and if the located note omits
+debt that large, forces **status = incomplete** with the reason spelled out.
+
+| field | result |
+|---|---|
+| heading | `12. OBLIGATIONS` (was Schedule I `2. Debt`) |
+| status | **incomplete** — guard fired |
+| reason | "reconciles to $5,984M, but the 10-K discloses ~$23,200M of non-recourse / subsidiary debt it does not include — this is a parent-only or partial schedule, not the consolidated debt note" |
+| tranches | 9 recourse (CP, 6 senior notes, revolver draw, 2 junior sub notes), each rate/maturity/seniority verbatim |
+| outcome | **safe** — will not ship a $23B-understated number; shows "capital structure incomplete" |
+
+Swept every currently-extracting deal for the same wrong-note landing: CBZ, NATH,
+GBTG, CZR, OGN, GSAT, AVNS all land on the consolidated FS debt note. Only AES had
+non-recourse debt of a scale to trip the guard, and it trips.
+
+### 2. ALOT and GBTG — debt read as null
+
+- **`_HEAD_KW`** gained `CREDIT AGREEMENTS? … (AND DEBT FACILITIES)?`, `DEBT
+  FACILITY|FACILITIES`, `FINANCING ARRANGEMENTS`, `DEBT OBLIGATIONS`,
+  `OBLIGATIONS`.
+- **`_score_heading`** now penalises an MD&A cross-reference: a "(see" / "refer
+  to" lead-in (−8), a "to our consolidated financial statements included
+  elsewhere" tail (−8), a contractual-obligations table nearby (−6); and boosts a
+  heading sitting inside "Notes to Consolidated Financial Statements" (+3).
+
+| target | heading now | status | tranches | bridge |
+|---|---|---|---|---|
+| **ALOT** | `Note 8—Credit Agreement and Debt Facilities` | incomplete | **6** (was 0) | Δ +15,700 — the $15.7M revolver draw sits outside the Note 8 table total; honest "incomplete" beats a silent partial |
+| **GBTG** | `(13) Long-term Debt` (real FS note, was an MD&A mention) | **ok** | 2 | **Δ 0** — $1,386M Term B-1 + $51M other → net $1,418M |
+
+Both now extract. ALOT field spot-check: USD Term Loan $9.5M @ SOFR+1.60–3.25%
+(7.024%), matures 2028-08-04; USD Term A-2 $9.6M matures 2035-08-04; MTEX euro
+term €/$1.567M @ EURIBOR-12M+2%; equipment loan $527K @ 7.06%; revolver $15.7M
+drawn / $27.5M cap. GBTG: Term B-1 face $1,386M / net $1,367M @ SOFR+2.50%
+(~6.7% effective), matures 2031-07-26, senior secured first lien.
+
+### 3. Change-of-control locator — two gaps closed
+
+**`_parse_indenture_refs` rewritten.** Window 480 → 1300 chars. Two reference
+shapes now parse:
+- shape A — the parenthetical: "(incorporated by reference to Exhibit 4.1 to the
+  Form 8-K filed <date>)"
+- **shape B — no exhibit number**: "… Previously filed on Form 8-K filed on
+  <date>" — this is how CZR cites every one of its indentures, and the old parser
+  read **zero** of them.
+A `supplemental` flag is carried so `_match_ref` can prefer a base
+"Indenture dated as of …" over a "Supplemental Indenture" when both match a coupon
+— this is what put OGN's euro notes on an 8 KB supplemental instead of the 584 KB
+base indenture.
+
+**`indenture_coc_for_notes`** now resolves shape-B references by opening the cited
+8-K's filing index and taking its EX-4.x / EX-10.x indenture documents in
+size-descending order, trying up to six, keeping the first whose head says
+"INDENTURE" and whose text contains the tranche coupon.
+
+**`_locate_coc_clause` rescored.** CZR's 4.625%/2029 indenture has three
+"Change of Control." heads — a definitions cross-reference at char 125K, the
+operative "Section 4.08 Change of Control." at 325K, a sub-clause at 328K. The old
+scorer tied them and kept the *first* (the definitions blurb → model correctly
+saw no put → false negative). Now: +6 for "right to require the Issuer to
+repurchase", +4 for "shall … offer to repurchase", +3 for "101% of … principal
+amount", +2 for a "Section N.NN" numeric heading; −8 when the preceding text is
+"the meaning of" / "definition of", −6 for "shall have the meaning" in the first
+400 chars; ties go to the *later* head.
+
+| target | series with 101% put | before | after |
+|---|---|---|---|
+| **CZR** | 2030 SSN 7.00%, 2032 SSN 6.50%, **2029 SN 4.625%**, 2032 SN 6.00% | 0 (parser read no refs) | **4 of 4** live series; the 8.125%/2027 is $0 face (redeemed July 2025), no ref, shown blank |
+| **OGN** | 4.125%/28, 2.875%€/28, 5.125%/31, 6.750%/34, **7.875%/34** | 3 | **5 of 5** |
+
+Each put verified by reading the indenture directly: "each holder shall have the
+right to require the Issuer to repurchase … at 101% of the principal amount
+thereof, plus accrued and unpaid interest".
+
+### Two thin spots — left as-is, both honest
+
+- **CZR CVA Delayed Draw Term Loan** rate reads "variable rate based on Term SOFR
+  plus an applicable margin" — the 10-K genuinely does not state the margin.
+- **OGN 7.875%/2034 seniority** is null — stated in prose ("senior unsecured"),
+  not in the debt table the model reads. Not fabricating a table cell that isn't
+  there.
+
+### Regression — no currently-correct deal moved
+
+| target | status | Δ | notes |
+|---|---|---|---|
+| CBZ | ok | 0 | 3 tranches, CoC on both 2024-facility tranches |
+| BZH | ok | 0 | **3 senior-note puts all intact**, each "101% of aggregate principal" |
+| NATH | ok | 0 | 1 term loan, CoC event-of-default noted |
+| GSAT | ok | 0 | 3 funding arrangements, no indenture path |
+| AVNS | ok | 0 | term loan + undrawn revolver |

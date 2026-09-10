@@ -216,40 +216,63 @@ def find_target_10k(ticker, cik=None, fetch=None):
 # ════════════════════════════════════════════════════════════════════════════
 
 # Note headings vary — "Note 10. Debt and Financing Arrangements" (CBZ),
-# "(7) Borrowings" (BZH), "NOTE J – LONG-TERM DEBT" (NATH). All three shapes,
-# plus the words filers actually use for the debt note.
+# "(7) Borrowings" (BZH), "NOTE J – LONG-TERM DEBT" (NATH), "Note 8—Credit
+# Agreement and Debt Facilities" (ALOT), "12. OBLIGATIONS" (AES's consolidated
+# debt note). _score_heading validates that the block after is really a debt
+# table, so the looser keywords here (OBLIGATIONS, CREDIT AGREEMENT) can't drag
+# in a lease or pension note.
+_HEAD_KW = (r'LONG[\-\s]?TERM\s+DEBT|DEBT(?:\s+AND\s+FINANCING(?:\s+ARRANGEMENTS)?)?|'
+            r'BORROWINGS|NOTES?\s+PAYABLE|INDEBTEDNESS|'
+            r'CREDIT\s+(?:AGREEMENTS?|FACILIT(?:Y|IES))(?:\s+AND\s+DEBT(?:\s+FACILIT(?:Y|IES))?)?|'
+            r'DEBT\s+FACILIT(?:Y|IES)|FINANCING\s+ARRANGEMENTS?|'
+            r'LONG[\-\s]?TERM\s+OBLIGATIONS|DEBT\s+OBLIGATIONS|OBLIGATIONS')
 _HEAD_PAT = re.compile(
     r'(?:'
-    r'NOTE\s+[A-Z0-9]{1,3}\s*[–—:.\-]\s*'
-      r'(?:LONG[\-\s]?TERM\s+DEBT|DEBT(?:\s+AND\s+FINANCING(?:\s+ARRANGEMENTS)?)?|'
-       r'BORROWINGS|NOTES?\s+PAYABLE|INDEBTEDNESS|CREDIT\s+FACILITIES?|'
-       r'LONG[\-\s]?TERM\s+OBLIGATIONS|DEBT\s+OBLIGATIONS)'
+    r'NOTE\s+[A-Z0-9]{1,3}\s*[–—:.\-]\s*(?:' + _HEAD_KW + r')'
     r'|'
-    r'\(\d{1,2}\)\s*(?:Borrowings|Debt|Long[\-\s]?Term\s+Debt|Notes?\s+Payable|'
-      r'Indebtedness|Debt\s+and\s+Financing(?:\s+Arrangements)?|Debt\s+Obligations)'
+    r'\(\d{1,2}\)\s*(?:' + _HEAD_KW + r')'
     r'|'
-    r'\b\d{1,2}\.\s+(?:Borrowings|Debt|Long[\-\s]?Term\s+Debt|Notes?\s+Payable|'
-      r'Indebtedness)\b'
+    r'\b\d{1,2}\.\s+(?:' + _HEAD_KW + r')\b'
     r')', re.I)
+
+# Contexts where a "Debt" heading is the WRONG note: a Schedule I / parent-only
+# condensed schedule (AES — reconciles cleanly to ~$6B parent recourse debt
+# while consolidated debt is ~$29B), or an MD&A contractual-obligations table.
+_SCHEDULE_I = re.compile(
+    r'SCHEDULE\s+I\b|CONDENSED\s+FINANCIAL\s+INFORMATION\s+OF\s+(?:THE\s+)?REGISTRANT'
+    r'|PARENT\s+COMPANY\s+(?:ONLY|INFORMATION|FINANCIAL)|PARENT[\-\s]?ONLY'
+    r'|\(PARENT\s+COMPANY\s+ONLY\)', re.I)
+_MDNA_OBLIG = re.compile(
+    r'Footnote\s+Reference|Payments?\s+Due\s+by\s+Period|Contractual\s+Obligations'
+    r'|Less\s+than\s+1\s+year', re.I)
+_FS_MARKER = re.compile(
+    r'NOTES\s+TO\s+(?:THE\s+)?(?:CONSOLIDATED\s+)?FINANCIAL\s+STATEMENTS', re.I)
 
 # Where the NEXT note begins — used to cut the tail of the captured block. The
 # capture group holds the heading text so a running page header that repeats the
 # current heading ("NOTE J – LONG-TERM DEBT (continued)") can be told apart from
 # a genuine new note and skipped.
+# A footnote marker inside a table — "(1) These amounts…", "(2) Excludes…" — is
+# not the next note. Exclude the words such markers lead with.
+_FN_LEADIN = (r'These|Exclud\w+|Includ\w+|Represent\w+|Reflect\w+|Consist\w+|'
+              r'Amounts?|Primarily|Net\b|Other\b|As\s+of|For\s+the|In\s+\w|The\s+\w')
 _NEXT_NOTE_PAT = re.compile(
     r'(NOTE\s+[A-Z0-9]{1,3}\s*[–—:.\-]\s*[A-Z][A-Za-z ,\-]{2,40}'
-    r'|\(\d{1,2}\)\s+[A-Z][a-z][A-Za-z ,\-]{2,40}'
-    r'|\b\d{1,2}\.\s+[A-Z][a-z]+(?:\s+[A-Za-z]+){0,3})')
+    r'|\(\d{1,2}\)\s+(?!(?:' + _FN_LEADIN + r'))[A-Z][a-z][A-Za-z ,\-]{2,40}'
+    r'|\b\d{1,2}\.\s+(?!(?:' + _FN_LEADIN + r'))[A-Z][a-z]+(?:\s+[A-Za-z]+){0,3})')
 
-_SECTION_MAX = 20000
+_SECTION_MAX = 24000
 
 
 def _score_heading(text, start):
     """
-    How much the block after a heading looks like the debt NOTE (a dense dollar
-    table with a stated total) rather than an MD&A mention of the same words.
+    How much the block after a heading looks like the CONSOLIDATED debt NOTE
+    (a dense dollar table with a stated total) rather than an MD&A mention, an
+    MD&A contractual-obligations row, or a Schedule I / parent-only schedule.
     """
     w = text[max(0, start - 500):start + _SECTION_MAX]
+    lookahead = text[start:start + 400]
+    before = text[max(0, start - 7000):start]
     sc = 0
     if re.search(r'total\s+(?:long[\-\s]?term\s+)?(?:debt|borrowings|senior\s+notes)'
                  r'[,]?\s*(?:net)?', w, re.I):
@@ -258,12 +281,42 @@ def _score_heading(text, start):
         sc += 2
     if re.search(r'matur', w, re.I):
         sc += 2
-    sc += min(3, len(re.findall(r'senior\s+notes|term\s+loan|revolv|subordinated', w, re.I)))
+    sc += min(3, len(re.findall(
+        r'senior\s+notes|term\s+loan|revolv|subordinated|non[\-\s]?recourse\s+debt|'
+        r'recourse\s+debt', w, re.I)))
     if re.search(r'risk\s+factors|forward[\-\s]looking\s+statements|item\s+1a', w, re.I):
         sc -= 3
     if re.search(r'consist(?:s|ed)?\s+of\s+the\s+following|was\s+as\s+follows|'
-                 r'following\s+table', text[start:start + 320], re.I):
+                 r'following\s+table', lookahead, re.I):
         sc += 2
+
+    # ── the "wrong note" penalties ──────────────────────────────────────────
+    # Schedule I / parent-company-only condensed schedule. AES's is titled
+    # "2. Debt" and reconciles perfectly — to a total that excludes $23bn of
+    # non-recourse debt.
+    if _SCHEDULE_I.search(before):
+        sc -= 12
+    # An MD&A contractual-obligations table ("Payments Due by Period",
+    # "Footnote Reference") is not the debt note.
+    if _MDNA_OBLIG.search(text[start:start + 700]):
+        sc -= 6
+    # A cross-reference — "see note 13 – Long-term Debt", "(refer to Note 8)" —
+    # is a pointer, not the note. GBTG lost its real note to one of these.
+    if re.search(r'(?:see|refer\s+to|\(\s*see)\s*$', text[max(0, start - 30):start], re.I):
+        sc -= 8
+    if re.search(r'to\s+(?:our|the)\s+(?:accompanying\s+)?consolidated\s+financial\s+'
+                 r'statements\s+included\s+elsewhere', lookahead, re.I):
+        sc -= 8
+    # In the financial-statement notes region (real note) vs anywhere else.
+    if _FS_MARKER.search(text[max(0, start - 9000):start]):
+        sc += 3
+    # A bare "OBLIGATIONS" heading needs debt words right after it, or it is a
+    # lease / pension / asset-retirement note.
+    if re.search(r'\bOBLIGATIONS\b\s*$', text[max(0, start - 14):start + 12], re.I) \
+       and not re.search(r'non[\-\s]?recourse|recourse\s+debt|senior\s+notes|'
+                         r'term\s+loan|credit\s+facilit|bonds?\b|indebtedness',
+                         lookahead + text[start + 400:start + 1200], re.I):
+        sc -= 10
     return sc
 
 
@@ -335,7 +388,7 @@ def locate_debt_footnote(text):
     if extra:
         section += "\n\n--- change-of-control language elsewhere in the 10-K ---\n\n"
         section += "\n\n...\n\n".join(extra)
-    return section[:24000], heading
+    return section[:30000], heading
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -504,36 +557,72 @@ def _iso(month_day_year):
 
 
 def _parse_indenture_refs(exhibit_index_text):
-    """[{desc, exhibit, source_form, source_date, coupon, note_year}] from the
-    10-K exhibit index — one entry per 'Indenture ... (incorporated by
-    reference to Exhibit X of the ... Form Y filed on <date>)' row."""
+    """
+    [{desc, exhibit, source_form, source_date, coupon, note_year, supplemental}]
+    from the 10-K exhibit index. Two reference shapes:
+
+      A. "Indenture ... (incorporated by reference to Exhibit X of the Company's
+         Form Y filed on <date>)"                    — OGN, BZH; exhibit known
+      B. "Indenture (4.625% Senior Notes due 2029), dated ..., ... Previously
+         filed on Form 8-K filed on <date>."         — CZR; NO exhibit number
+
+    The window is wide (1300 chars) so a long reference line — extra trustees,
+    paying agents, a UK branch — can't push the exhibit token past the end (the
+    bug that put OGN's euro notes on an 8 KB supplemental instead of the 584 KB
+    base indenture).
+    """
     t = exhibit_index_text or ""
     refs, seen = [], set()
     for m in re.finditer(r'\bIndenture\b', t):
-        win = t[m.start():m.start() + 480]
-        paren = re.search(r'\(([^)]{0,400}?(?:incorporated|filed)[^)]{0,360})\)', win)
-        if not paren:
+        win = t[m.start():m.start() + 1300]
+        pre = t[max(0, m.start() - 60):m.start()]
+        exhibit = form = date_txt = None
+        desc_end = len(win)
+
+        paren = re.search(
+            r'\(([^)]{0,950}?(?:incorporated|previously\s+filed|filed\s+here)[^)]{0,700})\)',
+            win, re.I)
+        if paren:
+            p = paren.group(1)
+            _e = re.search(r'Exhibit\s+(\d+\.\d+(?:\([a-z0-9]+\))?)', p, re.I)
+            _f = re.search(r'\bForm\s+([A-Z0-9][A-Z0-9/\-]{0,9})', p)
+            _d = _DATE_RE.search(p)
+            if _f and _d:
+                exhibit = _e.group(1) if _e else None
+                form, date_txt, desc_end = _f.group(1), _d.group(0), paren.start()
+
+        if not form:  # shape B — no parenthetical, no exhibit number
+            pv = re.search(
+                r'Previously\s+filed(?:\s+with\s+the\s+SEC)?\s+on\s+Form\s+'
+                r'([A-Z0-9][A-Z0-9/\-]{0,9})[^.]{0,40}?((?:' + _MONTHS_RE
+                + r')\s+\d{1,2},\s+\d{4})', win, re.I)
+            if pv:
+                form, date_txt = pv.group(1), pv.group(2)
+                desc_end = min(desc_end, pv.start())
+
+        if not (form and date_txt):
             continue
-        p = paren.group(1)
-        exh = re.search(r'Exhibit\s+(\d+\.\d+(?:\([a-z0-9]+\))?)', p, re.I)
-        form = re.search(r'\bForm\s+([A-Z0-9][A-Z0-9/\-]{0,9})', p)
-        dm = _DATE_RE.search(p)
-        if not (exh and form and dm):
-            continue
-        desc = re.sub(r'\s+', ' ', win[:paren.start()]).strip(" ,–—-")
+
+        desc = re.sub(r'\s+', ' ', win[:desc_end]).strip(" ,.–—-")
+        _d = _DATE_RE.search(date_txt)
+        source_date = _iso(f"{_d.group(1)} {_d.group(2)}, {_d.group(3)}")
         coupon = re.search(r'(\d+\.\d+)\s*%', desc)
         yr = re.search(r'due\s+(\d{4})|Notes?\s+(?:due\s+)?(\d{4})', desc, re.I)
-        key = (exh.group(1), dm.group(0))
+        supplemental = bool(re.search(r'supplement', pre + " " + desc, re.I))
+
+        key = (exhibit or "?", source_date,
+               coupon.group(1) if coupon else desc[:36], supplemental)
         if key in seen:
             continue
         seen.add(key)
         refs.append({
             "desc": desc,
-            "exhibit": exh.group(1).split("(")[0],
-            "source_form": form.group(1).upper(),
-            "source_date": _iso(f"{dm.group(1)} {dm.group(2)}, {dm.group(3)}"),
+            "exhibit": (exhibit.split("(")[0] if exhibit else None),
+            "source_form": form.upper(),
+            "source_date": source_date,
             "coupon": coupon.group(1) if coupon else None,
             "note_year": (yr.group(1) or yr.group(2)) if yr else None,
+            "supplemental": supplemental,
         })
     return refs
 
@@ -551,7 +640,14 @@ def _match_ref(tranche, refs):
     that carry no coupon at all (BZH's older indentures name none).
     """
     name = tranche.get("name") or ""
+    # CZR names its notes "CEI Senior Secured Notes due 2032" with the coupon
+    # only in the Rates column — and it has both a 6.50% and a 6.00% 2032 note,
+    # so year alone would put them on the same indenture. Take the coupon from
+    # the rate text when the name doesn't carry one.
     c = re.search(r'(\d+\.\d+)\s*%', name)
+    if not c:
+        rate_txt = ((tranche.get("rate") or {}).get("text") or "")
+        c = re.match(r'\s*(\d+\.\d+)\s*%', rate_txt) or re.search(r'(\d+\.\d+)\s*%\s*(?:fixed|coupon|senior|notes)', rate_txt, re.I)
     coupon = c.group(1) if c else None
     y = re.search(r'\b(19|20)\d{2}\b', name) or re.search(r'\b(19|20)\d{2}\b',
                                                           str(tranche.get("maturity") or ""))
@@ -564,9 +660,14 @@ def _match_ref(tranche, refs):
                              r["desc"], re.I)
 
     if coupon:
-        for want_specific in (True, False):
+        # A note has one base indenture and any number of supplementals (adding a
+        # guarantor, releasing escrow). The change-of-control covenant is in the
+        # base. Prefer base > supplemental > form-of, then exact coupon.
+        for pref in (lambda r: specific(r) and not r.get("supplemental"),
+                     lambda r: specific(r),
+                     lambda r: True):
             for r in refs:
-                if want_specific and not specific(r):
+                if not pref(r):
                     continue
                 if r["coupon"] == coupon and (
                         not (year and r["note_year"]) or r["note_year"] == year):
@@ -590,35 +691,40 @@ def _match_ref(tranche, refs):
     return None
 
 
-def _resolve_exhibit_url(cik, source_form, source_date, exhibit_label,
-                         fetch_index=None):
-    """The filing on `source_date` of type `source_form` → the URL of its
-    EX-<exhibit_label> document."""
+def _indenture_doc_urls(cik, source_form, source_date, exhibit_label=None,
+                        fetch_index=None):
+    """
+    Ordered candidate document URLs for an indenture cited in the exhibit index.
+
+    When the exhibit number is known, that doc leads. When it is not (CZR cites
+    its indentures only as "Previously filed on Form 8-K filed on <date>"), every
+    EX-4.x / EX-10.x document from the cited filing is returned, largest first —
+    a base indenture runs 200 KB-1 MB, a supplemental or a form-of-note a few KB.
+    The caller reads down the list and takes the first with a real
+    change-of-control clause.
+    """
     fetch_index = fetch_index or _fetch_raw
     if not source_date:
-        return None
-    want = source_date
-    near = {want}
-    # 'dated' vs 'filed on' can differ by a day or two
-    y, mo, d = (int(x) for x in want.split("-"))
-    for off in (-3, -2, -1, 1, 2, 3):
+        return []
+    y, mo, d = (int(x) for x in source_date.split("-"))
+    near = {source_date}
+    for off in (-3, -2, -1, 1, 2, 3, 4):
         try:
             from datetime import date, timedelta
             near.add((date(y, mo, d) + timedelta(days=off)).isoformat())
         except Exception:
             pass
-    cand = [r for r in _all_filings(cik)
-            if r["form"] == source_form and r["filed"] in near]
-    for r in cand:
+    base = exhibit_label.split("(")[0] if exhibit_label else None
+    out = []
+    for r in [f for f in _all_filings(cik)
+              if f["form"] == source_form and f["filed"] in near]:
         acc_nd = (r["accession"] or "").replace("-", "")
-        idx = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc_nd}/{r['accession']}-index.html"
-        html = fetch_index(idx)
+        html = fetch_index(f"https://www.sec.gov/Archives/edgar/data/"
+                           f"{int(cik)}/{acc_nd}/{r['accession']}-index.html")
         if not html:
             continue
-        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.S | re.I)
-        base = exhibit_label.split("(")[0]
-        best = None
-        for row in rows:
+        exact, ex4x, ex10x = [], [], []
+        for row in re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.S | re.I):
             cells = [re.sub(r'<[^>]+>', '', c).strip()
                      for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.S | re.I)]
             if not cells:
@@ -627,45 +733,86 @@ def _resolve_exhibit_url(cik, source_form, source_date, exhibit_label,
             doc = next((c for c in cells if re.search(r'\.htm', c, re.I)), None)
             if not doc:
                 continue
-            if f"EX-{base}" in typ or f"EX-{exhibit_label}".upper() in typ:
-                best = doc
-                if f"EX-{exhibit_label}".upper() in typ:
-                    break
-            elif best is None and "EX-4" in typ:
-                best = doc
-        if best:
-            return (f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/"
-                    f"{acc_nd}/{best.split('/')[-1]}")
-    return None
+            doc = doc.split("/")[-1]
+            size = 0
+            for c in cells:
+                if re.fullmatch(r'[\d,]{4,}', c.strip()):
+                    size = int(c.replace(",", ""))
+            url = (f"https://www.sec.gov/Archives/edgar/data/"
+                   f"{int(cik)}/{acc_nd}/{doc}")
+            if base and (f"EX-{base}" in typ or f"EX-{exhibit_label}".upper() in typ):
+                exact.append((size, url))
+            elif re.search(r'EX-4\b|EX-4\.', typ):
+                ex4x.append((size, url))
+            elif re.search(r'EX-10\b|EX-10\.', typ):
+                ex10x.append((size, url))
+        ordered = ([u for _, u in exact]
+                   + [u for _, u in sorted(ex4x, reverse=True)]
+                   + [u for _, u in sorted(ex10x, reverse=True)])
+        out.extend(ordered)
+    # dedupe, keep order
+    seen, uniq = set(), []
+    for u in out:
+        if u not in seen:
+            seen.add(u)
+            uniq.append(u)
+    return uniq
 
 
 def _locate_coc_clause(indenture_text):
-    """The change-of-control section only. Prefers a real 'Section N.N Change of
-    Control .' heading over the definitions and the table of contents."""
+    """
+    The operative change-of-control section only.
+
+    An indenture says "Change of Control" 30+ times — in the table of contents,
+    the definitions ("... the meaning assigned in the definition of 'Change of
+    Control'"), covenant-suspension clauses. The one that matters grants holders
+    the right to require repurchase. CZR's 4.625%/2029 indenture put the parser
+    on a definitions cross-reference (no price, no put) and the model — correctly
+    for what it was handed — said "no put".
+    """
     if not indenture_text:
         return None
     hits = list(_COC_CLAUSE_HEAD.finditer(indenture_text))
     if not hits:
         return None
-    # score each: a heading followed by obligation language ("shall offer to
-    # purchase", "101%") is the operative clause, not the ToC line or a
-    # cross-reference.
     best, best_sc = None, -1
     for h in hits:
         w = indenture_text[h.start():h.start() + 7000]
+        pre = indenture_text[max(0, h.start() - 40):h.start()]
         sc = 0
+        # the operative grant
+        if re.search(r'right\s+to\s+require\s+the\s+(?:Issuers?|Company|Parent)\s+'
+                     r'to\s+(?:re)?purchase', w, re.I):
+            sc += 6
+        if re.search(r'(?:Issuers?|Company)\s+shall\s+(?:be\s+required\s+to\s+)?'
+                     r'(?:make\s+an\s+offer\s+to\s+(?:purchase|repurchase)|'
+                     r'(?:offer\s+to\s+)?(?:purchase|repurchase))', w, re.I):
+            sc += 4
         if re.search(r'shall\s+(?:be\s+required\s+to\s+)?(?:offer\s+to\s+)?'
                      r'(?:purchase|repurchase)', w, re.I):
-            sc += 3
-        if re.search(r'\b101\s*%|\b100\s*%', w):
             sc += 2
-        if re.search(r'Holders?\b', w):
+        if re.search(r'\b10[01]\s*%\s*of\s+(?:the\s+)?(?:aggregate\s+)?principal',
+                     w, re.I):
+            sc += 3
+        elif re.search(r'\b10[01]\s*%', w):
             sc += 1
-        if len(w) < 800:
-            sc -= 3
-        if sc > best_sc:
+        if re.search(r'Change\s+of\s+Control\s+(?:Offer|Payment|Price)', w, re.I):
+            sc += 2
+        # a numbered section heading is the real clause; a bare mention is prose
+        if re.match(r'Section\s+\d', h.group(0), re.I):
+            sc += 2
+        # ── not the operative clause ───────────────────────────────────────
+        if re.search(r'(?:definition|meaning)\s+of\s*$', pre, re.I):
+            sc -= 8
+        if re.search(r'shall\s+have\s+the\s+meaning|has\s+the\s+meaning\s+'
+                     r'(?:assigned|set\s+forth)', w[:400], re.I):
+            sc -= 6
+        if len(w) < 800 or re.search(r'^\s*\d{1,3}\s+Section\s+\d', w):  # ToC row
+            sc -= 4
+        # tie → the later hit (definitions precede the operative articles)
+        if sc >= best_sc:
             best, best_sc = h, sc
-    if best_sc < 2:
+    if best_sc < 3:
         return None
     return indenture_text[max(0, best.start() - 200):best.start() + 8000]
 
@@ -696,20 +843,39 @@ def indenture_coc_for_notes(cik, exhibit_index_text, tranches, llm_fn, fetch=Non
             entry["result"] = "no matching indenture reference"
             log.append(entry)
             continue
-        entry["indenture_ref"] = (f"EX-{ref['exhibit']} via {ref['source_form']} "
-                                  f"{ref['source_date']}")
-        url = _resolve_exhibit_url(cik, ref["source_form"], ref["source_date"],
+        entry["indenture_ref"] = (
+            (f"EX-{ref['exhibit']}" if ref["exhibit"] else "indenture")
+            + f" via {ref['source_form']} {ref['source_date']}")
+        urls = _indenture_doc_urls(cik, ref["source_form"], ref["source_date"],
                                    ref["exhibit"])
-        if not url:
+        if not urls:
             entry["result"] = "indenture document could not be located on EDGAR"
             log.append(entry)
             continue
-        entry["indenture_url"] = url
-        clause = _locate_coc_clause(fetch(url))
+        # Read down the candidates; take the first that is an indenture with a
+        # real change-of-control clause. A tiny supplemental has no clause and
+        # is skipped automatically.
+        cpn = ref["coupon"]
+        clause, chosen = None, None
+        for u in urls[:6]:
+            txt = fetch(u)
+            if not txt:
+                continue
+            head = txt[:3000].upper()
+            if "INDENTURE" not in head:
+                continue
+            if cpn and cpn not in txt[:40000] and cpn not in txt[-40000:]:
+                continue
+            c = _locate_coc_clause(txt)
+            if c:
+                clause, chosen = c, u
+                break
         if not clause:
+            entry["indenture_url"] = urls[0]
             entry["result"] = "no change-of-control clause found in the indenture"
             log.append(entry)
             continue
+        entry["indenture_url"] = chosen
         try:
             parsed = _parse_model_json(llm_fn(_COC_PROMPT.format(clause=clause)))
         except Exception as e:
@@ -744,6 +910,63 @@ def _num(x):
         return float(x)
     except (TypeError, ValueError):
         return None
+
+
+def _to_millions(amount, unit):
+    """A figure + its currency unit -> $ millions."""
+    a = _num(amount)
+    if a is None:
+        return None
+    u = (unit or "").lower()
+    if u.startswith("thousand"):
+        return a / 1000.0
+    if u.startswith("billion"):
+        return a * 1000.0
+    if u.startswith("dollar") or u.startswith("unit"):
+        return a / 1e6
+    return a  # already millions
+
+
+def consolidated_total_guard(full_text, parsed, debt_tranches):
+    """
+    Reconciling to A total is not enough — it must be the CONSOLIDATED total.
+
+    AES read Schedule I (parent-only, ~$6.0B) and bridged to it perfectly while
+    consolidated debt is ~$29B — $23.2B of it non-recourse subsidiary debt that
+    the located note never mentions. Returns a reason string when the extracted
+    total is materially short of a non-recourse / subsidiary debt figure the
+    10-K discloses elsewhere, and no extracted tranche accounts for it.
+    """
+    net = (parsed or {}).get("stated_net_total") or {}
+    net_m = _to_millions(net.get("amount"), (parsed or {}).get("currency_unit"))
+    if net_m is None or net_m <= 0:
+        return None
+
+    names = " ".join((t.get("name") or "") for t in debt_tranches).lower()
+    if re.search(r'non[\-\s]?recourse|subsidiary\s+debt|project\s+debt', names):
+        return None  # the extraction already covers non-recourse debt
+
+    disc = None
+    for m in re.finditer(
+            r'(?:approximately\s+)?\$\s*([\d.,]+)\s*(billion|million)\s+'
+            r'(?:was|of|in|is|represented|represents)?\s*non[\-\s]?recourse',
+            full_text, re.I):
+        v = _to_millions(m.group(1).replace(",", ""),
+                         "billion" if m.group(2).lower().startswith("b") else "million")
+        disc = max(disc or 0, v or 0)
+    for m in re.finditer(
+            r'non[\-\s]?recourse\s+(?:long[\-\s]?term\s+)?debt[^.$]{0,60}?'
+            r'\$\s*([\d.,]+)\s*(billion|million)', full_text, re.I):
+        v = _to_millions(m.group(1).replace(",", ""),
+                         "billion" if m.group(2).lower().startswith("b") else "million")
+        disc = max(disc or 0, v or 0)
+
+    if disc and disc > 500 and net_m < 0.6 * (net_m + disc):
+        return ("the located note reconciles to ${:,.0f}M, but the 10-K discloses "
+                "~${:,.0f}M of non-recourse / subsidiary debt it does not include "
+                "— this is a parent-only or partial schedule, not the consolidated "
+                "debt note".format(net_m, disc))
+    return None
 
 
 def _unit_tolerance(unit, total):
@@ -928,6 +1151,13 @@ def assess_capital_structure(ticker, company=None, cik=None,
 
     rec = reconcile({**parsed, "tranches": debt_tranches})
     status = OK if rec["ok"] else INCOMPLETE
+
+    # Reconciling is not enough — it must be the CONSOLIDATED total, not a
+    # parent-only / Schedule I schedule.
+    wrong_note = consolidated_total_guard(filing["text"], parsed, debt_tranches)
+    if wrong_note:
+        status = INCOMPLETE
+
     coc = [{"name": t.get("name"),
             "treatment": t.get("change_of_control"),
             "quote": t.get("change_of_control_quote"),
@@ -951,7 +1181,7 @@ def assess_capital_structure(ticker, company=None, cik=None,
         "change_of_control": coc,
         "indenture_log": indenture_log,
         "model_notes": parsed.get("notes"),
-        "reason": (None if status == OK else
+        "reason": (None if status == OK else wrong_note if wrong_note else
                    "the extracted tranches do not bridge to the filing's stated "
                    "total — a tranche or an adjustment line was probably missed; "
                    "show 'capital structure incomplete', not the partial table"),
