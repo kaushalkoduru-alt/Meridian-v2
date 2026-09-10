@@ -1267,7 +1267,79 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 </div>
 
 <!-- ═══════════════════════════════ DEAL ANALYSIS ═══════════════════════════════ -->
-<div id="page-analysis" class="page" style="background:#100e0a; background-image:radial-gradient(120% 90% at 82% -8%, rgba(74,158,138,0.05), transparent 58%); color:#efe7d6; font-family:'DM Mono', ui-monospace, monospace; padding:20px 20px 40px;">
+<style>
+/* ═══ DEAL PAGE REDESIGN — scoped to #page-analysis ═══════════════════════════
+   One 12-column rhythm, flat surfaces (no gradients), #e8e0d0 body copy, the
+   four house faces one role each, collapsible detail sections + a sticky jump
+   nav. Every da-* id and every .da-section paywall anchor is preserved. */
+#page-analysis{
+  --dr-ink:#e8e0d0; --dr-label:#8d988d; --dr-faint:#586158;
+  --dr-line:#1e2723; --dr-line2:#2a3531;
+  --dr-panel:#111614; --dr-panel2:#0d1210;
+  --dr-accent:#4fc9b3; --dr-warn:#cfa151; --dr-crit:#cf6f57; --dr-pos:#64b184;
+  background:#0b0e0d !important; background-image:none !important;
+  color:var(--dr-ink); font-family:'DM Sans',system-ui,sans-serif;
+  max-width:1200px; margin:0 auto;
+}
+#page-analysis .da-section{margin:0 !important; padding:0 !important; position:relative;}
+#page-analysis .dr-crumb{margin-top:11px; font-family:'DM Mono',monospace; font-size:10px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--dr-label);}
+
+/* sticky jump nav */
+#page-analysis .dr-jump{position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap;
+  justify-content:center; align-items:center; background:#0b0e0d;
+  border-top:1px solid var(--dr-line2); border-bottom:1px solid var(--dr-line2);
+  padding:9px 0; margin-top:14px;
+  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase;}
+#page-analysis .dr-jump a{color:var(--dr-label); text-decoration:none; padding:3px 12px;
+  border-right:1px solid var(--dr-line);}
+#page-analysis .dr-jump a:last-child{border-right:0;}
+#page-analysis .dr-jump a:hover,#page-analysis .dr-jump a:focus-visible{color:var(--dr-accent); outline:none;}
+
+/* one section-header treatment, everywhere */
+#page-analysis .dr-sec{margin-top:52px; scroll-margin-top:56px;}
+#page-analysis .dr-sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:16px;}
+#page-analysis .dr-eye{font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--dr-accent); white-space:nowrap;}
+#page-analysis .dr-fn{font-family:'Playfair Display',serif; font-style:italic; font-size:15px;
+  color:var(--dr-ink); white-space:nowrap;}
+#page-analysis .dr-rule{flex:1; height:1px; background:var(--dr-line2);}
+
+/* flat surfaces */
+#page-analysis .dr-hero,#page-analysis .dr-panel{border:1px solid var(--dr-line);
+  background:var(--dr-panel); box-shadow:none;}
+#page-analysis .dr-hero-body{padding:16px 22px;}
+#page-analysis .dr-hero-body > div:not(:empty){margin-top:0;}
+
+/* collapsible detail section */
+#page-analysis .dr-fold{border:1px solid var(--dr-line2); background:var(--dr-panel);}
+#page-analysis .dr-fold-bar{width:100%; display:grid; grid-template-columns:1fr auto;
+  align-items:center; gap:16px; padding:16px 20px; background:var(--dr-panel2); border:0;
+  color:var(--dr-ink); cursor:pointer; text-align:left; font:inherit;}
+#page-analysis .dr-fold-bar:focus-visible{outline:2px solid var(--dr-accent); outline-offset:-2px;}
+#page-analysis .dr-fold-lead{display:block; font-family:'DM Mono',monospace; font-size:12px;
+  letter-spacing:.08em; text-transform:uppercase;}
+#page-analysis .dr-fold-lead b{color:var(--dr-accent); font-weight:500;}
+#page-analysis .dr-fold-meta{display:block; font-family:'DM Mono',monospace; font-size:10px;
+  color:var(--dr-label); margin-top:5px;}
+#page-analysis .dr-chev{font-family:'DM Mono',monospace; font-size:13px; color:var(--dr-label);
+  transition:transform .2s ease;}
+#page-analysis .dr-fold.open .dr-chev{transform:rotate(90deg); color:var(--dr-accent);}
+#page-analysis .dr-fold-body{display:none;}
+#page-analysis .dr-fold.open .dr-fold-body{display:block; animation:drFoldIn .24s ease both;}
+#page-analysis .dr-fold-inner{padding:14px 18px 4px;}
+@keyframes drFoldIn{from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;}}
+
+@media (prefers-reduced-motion:reduce){
+  #page-analysis .dr-fold.open .dr-fold-body{animation:none;}
+  #page-analysis .dr-chev{transition:none;}
+}
+@media (max-width:820px){
+  #page-analysis .dr-sec-head{flex-wrap:wrap; gap:8px;}
+  #page-analysis .dr-fn{white-space:normal;}
+}
+</style>
+<div id="page-analysis" class="page" style="color:#efe7d6; font-family:'DM Mono', ui-monospace, monospace; padding:20px 20px 40px;">
 
   <!-- HEADER -->
   <header style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:14px; border-bottom:1px solid rgba(238,228,208,0.12);">
@@ -1292,28 +1364,36 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </header>
 
   <!-- BREADCRUMB -->
-  <div id="da-breadcrumb" style="margin-top:11px; font-size:10px; letter-spacing:0.16em; color:#7d745f; text-transform:uppercase;"></div>
+  <div id="da-breadcrumb" class="dr-crumb"></div>
+
+  <!-- JUMP NAV -->
+  <nav class="dr-jump" id="da-jump" aria-label="Sections">
+    <a href="#dr-s-summary">Summary</a>
+    <a href="#dr-s-rr">R/R</a>
+    <a href="#dr-s-acq">Acquirer</a>
+    <a href="#da-structure-section">Structure</a>
+    <a href="#da-commitment-section">Commitment</a>
+    <a href="#dr-s-score">Score</a>
+  </nav>
 
   <!-- ============ 1 · DECISION SUMMARY (HERO) ============ -->
-  <section style="position:relative; margin-top:12px; background:linear-gradient(180deg, #1f1b14, #17140e); border:1px solid rgba(95,224,201,0.22); box-shadow:0 18px 40px -16px rgba(0,0,0,0.7); overflow:hidden;">
-    <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #5fe0c9, rgba(95,224,201,0.12));"></div>
-
-    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:26px; padding:24px 26px 18px;">
+  <section class="dr-hero" id="dr-s-summary" style="margin-top:20px; scroll-margin-top:56px;">
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:26px; padding:24px 24px 18px; border-bottom:1px solid var(--dr-line);">
       <div>
         <div style="display:flex; align-items:baseline; gap:12px;">
           <div id="da-ticker" style="font-family:'Playfair Display', serif; font-weight:600; font-size:52px; line-height:0.9; color:#f6f0e3; letter-spacing:0.01em;">--</div>
         </div>
-        <div id="da-company" style="margin-top:9px; font-family:'Playfair Display', serif; font-style:italic; font-size:18px; color:#e2d8c0;">--</div>
-        <div style="margin-top:9px; font-size:13px; font-weight:500; color:#d8cdb4; letter-spacing:0.02em;"><span id="da-acquirer">--</span> <span style="color:#5fe0c9;">&#8594;</span> <span id="da-target">--</span></div>
-        <div id="da-badges" style="margin-top:11px; display:flex; flex-wrap:wrap; gap:7px;"></div>
+        <div id="da-company" style="margin-top:9px; font-family:'DM Mono',monospace; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; color:var(--dr-label);">--</div>
+        <div style="margin-top:11px; font-size:13px; color:var(--dr-ink); letter-spacing:0.02em;"><span id="da-acquirer">--</span> <span style="color:var(--dr-accent);">&#8594;</span> <span id="da-target">--</span></div>
+        <div id="da-badges" style="margin-top:13px; display:flex; flex-wrap:wrap; gap:6px;"></div>
       </div>
 
       <div style="text-align:right; flex-shrink:0;">
         <div id="da-risk-badge"></div>
         <div style="margin-top:12px; display:flex; align-items:baseline; gap:7px; justify-content:flex-end;">
-          <span style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase;">V3 Score</span>
-          <span id="da-score-num" style="font-family:'Playfair Display', serif; font-weight:600; font-size:32px; line-height:0.9; color:#6bbaa8;">--</span>
-          <span style="font-size:13px; color:#7d745f;">/100</span>
+          <span style="font-family:'DM Mono',monospace; font-size:9px; letter-spacing:0.16em; color:var(--dr-label); text-transform:uppercase;">V3 Score</span>
+          <span id="da-score-num" style="font-family:'Playfair Display', serif; font-weight:600; font-size:32px; line-height:0.9; color:var(--dr-accent);">--</span>
+          <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--dr-faint);">/100</span>
         </div>
         <!-- price block: what a holder receives. Empty until DEAL_PRICING_ENFORCING. -->
         <div id="da-price-block"></div>
@@ -1321,91 +1401,133 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
 
     <!-- critical numbers strip -->
-    <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr); border-top:1px solid rgba(238,228,208,0.10);"></div>
-    <div id="da-verification" style="margin:14px 2.5rem 0;"></div>
-    <div id="da-premium-note" style="margin:0 2.5rem;"></div>
-    <div id="da-deadline" style="margin:0 2.5rem;"></div>
-    <div id="da-timing" style="margin:14px 2.5rem 0;"></div>
-    <div id="da-explain" style="margin:0 2.5rem;"></div>
+    <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr);"></div>
+
+    <div class="dr-hero-body" style="display:flex; flex-direction:column; gap:14px; border-top:1px solid var(--dr-line);">
+      <div id="da-verification"></div>
+      <div id="da-premium-note"></div>
+      <div id="da-deadline"></div>
+      <div id="da-timing"></div>
+      <div id="da-explain"></div>
+    </div>
 
     <!-- implied probability + break price -->
-    <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid rgba(238,228,208,0.10);">
-      <div class="da-section" style="position:relative; padding:20px 24px; border-right:1px solid rgba(238,228,208,0.08);">
-        <div style="font-size:10px; letter-spacing:0.2em; color:#6bbaa8; text-transform:uppercase;">Market&#8211;Implied Close Probability</div>
+    <div style="display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); border-top:1px solid var(--dr-line);">
+      <div class="da-section" style="position:relative; padding:20px 22px; border-right:1px solid var(--dr-line);">
+        <div style="font-family:'DM Mono',monospace; font-size:9.5px; letter-spacing:0.16em; color:var(--dr-accent); text-transform:uppercase;">Market&#8211;Implied Close Probability</div>
         <div id="da-implied-prob" style="margin-top:8px;"></div>
       </div>
-      <div id="da-break-box" style="position:relative; padding:20px 24px; background:linear-gradient(180deg, rgba(240,115,94,0.10), rgba(240,115,94,0.05));"></div>
+      <div id="da-break-box" style="position:relative; padding:20px 22px; border-left:2px solid var(--dr-crit);"></div>
     </div>
   </section>
 
   <!-- ============ 2 · RISK / REWARD ============ -->
-  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
-    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Risk &amp; Reward</span>
-    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">if it closes vs if it breaks</span>
-    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
-  </div>
-  <div class="da-section" style="position:relative;">
-    <div id="da-rr-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px;"></div>
-    <div id="da-position-table" style="margin-top:14px; background:#161310; border:1px solid rgba(238,228,208,0.1); overflow:hidden;"></div>
-    <div style="margin-top:9px; font-size:9.5px; letter-spacing:0.1em; color:#6f6753; text-transform:uppercase;">Returns shown are on the current spread. Break-price downside is an optimistic estimate — the real fall is likely worse.</div>
-  </div>
+  <section class="dr-sec" id="dr-s-rr">
+    <div class="dr-sec-head">
+      <span class="dr-eye">Risk / Reward</span>
+      <span class="dr-fn">if it closes against if it breaks</span>
+      <span class="dr-rule"></span>
+    </div>
+    <div class="da-section" style="position:relative;">
+      <div id="da-rr-grid" style="display:grid; grid-template-columns:repeat(2,1fr); gap:14px;"></div>
+      <div id="da-position-table" style="margin-top:14px; border:1px solid var(--dr-line); overflow:hidden;"></div>
+      <div style="margin-top:10px; font-family:'DM Mono',monospace; font-size:9.5px; letter-spacing:0.1em; color:var(--dr-label); text-transform:uppercase;">Returns are on the current spread. Break-price downside is an optimistic estimate &mdash; the real fall is likely worse.</div>
+    </div>
+  </section>
 
   <!-- ============ 3 · ACQUIRER & REGULATORY ============ -->
-  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
-    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Acquirer &amp; Regulatory Intelligence</span>
-    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">who&#8217;s buying, and what stands between here and close</span>
-    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
-  </div>
-  <div class="da-section" style="position:relative;">
+  <section class="dr-sec" id="dr-s-acq">
+    <div class="dr-sec-head">
+      <span class="dr-eye">Acquirer &amp; Regulatory</span>
+      <span class="dr-fn">the buyer, and the path to close</span>
+      <span class="dr-rule"></span>
+    </div>
     <div style="display:grid; grid-template-columns:0.85fr 1.15fr; gap:14px; align-items:stretch;">
-      <div id="da-acq-grid" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:20px 22px; display:flex; flex-direction:column;"></div>
-      <div style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:20px 22px;">
+      <div class="da-section" style="position:relative; display:flex;">
+        <div id="da-acq-grid" style="flex:1; background:var(--dr-panel); border:1px solid var(--dr-line); padding:20px 22px; display:flex; flex-direction:column;"></div>
+      </div>
+      <div style="background:var(--dr-panel); border:1px solid var(--dr-line); padding:20px 22px;">
         <div style="display:flex; align-items:baseline; gap:9px; margin-bottom:4px;">
           <div style="font-family:'Playfair Display', serif; font-weight:600; font-size:19px; color:#f4eee0;">Regulatory Path</div>
-          <span id="da-reg-count" style="font-family:'Playfair Display', serif; font-style:italic; font-size:13px; color:#8f8772;"></span>
+          <span id="da-reg-count" style="font-family:'Playfair Display', serif; font-style:italic; font-size:13px; color:var(--dr-label);"></span>
         </div>
         <div id="da-reg-risk"></div>
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- ============ 3.5 · STRUCTURE NOTES (deal flags; hidden when a deal has none) ============ -->
-  <div id="da-structure-section" style="display:none;">
-    <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
-      <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Structure Notes</span>
-      <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">what the headline price doesn&#8217;t say</span>
-      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+  <div id="da-structure-section" class="dr-sec" style="display:none; scroll-margin-top:56px;">
+    <div class="dr-sec-head">
+      <span class="dr-eye">Structure Notes</span>
+      <span class="dr-fn">what the headline price doesn&#8217;t say</span>
+      <span class="dr-rule"></span>
     </div>
-    <div class="da-section" style="position:relative;">
-      <div id="da-structure-notes" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:6px 22px;"></div>
+    <div class="dr-fold" data-fold>
+      <button class="dr-fold-bar" type="button" aria-expanded="false">
+        <span>
+          <span class="dr-fold-lead"><b>Structure Notes</b></span>
+          <span class="dr-fold-meta">deal flags that change what the headline price means &middot; click to open</span>
+        </span>
+        <span class="dr-chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="dr-fold-body"><div><div class="dr-fold-inner">
+        <div class="da-section" style="position:relative;">
+          <div id="da-structure-notes" style="border:1px solid var(--dr-line); padding:6px 22px;"></div>
+        </div>
+      </div></div></div>
     </div>
   </div>
 
   <!-- ============ 3.6 · DEAL COMMITMENT (merger agreement terms; hidden when unread) ============ -->
-  <div id="da-commitment-section" style="display:none;">
-    <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
-      <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">Deal Commitment</span>
-      <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">what the merger agreement obliges</span>
-      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+  <div id="da-commitment-section" class="dr-sec" style="display:none; scroll-margin-top:56px;">
+    <div class="dr-sec-head">
+      <span class="dr-eye">Deal Commitment</span>
+      <span class="dr-fn">what the merger agreement obliges</span>
+      <span class="dr-rule"></span>
     </div>
-    <div class="da-section" style="position:relative;">
-      <div id="da-commitment" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:6px 22px;"></div>
+    <div class="dr-fold" data-fold>
+      <button class="dr-fold-bar" type="button" aria-expanded="false">
+        <span>
+          <span class="dr-fold-lead"><b>Deal Commitment</b></span>
+          <span class="dr-fold-meta">antitrust, financing, specific performance &amp; the reverse fee, from the agreement &middot; click to open</span>
+        </span>
+        <span class="dr-chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="dr-fold-body"><div><div class="dr-fold-inner">
+        <div class="da-section" style="position:relative;">
+          <div id="da-commitment" style="border:1px solid var(--dr-line); padding:6px 22px;"></div>
+        </div>
+      </div></div></div>
     </div>
   </div>
 
   <!-- ============ 4 · V3 SCORE BREAKDOWN ============ -->
-  <div style="display:flex; align-items:baseline; gap:14px; margin:34px 0 15px;">
-    <span style="font-size:10.5px; letter-spacing:0.28em; color:#6bbaa8; text-transform:uppercase;">V3 Score Breakdown</span>
-    <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:15px; color:#9a9079;">the factors, composited</span>
-    <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
-  </div>
-  <div class="da-section" style="position:relative;">
-    <div style="display:grid; grid-template-columns:0.7fr 1.3fr; gap:14px; align-items:stretch;">
-      <div id="da-score-overall" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:22px; display:flex; flex-direction:column; justify-content:center;"></div>
-      <div id="da-score-bars" style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:18px 22px;"></div>
+  <section class="dr-sec" id="dr-s-score">
+    <div class="dr-sec-head">
+      <span class="dr-eye">V3 Score Breakdown</span>
+      <span class="dr-fn">the factors, composited</span>
+      <span class="dr-rule"></span>
     </div>
-    <div id="da-risk-factors" style="margin-top:14px;"></div>
-  </div>
+    <div class="dr-fold" data-fold>
+      <button class="dr-fold-bar" type="button" aria-expanded="false">
+        <span>
+          <span class="dr-fold-lead"><b>V3 Score Breakdown</b></span>
+          <span class="dr-fold-meta">the base score, every factor and its weight, and the raw&#8594;normalized math &middot; click to open</span>
+        </span>
+        <span class="dr-chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="dr-fold-body"><div><div class="dr-fold-inner">
+        <div class="da-section" style="position:relative;">
+          <div style="display:grid; grid-template-columns:0.7fr 1.3fr; gap:14px; align-items:stretch;">
+            <div id="da-score-overall" style="background:var(--dr-panel); border:1px solid var(--dr-line); padding:22px; display:flex; flex-direction:column; justify-content:center;"></div>
+            <div id="da-score-bars" style="background:var(--dr-panel); border:1px solid var(--dr-line); padding:18px 22px;"></div>
+          </div>
+          <div id="da-risk-factors" style="margin-top:14px;"></div>
+        </div>
+      </div></div></div>
+    </div>
+  </section>
 
   <!-- FOOTER -->
   <footer style="margin-top:44px; padding-top:24px; border-top:1px solid rgba(238,228,208,0.12);">
@@ -1427,6 +1549,39 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   </footer>
 
 </div>
+
+<script>
+/* ── deal page: collapsible detail sections + jump nav ────────────────── */
+(function(){
+  function toggle(fold, force){
+    var bar = fold.querySelector('.dr-fold-bar');
+    var open = (force === undefined) ? !fold.classList.contains('open') : force;
+    fold.classList.toggle('open', open);
+    if(bar) bar.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  document.querySelectorAll('#page-analysis .dr-fold[data-fold] .dr-fold-bar').forEach(function(bar){
+    bar.addEventListener('click', function(){ toggle(bar.closest('.dr-fold')); });
+  });
+  // jump link: open a collapsed target before the browser scrolls to it,
+  // and drop links whose section is not currently shown
+  document.querySelectorAll('#page-analysis .dr-jump a').forEach(function(a){
+    a.addEventListener('click', function(){
+      var t = document.querySelector(a.getAttribute('href'));
+      if(!t) return;
+      var fold = t.querySelector('.dr-fold[data-fold]');
+      if(fold && !fold.classList.contains('open')) toggle(fold, true);
+    });
+  });
+  // hide jump links for sections a given deal doesn't have (structure / commitment
+  // start display:none and renderAnalysis reveals them)
+  window.daSyncJump = function(){
+    document.querySelectorAll('#page-analysis .dr-jump a').forEach(function(a){
+      var t = document.querySelector(a.getAttribute('href'));
+      a.style.display = (t && getComputedStyle(t).display === 'none') ? 'none' : '';
+    });
+  };
+})();
+</script>
 
 <!-- ═══════════════════════════════ COMPARE ═══════════════════════════════ -->
 <div id="page-compare" class="page">
@@ -2547,10 +2702,9 @@ async function renderAnalysis(deal){
         + '</span>'
       : '';
     _daSet('da-break-box',
-      '<div style="position:absolute; top:0; right:0; bottom:0; width:3px; background:linear-gradient(180deg, #f0735e, rgba(240,115,94,0.15));"></div>'
-      + '<div style="display:flex; align-items:center; gap:8px;">'
+      '<div style="display:flex; align-items:center; gap:8px;">'
       +   '<span style="width:6px; height:6px; transform:rotate(45deg); background:#f0735e;"></span>'
-      +   '<div style="font-size:10px; letter-spacing:0.2em; color:#f0735e; text-transform:uppercase;">Break Price \u00b7 Optimistic Estimate</div>'
+      +   '<div style="font-family:\'DM Mono\',monospace; font-size:10px; letter-spacing:0.16em; color:#f0735e; text-transform:uppercase;">Break Price \u00b7 Optimistic Estimate</div>'
       + '</div>'
       + '<div style="margin-top:10px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:44px; line-height:0.85; color:#f0735e;">'+_daUsd(bp)+'</div>'
       + '<div style="margin-top:9px; font-size:13px; color:#f3b9ad; letter-spacing:0.02em;">at least '+bdTxt+perSh+'</div>'
@@ -2624,18 +2778,16 @@ async function renderAnalysis(deal){
 
   // ---- risk / reward cards ----
   var closesCard = ''
-    + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(95,224,201,0.22); padding:18px 20px; overflow:hidden;">'
-    +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#5fe0c9;"></div>'
-    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#6bbaa8; text-transform:uppercase;">If Deal Closes'+_daBadge(deal,'dp')+'</div>'
+    + '<div style="position:relative; background:var(--dr-panel); border:1px solid var(--dr-line); border-top:2px solid #5fe0c9; padding:18px 20px; overflow:hidden;">'
+    +   '<div style="font-family:\'DM Mono\',monospace; font-size:10px; letter-spacing:0.16em; color:#6bbaa8; text-transform:uppercase;">If Deal Closes'+_daBadge(deal,'dp')+'</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(deal.dp)+'</div>'
     +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+_daSgn(deal.sp_pct)+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?_daSgnUsd(deal.dp-deal.cp)+' / share':'')+'</div>'
     +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daAnnSingle(deal)+'</div>'
     + '</div>';
   var breaksCard = bp!=null ? ''
-    + '<div style="position:relative; background:linear-gradient(180deg, #1c1a13, #18150f); border:1px solid rgba(240,115,94,0.4); padding:18px 20px; overflow:hidden;">'
-    +   '<div style="position:absolute; top:0; left:0; right:0; height:3px; background:#f0735e;"></div>'
-    +   '<div style="font-size:10px; letter-spacing:0.18em; color:#f0735e; text-transform:uppercase;">If Deal Breaks \u00b7 At Best'+_daBadge(deal,'break_price')+'</div>'
+    + '<div style="position:relative; background:var(--dr-panel); border:1px solid var(--dr-line); border-top:2px solid #f0735e; padding:18px 20px; overflow:hidden;">'
+    +   '<div style="font-family:\'DM Mono\',monospace; font-size:10px; letter-spacing:0.16em; color:#f0735e; text-transform:uppercase;">If Deal Breaks \u00b7 At Best'+_daBadge(deal,'break_price')+'</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(bp)+'</div>'
     +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:'+_daSgnColor(bd)+';">'+(bd!=null?(bd<0?'at least ':'')+_daSgn(bd):'\u2014')+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.cp!=null)?_daSgnUsd(bp-deal.cp)+' / share':'')+'</div>'
@@ -2857,8 +3009,8 @@ async function renderAnalysis(deal){
   // ---- risk factors ----
   var rf = (typeof getRiskFactors==='function') ? getRiskFactors(deal) : [];
   _daSet('da-risk-factors', rf.length ? (
-    '<div style="background:linear-gradient(180deg, #1c1a13, #17140e); border:1px solid rgba(238,228,208,0.12); padding:18px 22px;">'
-    + '<div style="font-size:10px; letter-spacing:0.2em; color:#8f8772; text-transform:uppercase; margin-bottom:10px;">Risk Factors</div>'
+    '<div style="background:var(--dr-panel); border:1px solid var(--dr-line); padding:18px 22px;">'
+    + '<div style="font-family:\'DM Mono\',monospace; font-size:10px; letter-spacing:0.16em; color:var(--dr-label); text-transform:uppercase; margin-bottom:10px;">Risk Factors</div>'
     + rf.map(function(f){
         var lm = levelMeta[f.l] || levelMeta.lo;
         return '<div style="display:flex; gap:11px; align-items:flex-start; padding:9px 0; border-top:1px solid rgba(238,228,208,0.06);">'
@@ -2869,6 +3021,7 @@ async function renderAnalysis(deal){
     + '</div>') : '');
 
   applyPaywallToSections();
+  if(typeof daSyncJump === 'function') daSyncJump();
 }
 
 // ── COMPARE PAGE ──────────────────────────────────────────────────────────────
