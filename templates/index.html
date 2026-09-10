@@ -1279,7 +1279,8 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   --dr-accent:#4fc9b3; --dr-warn:#cfa151; --dr-crit:#cf6f57; --dr-pos:#64b184;
   background:#0b0e0d !important; background-image:none !important;
   color:var(--dr-ink); font-family:'DM Sans',system-ui,sans-serif;
-  max-width:1200px; margin:0 auto;
+  /* content runs nearly edge to edge, as it did before the redesign — the side
+     padding on the #page-analysis element (30px) is the only gutter, no max-width */
 }
 #page-analysis .da-section{margin:0 !important; padding:0 !important; position:relative;}
 #page-analysis .dr-crumb{margin-top:11px; font-family:'DM Mono',monospace; font-size:10px;
@@ -1290,7 +1291,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   justify-content:center; align-items:center; background:#0b0e0d;
   border-top:1px solid var(--dr-line2); border-bottom:1px solid var(--dr-line2);
   padding:9px 0; margin-top:14px;
-  font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase;}
+  font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase;}
 #page-analysis .dr-jump a{color:var(--dr-label); text-decoration:none; padding:3px 12px;
   border-right:1px solid var(--dr-line);}
 #page-analysis .dr-jump a:last-child{border-right:0;}
@@ -1339,7 +1340,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
   #page-analysis .dr-fn{white-space:normal;}
 }
 </style>
-<div id="page-analysis" class="page" style="color:#efe7d6; font-family:'DM Mono', ui-monospace, monospace; padding:20px 20px 40px;">
+<div id="page-analysis" class="page" style="color:#efe7d6; font-family:'DM Mono', ui-monospace, monospace; padding:22px 30px 56px;">
 
   <!-- HEADER -->
   <header style="display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:14px; border-bottom:1px solid rgba(238,228,208,0.12);">
