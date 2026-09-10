@@ -1374,6 +1374,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <a href="#dr-s-acq">Acquirer</a>
     <a href="#da-structure-section">Structure</a>
     <a href="#da-commitment-section">Commitment</a>
+    <a href="#dr-s-explain">Risk band</a>
     <a href="#dr-s-score">Score</a>
   </nav>
 
@@ -1409,7 +1410,6 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <div id="da-premium-note"></div>
       <div id="da-deadline"></div>
       <div id="da-timing"></div>
-      <div id="da-explain"></div>
     </div>
 
     <!-- implied probability + break price -->
@@ -1499,6 +1499,27 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
         <div class="da-section" style="position:relative;">
           <div id="da-commitment" style="border:1px solid var(--dr-line); padding:6px 22px;"></div>
         </div>
+      </div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ 3.7 · WHY THIS RISK BAND (explanation; hidden when no evidence) ============ -->
+  <div id="dr-s-explain" class="dr-sec" style="scroll-margin-top:56px;">
+    <div class="dr-sec-head">
+      <span class="dr-eye">Why This Risk Band</span>
+      <span class="dr-fn">what the rating is built on</span>
+      <span class="dr-rule"></span>
+    </div>
+    <div class="dr-fold" data-fold>
+      <button class="dr-fold-bar" type="button" aria-expanded="false">
+        <span>
+          <span class="dr-fold-lead"><b>Why This Risk Band</b></span>
+          <span class="dr-fold-meta">the evidenced categories behind the risk tier, with the filing language &middot; click to open</span>
+        </span>
+        <span class="dr-chev" aria-hidden="true">&#9656;</span>
+      </button>
+      <div class="dr-fold-body"><div><div class="dr-fold-inner">
+        <div id="da-explain"></div>
       </div></div></div>
     </div>
   </div>
@@ -2289,11 +2310,8 @@ function _daExplain(deal){
         }).join('')
       + '</div>';
   }).join('');
-  return '<div style="margin-top:16px; padding:16px 18px; '
-    + 'border:1px solid rgba(238,228,208,0.10);">'
-    + '<div style="font-size:9.5px; letter-spacing:0.16em; color:#8f8772; '
-    +   'text-transform:uppercase; font-weight:600;">Why this risk band</div>'
-    + '<div style="margin-top:6px; font-size:11px; color:#7d745f; line-height:1.6;">'
+  return '<div>'
+    + '<div style="font-size:11px; color:#8d988d; line-height:1.6;">'
     +   have+' of '+total+' categories carry evidence. The rest are shown '
     +   'as unevidenced rather than given a number \u2014 there is not enough '
     +   'verified history to weight eight categories honestly.</div>'
@@ -2908,7 +2926,10 @@ async function renderAnalysis(deal){
 
   _daSet('da-verification', _daVerification(deal));
   _daSet('da-deadline', _daDeadline(deal));
-  _daSet('da-explain', _daExplain(deal));
+  var _explHtml = _daExplain(deal);
+  _daSet('da-explain', _explHtml);
+  var _explSec = document.getElementById('dr-s-explain');
+  if(_explSec) _explSec.style.display = _explHtml ? '' : 'none';
 
   // ---- structure notes (deal flags + blended consideration) — neutral facts
   //      about what the price means ----
