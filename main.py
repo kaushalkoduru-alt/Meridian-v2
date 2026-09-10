@@ -3894,6 +3894,9 @@ async def compare(): return read_html()
 @app.get("/primer")
 async def primer(): return read_html()
 
+@app.get("/privacy")
+async def privacy(): return read_html()
+
 @app.get("/deal/{ticker}")
 async def deal_page(ticker: str): return read_html()
 
@@ -4959,21 +4962,28 @@ async def create_checkout_session(request: Request):
         print(f"Stripe error: {e}")
         return JSONResponse(content={'error': str(e)}, status_code=500)
 
+def _paywall_disabled():
+    """The paywall is OPEN by default. The first users are a student finance
+    club, so the product runs gate-free — set PAYWALL_DISABLED=false in the
+    Railway env to turn the deal-page gates (and the subscribe modal) back on
+    once there's a paying segment. All the Stripe / checkout / subscription
+    code stays wired either way; this only flips whether the gates render."""
+    return os.environ.get('PAYWALL_DISABLED', 'true').strip().lower() != 'false'
+
+
 @app.get("/api/paywall-status")
 async def paywall_status():
     """No-auth-required check for the global paywall bypass flag. The frontend
     calls this BEFORE checking Clerk login state, so a fully logged-out visitor
     can also see the bypass take effect — check-subscription alone can't do this
     since it's only ever called after a Clerk user is detected."""
-    disabled = os.environ.get('PAYWALL_DISABLED', '').lower() == 'true'
-    return JSONResponse(content={'paywall_disabled': disabled})
+    return JSONResponse(content={'paywall_disabled': _paywall_disabled()})
 
 @app.get("/api/check-subscription")
 async def check_subscription(email: str = ''):
-    # Temporary full-product bypass — does not touch Stripe or auth code.
-    # Set PAYWALL_DISABLED=true in Railway env vars to show full product to everyone.
-    # Set back to false (or remove the var) to restore normal paywall behavior.
-    if os.environ.get('PAYWALL_DISABLED', '').lower() == 'true':
+    # Full-product access is the default (see _paywall_disabled). Does not touch
+    # Stripe or auth code. Set PAYWALL_DISABLED=false in Railway to restore gates.
+    if _paywall_disabled():
         return JSONResponse(content={'subscribed': True})
     if not email:
         return JSONResponse(content={'subscribed': False})
