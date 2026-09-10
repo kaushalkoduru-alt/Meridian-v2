@@ -547,3 +547,25 @@ reconciliation bridge) are dropped from the rendered stack.
   OBLIGATIONS".
 - **PAYO — not disclosed.** "Capital structure not disclosed. / no long-term-debt
   footnote could be located in the target's most recent 10-K." No table.
+
+---
+
+## Null-target classification (2026-09-10) — no backward reach
+
+`find_target_10k` takes the most recent 10-K that carries financial statements
+and stops. `assess_capital_structure` returns `not_disclosed` when that filing's
+debt note can't be located — it never falls back to an older year. Stale debt
+shown as current is the AES-class error; this is the guard against it.
+
+Every current-feed target's newest 10-K carries financial statements, so there
+is **no stub case (C)** in the feed. The four that came back null:
+
+| target | class | evidence |
+|---|---|---|
+| **HZO** MarineMax | **B — parser missed** | Balance sheet carries "Long-term debt, net of current maturities $356,235K"; the note is **"11. SHORT-TERM BORROWINGS AND LONG-TERM DEBT"**. `_HEAD_PAT` keyed on `BORROWINGS` / `LONG-TERM DEBT` but not a heading *led* by "SHORT-TERM BORROWINGS". **Fixed**: added `SHORT[-\s]?TERM\s+BORROWINGS(?:\s+AND\s+LONG[-\s]?TERM\s+DEBT)?` to `_HEAD_KW`. HZO now extracts **7 tranches** (Floor Plan $715.7M, M&T term loan $317.5M + mortgage $36M, three bank mortgage facilities, one small note), undrawn $100M revolver, reconciles Δ0. |
+| **PAYO** Payoneer | **A — genuinely no term debt** | Non-current liabilities are only deferred tax + "Other long-term liabilities $143M". No long-term-debt line, no debt note — the only debt-adjacent note is "NOTE 12 – LEASES". A receivables/warehouse revolver is mentioned in narrative ("revolving period expired October 2024"), wound down. `not_disclosed` is correct. |
+| **RAMP** LiveRamp | **A — genuinely no debt** | No debt note anywhere; debt-adjacent headings are "3. LEASES" and "17. FAIR VALUE" only. No term loan, notes payable, or drawn facility. Net-cash. `not_disclosed` is correct. |
+| **APGE** Apogee Therapeutics | **A — genuinely no debt** | Balance sheet long-term liabilities: "Lease liability, net of current $5,345K" and nothing else. Only debt-adjacent note is "14. Operating Leases". Clinical-stage biotech. `not_disclosed` is correct. |
+
+Regression: all 15 currently-extracting targets still locate the same debt-note
+heading after the `_HEAD_KW` change.

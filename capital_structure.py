@@ -68,7 +68,7 @@ SEC_HEADERS = {"User-Agent": "Kaushal Koduru kaushalkoduru@gmail.com"}
 # deal whose cached version does not match — the same invalidation discipline the
 # commitment / outside_date readings get, keyed to the code rather than the
 # filing (a signed 10-K's debt note does not change; our reading of it does).
-EXTRACTOR_VERSION = "2026-09-10.1"
+EXTRACTOR_VERSION = "2026-09-10.2"
 
 # ── status values the caller renders ─────────────────────────────────────────
 OK           = "ok"             # tranches found and they reconcile
@@ -229,6 +229,7 @@ def find_target_10k(ticker, cik=None, fetch=None):
 # table, so the looser keywords here (OBLIGATIONS, CREDIT AGREEMENT) can't drag
 # in a lease or pension note.
 _HEAD_KW = (r'LONG[\-\s]?TERM\s+DEBT|DEBT(?:\s+AND\s+FINANCING(?:\s+ARRANGEMENTS)?)?|'
+            r'SHORT[\-\s]?TERM\s+BORROWINGS(?:\s+AND\s+LONG[\-\s]?TERM\s+DEBT)?|'
             r'BORROWINGS|NOTES?\s+PAYABLE|INDEBTEDNESS|'
             r'CREDIT\s+(?:AGREEMENTS?|FACILIT(?:Y|IES))(?:\s+AND\s+DEBT(?:\s+FACILIT(?:Y|IES))?)?|'
             r'DEBT\s+FACILIT(?:Y|IES)|FINANCING\s+ARRANGEMENTS?|'
