@@ -1309,8 +1309,12 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 /* flat surfaces */
 #page-analysis .dr-hero,#page-analysis .dr-panel{border:1px solid var(--dr-line);
   background:var(--dr-panel); box-shadow:none;}
-#page-analysis .dr-hero-body{padding:16px 22px;}
+#page-analysis .dr-hero-body{padding:18px 22px 20px;
+  font-family:'DM Sans',system-ui,sans-serif;}
 #page-analysis .dr-hero-body > div:not(:empty){margin-top:0;}
+/* running prose in the hero strips reads as sentences (sans), not code (mono);
+   dates, day-counts and the uppercase micro-labels are tagged .drm to stay mono */
+#page-analysis .dr-hero-body .drm{font-family:'DM Mono',monospace;}
 
 /* collapsible detail section */
 #page-analysis .dr-fold{border:1px solid var(--dr-line2); background:var(--dr-panel);}
@@ -1405,10 +1409,10 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <!-- critical numbers strip -->
     <div id="da-metrics" style="display:grid; grid-template-columns:repeat(6,1fr);"></div>
 
-    <div class="dr-hero-body" style="display:flex; flex-direction:column; gap:14px; border-top:1px solid var(--dr-line);">
+    <div class="dr-hero-body" style="display:flex; flex-direction:column; gap:16px; border-top:1px solid var(--dr-line);">
       <div id="da-verification"></div>
       <div id="da-premium-note"></div>
-      <div id="da-deadline"></div>
+      <div id="da-deadline" hidden></div>
       <div id="da-timing"></div>
     </div>
 
@@ -2587,42 +2591,78 @@ function _daFmtCloseDate(cd, deal){
 // is the day either party may walk away, which is a legal right. A reader
 // should not have to work out why two dates on the same deal differ by ten
 // weeks, so both are labelled and each carries its OWN day count.
+// ONE timing block. The old layout showed the deadline three times \u2014 a bordered
+// box with a four-sentence paragraph, a "Deadline" row, and a paragraph
+// explaining guidance vs deadline, with two day-counts a few inches apart. This
+// merges all of it: two rows (date \u00b7 day-count \u00b7 one-line gloss), the deadline's
+// meaning and filing quote once, and a single-line note on the gap. No
+// information dropped; the repetition and the wall of monospace prose are.
 function _daTimingRows(deal){
-  var rows = [];
-  var g = _daParseCloseDate(deal.close_date);
-  if(g){
-    rows.push({k:'Guidance', d:g,
-               t:_daFmtCloseDate(deal.close_date, deal),
-               n:'what the company said it expects', c:'#cdc2a8'});
-  }
   var od = deal && deal.outside_date;
+  var g  = _daParseCloseDate(deal.close_date);
   var o  = od && od.date ? _daParseCloseDate(od.date) : null;
-  if(o){
-    rows.push({k:'Deadline', d:o,
-               t:o.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'}),
-               n:'when either party may walk away',
-               c: od.passed ? '#f0735e' : '#cdc2a8', passed: od.passed});
+  if(!g && !o) return '';
+
+  var now = new Date();
+  function dayTxt(d, passed){
+    var n = Math.round((d - now) / 86400000);
+    return (passed || n < 0) ? Math.abs(n) + ' days ago' : n + ' days';
   }
-  if(!rows.length) return '';
-  return rows.map(function(r){
-    var days = Math.round((r.d - new Date()) / 86400000);
-    var dtxt = r.passed || days < 0 ? Math.abs(days)+' days ago' : days+' days';
-    return '<div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-top:6px;">'
-      + '<span style="font-size:9.5px; letter-spacing:0.14em; color:#ada284; '
-      +   'text-transform:uppercase; min-width:74px;">'+r.k+'</span>'
-      + '<span style="font-size:14px; color:'+r.c+'; font-weight:500;">'+r.t+'</span>'
-      + '<span style="font-size:11.5px; color:'+r.c+';">\u00b7 '+dtxt+'</span>'
-      + '<span style="font-size:10.5px; color:#7d745f;">'+r.n+'</span>'
+  function row(k, dateTxt, dayStr, gloss, col){
+    return '<div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; padding:5px 0;">'
+      + '<span class="drm" style="font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; '
+      +   'color:#8d988d; min-width:68px;">' + k + '</span>'
+      + '<span class="drm" style="font-size:14px; color:' + col + ';">' + dateTxt + '</span>'
+      + '<span class="drm" style="font-size:11px; color:#8d988d;">' + dayStr + '</span>'
+      + '<span style="font-size:12.5px; color:#8d988d;">' + gloss + '</span>'
       + '</div>';
-  }).join('')
-  + '<div style="margin-top:9px; font-size:10.5px; line-height:1.65; color:#7d745f;">'
-  + 'Guidance is the company\u2019s stated expectation and carries no contractual '
-  + 'force. The deadline is a contractual right \u2014 past it, either party may '
-  + 'walk away without paying a break fee. They are different claims, and the '
-  + 'gap between them is not an error.</div>';
+  }
+
+  var html = '<div class="drm" style="font-size:9.5px; letter-spacing:0.16em; '
+    + 'text-transform:uppercase; color:#8d988d; margin-bottom:6px;">Timing</div>';
+
+  if(g){
+    html += row('Guidance', _daFmtCloseDate(deal.close_date, deal),
+                dayTxt(g), 'the company&rsquo;s estimate &mdash; not binding', '#e8e0d0');
+  }
+  if(o){
+    html += row('Deadline',
+      o.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', timeZone:'UTC'}),
+      dayTxt(o, od.passed),
+      od.passed ? 'passed' : 'the contractual right to walk',
+      od.passed ? '#f0735e' : '#e8e0d0');
+  }
+
+  // The deadline's own meaning (from the filing reader) \u2014 the full explanation,
+  // shown once, as prose. It already covers the break fee, the automatic
+  // extension and that the date shown is the outer one, so the rows above stay
+  // to a short tag each and don't repeat it.
+  if(o && od.meaning){
+    html += '<div style="margin-top:10px; font-size:12.5px; line-height:1.6; color:#c9c0ad;">'
+      + od.meaning + '</div>';
+  }
+  if(o && od.quote){
+    html += _daQuote(od.quote, 'rgba(207,161,81,0.4)');
+  }
+  if(g && o){
+    html += '<div style="margin-top:8px; font-size:11.5px; line-height:1.55; color:#8d988d;">'
+      + 'The two are different claims &mdash; the gap between them is not an error.</div>';
+  }
+  return html;
 }
 function _daSet(id, html){ var e=document.getElementById(id); if(e) e.innerHTML = html; }
 function _daTxt(id, txt){ var e=document.getElementById(id); if(e) e.textContent = txt; }
+// When there is no market-implied probability, drop the 3fr/2fr split so the
+// break box doesn't sit beside a near-empty column — stack them full width.
+function _daCollapseProbRow(){
+  var cell = document.getElementById('da-implied-prob');
+  cell = cell && cell.closest('.da-section');
+  var grid = cell && cell.parentElement;
+  if(!grid) return;
+  grid.style.gridTemplateColumns = '1fr';
+  cell.style.borderRight = 'none';
+  cell.style.borderBottom = '1px solid var(--dr-line)';
+}
 
 async function renderAnalysis(deal){
   if(!deal) return;
@@ -2744,7 +2784,13 @@ async function renderAnalysis(deal){
   // it, not instead -- applying carry to the whole position assumes 100%
   // borrowing, which would be an assumption presented as a fact (section 20).
   // (3) break-even probability -- the threshold for the FINANCED case only.
-  _daSet('da-implied-prob', '<div style="font-size:12px; color:#7d745f;">Calculating\u2026</div>');
+  _daSet('da-implied-prob', '<div style="font-size:12px; color:#8d988d;">Calculating\u2026</div>');
+  (function(){  // reset the prob/break split in case a prior render collapsed it
+    var _c = document.getElementById('da-implied-prob'); _c = _c && _c.closest('.da-section');
+    var _grid = _c && _c.parentElement;
+    if(_grid){ _grid.style.gridTemplateColumns = 'minmax(0,3fr) minmax(0,2fr)';
+      _c.style.borderRight = '1px solid var(--dr-line)'; _c.style.borderBottom = 'none'; }
+  })();
   try{
     var probData = await fetch('/api/implied-probability/'+deal.ticker).then(function(r){ return r.json(); });
     if(probData && probData.model_applies && probData.probability != null){
@@ -2789,10 +2835,17 @@ async function renderAnalysis(deal){
         + '</div>'
         + '<div style="margin-top:12px; padding-top:10px; border-top:1px dashed rgba(95,224,201,0.28); font-size:11px; line-height:1.6; color:#8f8772;">'+probData.leverage_note+' Break is assumed to resolve at the same horizon as close.</div>');
     } else {
-      _daSet('da-implied-prob', '<div style="font-size:12px; line-height:1.6; color:#9a9079;">'+((probData && probData.note) || 'Break price unavailable \u2014 a market-implied close probability cannot be calculated for this deal.')+'</div>');
+      // Model doesn't apply (usually break price >= current). One line of prose,
+      // and collapse the 3fr/2fr split so the break box beside it isn't sitting
+      // next to a near-empty column.
+      _daSet('da-implied-prob', '<div style="font-family:\'DM Sans\',system-ui,sans-serif; font-size:12.5px; line-height:1.6; color:#8d988d; max-width:62ch;">'
+        + ((probData && probData.note) || 'A market-implied close probability cannot be calculated for this deal \u2014 no usable break price to price downside against.')
+        + '</div>');
+      _daCollapseProbRow();
     }
   }catch(e){
-    _daSet('da-implied-prob', '<div style="font-size:12px; color:#9a9079;">Unable to calculate the market-implied close probability.</div>');
+    _daSet('da-implied-prob', '<div style="font-family:\'DM Sans\',system-ui,sans-serif; font-size:12.5px; color:#8d988d;">The market-implied close probability could not be calculated.</div>');
+    _daCollapseProbRow();
   }
 
   // ---- risk / reward cards ----
@@ -2912,20 +2965,25 @@ async function renderAnalysis(deal){
     var el = document.getElementById('da-premium-note');
     if(!el) return;
     if(!p){ el.innerHTML = ''; return; }
-    el.innerHTML = '<div style="margin-top:10px; padding:9px 12px; '
-      + 'border-left:2px solid rgba(238,228,208,0.18); font-size:11.5px; '
-      + 'line-height:1.65; color:#9a9079;">'
-      + (p.reference ? '<span style="color:#cdc2a8;">' + p.reference + '.</span> ' : '')
+    var ref = p.reference ? String(p.reference).replace(/^against\s+/i, 'over ') : '';
+    var pct = (p.value != null && !isNaN(p.value))
+      ? '<span style="color:#e8e0d0;">' + (p.value >= 0 ? '+' : '') + p.value + '%</span> '
+      : '';
+    el.innerHTML = '<div style="padding:2px 0 2px 12px; '
+      + 'border-left:2px solid rgba(238,228,208,0.14); font-size:12.5px; '
+      + 'line-height:1.6; color:#8d988d;">'
+      + 'Premium ' + pct + (ref ? ref + '. ' : '')
       + (p.thin ? '<span style="color:#e2b23f;">The buyer is paying at or barely '
                 + 'above market.</span> ' : '')
-      + 'Premium measures standalone downside and how motivated holders are to '
-      + 'vote yes. It is not evidence the deal will close, and says nothing '
-      + 'about buyer commitment, termination rights or regulatory risk.'
+      + 'It measures standalone downside and how motivated holders are to vote '
+      + 'yes — not whether the deal closes, and nothing about buyer commitment, '
+      + 'termination rights or regulatory risk.'
       + '</div>';
   })();
 
   _daSet('da-verification', _daVerification(deal));
-  _daSet('da-deadline', _daDeadline(deal));
+  // The contractual deadline is now folded into the single Timing block
+  // (_daTimingRows) — no separate box, no repeated date.
   var _explHtml = _daExplain(deal);
   _daSet('da-explain', _explHtml);
   var _explSec = document.getElementById('dr-s-explain');
