@@ -1520,9 +1520,13 @@ def validate_close_date(cd, announced, now=None):
               r'|october|november|december)\s+\d{1,2},?\s+20\d{2}'
               r'|\d{1,2}\s+(?:january|february|march|april|may|june|july|august'
               r'|september|october|november|december)\s+20\d{2}')
+    # "end of 2026" / "end of the calendar year 2026" and a bare "December
+    # 2026" are the same class as "year-end" -- as specific as "late", not a
+    # bare year -- see extract_close_date's year-end-class patterns.
     if not re.search(_EXACT, str(cd), re.IGNORECASE) and \
        not re.search(r'q[1-4]|first|second|third|fourth|quarter|half|h[12]|'
-                     r'early|mid|late|year[\s-]?end', str(cd), re.IGNORECASE):
+                     r'early|mid|late|year[\s-]?end|end\s+of|december',
+                     str(cd), re.IGNORECASE):
         return None, (f'too coarse: {cd!r} names a year with no quarter or half, '
                       f'which is a fragment rather than guidance')
     try:
@@ -2185,16 +2189,35 @@ def extract_close_date(clean_text, scan_chars=None):
         r'\b(Q[1-4]\s+20\d{2})\b[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
         r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b',
         r'\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
-        # "expected to close by calendar year-end 2026" -- ACVA's press release.
-        # "year-end" anchors to 31 December the same way "late" does; it is not
-        # a bare year (which is refused downstream as too coarse -- see
-        # validate_close_date). The captured group keeps "year-end"/"year end"
-        # in the string so that qualifier survives past this function: the
-        # greedy catch-alls below would otherwise chop this to "end 2026",
-        # which self-aborts as an unqualified word+year fragment, and the
-        # filing's real guidance was lost to TBD.
+        # THE YEAR-END CLASS. Filings say "by year-end" a handful of different
+        # ways, and every one of them means the same thing: 31 December of the
+        # named year. ACVA's press release said "calendar year-end 2026";
+        # HZO's says "by the end of the calendar year 2026" -- same meaning,
+        # different words, and the second phrasing hit the same failure the
+        # first one did: reduced to a bare "2026", self-rejected downstream as
+        # too coarse (see validate_close_date), guidance the filing actually
+        # gave was lost to TBD. Rather than add one more exact string, this
+        # covers the class: "year-end YYYY" / "year end YYYY", "(before) the
+        # end of [the] [calendar/fiscal] year YYYY", "(before) the end of
+        # YYYY", and a bare "December YYYY" (December being the one month
+        # name that IS year-end; a day-qualified "December 31, 2026" is
+        # already caught by the exact-date patterns above and never reaches
+        # here). Every capture keeps its qualifying words in the string, so
+        # that text -- not just the year -- is what validate_close_date and
+        # parse_close_date see.
         r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?(?:(?:fiscal|calendar)\s+)?(year[\s-]?end\s+20\d{2})',
         r'(?:(?:fiscal|calendar)\s+)?(year[\s-]?end\s+20\d{2})[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
+        # The captured group starts at "end", never at "the"/"before"/"of" --
+        # those three words are exactly what the abstention guard below treats
+        # as an unqualified-fragment lead-in (it exists to catch "in 2026",
+        # "of 2026" picked up out of context), and a leading "the"/"before"
+        # would trip that guard on genuine guidance and fall through to the
+        # weaker bare "(?:fiscal|calendar) year 20XX" pattern below it, which
+        # captures only the year -- exactly the bug this is fixing.
+        r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?(?:before\s+)?(?:the\s+)?(end\s+of\s+(?:the\s+)?(?:calendar\s+|fiscal\s+)?(?:year\s+)?20\d{2})',
+        r'(?:before\s+)?(?:the\s+)?(end\s+of\s+(?:the\s+)?(?:calendar\s+|fiscal\s+)?(?:year\s+)?20\d{2})[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
+        r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?\b(December\s+20\d{2})\b',
+        r'\b(December\s+20\d{2})\b[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
         r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})',
         r'(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
         # Greedy catch-alls last — only fire if nothing above matched
@@ -2204,7 +2227,7 @@ def extract_close_date(clean_text, scan_chars=None):
 
     QUALIFIER_WORDS = {
         'q1','q2','q3','q4','first','second','third','fourth',
-        'early','mid','late','half','calendar','fiscal',
+        'early','mid','late','half','calendar','fiscal','december','end',
     }
 
     for pat in patterns:
