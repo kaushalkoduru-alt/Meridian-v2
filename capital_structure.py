@@ -68,7 +68,7 @@ SEC_HEADERS = {"User-Agent": "Kaushal Koduru kaushalkoduru@gmail.com"}
 # deal whose cached version does not match — the same invalidation discipline the
 # commitment / outside_date readings get, keyed to the code rather than the
 # filing (a signed 10-K's debt note does not change; our reading of it does).
-EXTRACTOR_VERSION = "2026-09-10.2"
+EXTRACTOR_VERSION = "2026-09-11.1"
 
 # ── status values the caller renders ─────────────────────────────────────────
 OK           = "ok"             # tranches found and they reconcile
@@ -243,6 +243,14 @@ _HEAD_PAT = re.compile(
     r'\b\d{1,2}\.\s+(?:' + _HEAD_KW + r')\b'
     r')', re.I)
 
+# A table-of-contents row: "Note 9 - Borrowings   78" immediately followed by
+# the next listing, "Note 10 - Leases   80". ACVA's ToC entry for its debt note
+# sits 60,000 characters ahead of the real note and scored an identical 7 to it
+# — ties favor the earliest match, so the ToC row won and the section captured
+# was the table of contents plus the auditor's report, not any debt content.
+_TOC_ROW = re.compile(
+    r'[a-zA-Z)]\s+\d{1,4}\s+(?:NOTE\s+[A-Z0-9]|\(\d{1,2}\)\s|\d{1,2}\.\s+[A-Z])', re.I)
+
 # Contexts where a "Debt" heading is the WRONG note: a Schedule I / parent-only
 # condensed schedule (AES — reconciles cleanly to ~$6B parent recourse debt
 # while consolidated debt is ~$29B), or an MD&A contractual-obligations table.
@@ -299,6 +307,9 @@ def _score_heading(text, start):
         sc += 2
 
     # ── the "wrong note" penalties ──────────────────────────────────────────
+    # A table-of-contents listing, not the note itself.
+    if _TOC_ROW.search(text[start:start + 60]):
+        sc -= 15
     # Schedule I / parent-company-only condensed schedule. AES's is titled
     # "2. Debt" and reconciles perfectly — to a total that excludes $23bn of
     # non-recourse debt.

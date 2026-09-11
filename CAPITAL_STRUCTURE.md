@@ -569,3 +569,73 @@ is **no stub case (C)** in the feed. The four that came back null:
 
 Regression: all 15 currently-extracting targets still locate the same debt-note
 heading after the `_HEAD_KW` change.
+
+---
+
+## ACVA (ACV Auctions / Copart) — structured-finance debt + a close-date bug
+
+### 1. Capital structure — real miss, fixed
+
+`_HEAD_PAT` already matches "9. Borrowings" — the miss wasn't the heading
+keyword, it was a **table-of-contents collision**. ACVA's ToC lists "Note 9 -
+Borrowings   78" (a page-number listing) at char 273,080, and the real note
+sits at char 334,927. Both scored 7 under `_score_heading`; ties favor the
+earliest match, so the ToC row won, and the "section" fed to the model was the
+table of contents plus the auditor's report — no debt content at all, hence
+`not_disclosed`.
+
+**Fixed**: `_TOC_ROW` — a heading immediately followed by a bare page number
+and another "Note N -" listing (`[a-zA-Z)]\s+\d{1,4}\s+(?:NOTE...|...)`) scores
+−15. The real note now wins outright (7 vs −8).
+
+ACVA's debt is two revolving facilities, neither a corporate bond:
+- **2021 Revolver** — corporate line, drawn $70.0M / $250.0M capacity, SOFR +
+  2.75% (8.50% at 12/31/25), matures 2030-06.
+- **Warehouse Facility** — in ACV Capital Funding II LLC, funds auto floorplan
+  loan originations. Extracted as **drawn $120.0M** (not the $200.0M capacity —
+  same drawn-vs-capacity rule as BZH's revolver), rate **6.71%** at 12/31/25,
+  revolving feature ends **December 2027**. No new instrument type was needed:
+  a warehouse facility with a drawn/capacity split reads as `revolver`, and the
+  extractor's existing "capacity is context, drawn is the debt" rule applied
+  without change. Reconciles Δ0 ($70M + $120M = $190M, the filing's only
+  combined figure, stated in narrative rather than a table).
+
+**Swept** the other three `not_disclosed` feed targets (PAYO, RAMP, APGE) for
+warehouse/securitization/ABS language. PAYO genuinely had one — the "2021
+Receivables Loan and Security Agreement ('Warehouse Facility')" — but its
+revolving period expired October 2024 and the agreement terminated April 2025;
+$0 outstanding at the current balance-sheet date. `not_disclosed` stands for
+all three. No other hidden structured-finance debt in the feed.
+
+Regression: all 18 currently-extracting/fixed targets (including HZO) still
+locate the same heading. `EXTRACTOR_VERSION` → `2026-09-11.1`.
+
+### 2. Close date — real bug, not a diagnosis-only case
+
+"Year-end 2026" is not a news figure — it is stated verbatim in **EX-99.1, the
+press release filed as part of ACVA's own 8-K** (accession
+0000950103-26-013780): *"the transaction ... is expected to close by calendar
+year-end 2026."* That exhibit is the first document the scan's detection loop
+reads for this filing, and it is where the deal price ($10.50) was
+successfully pulled from — so the pipeline was already reading the right
+document; `extract_close_date` just couldn't parse this phrasing.
+
+`extract_close_date`'s "calendar year" pattern captures only the bare year
+(`(?:year\s+)?(20\d{2})`), which does not match "year**-end**" — the hyphenated
+word sits between "year" and the digits. The regex fell through to the greedy
+catch-all, which chopped the phrase to "end 2026", correctly self-rejected as
+an unqualified word+year fragment (working as designed), and returned `TBD`.
+Real guidance existed in the filing; `TBD` was the wrong answer.
+
+**Fixed**: two new patterns capture `year[\s-]?end\s+20\d{2}` as one unit
+("year-end 2026" / "year end 2026"), and `validate_close_date`'s coarseness
+check now accepts `year[\s-]?end` as a qualifier (previously only
+quarter/half/early/mid/late) — "year-end" is exactly as specific as "late",
+not a bare year. `parse_close_date` needed no change: an unmatched clause
+already defaults to December 31.
+
+End-to-end confirmed against the real scan path: `extract_close_date` →
+`'year-end 2026'` → `validate_close_date` → accepted → `parse_close_date` →
+`2026-12-31`. Regression: synthetic cases for BWMN's Q2 cross-reference, ATKR's
+fiscal-year mention, HZO's bare year, RAMP's exact date, and AES's
+late-2026-or-early-2027 compound all resolve exactly as before.

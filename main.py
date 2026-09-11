@@ -1182,6 +1182,8 @@ _CLOSE_PERIOD_END = {
     'early': (3, 31),
     'mid': (6, 30),
     'late': (12, 31),
+    'year-end': (12, 31),      # explicit, though a clause with no keyword
+    'year end': (12, 31),      # already defaults to (12, 31) below
 }
 
 
@@ -1476,7 +1478,7 @@ def validate_close_date(cd, announced, now=None):
               r'|september|october|november|december)\s+20\d{2}')
     if not re.search(_EXACT, str(cd), re.IGNORECASE) and \
        not re.search(r'q[1-4]|first|second|third|fourth|quarter|half|h[12]|'
-                     r'early|mid|late', str(cd), re.IGNORECASE):
+                     r'early|mid|late|year[\s-]?end', str(cd), re.IGNORECASE):
         return None, (f'too coarse: {cd!r} names a year with no quarter or half, '
                       f'which is a fragment rather than guidance')
     try:
@@ -2139,6 +2141,16 @@ def extract_close_date(clean_text, scan_chars=None):
         r'\b(Q[1-4]\s+20\d{2})\b[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
         r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b',
         r'\b((?:first|second|third|fourth|early|mid|late)[-\s]+(?:(?:half|quarter)[-\s]+of[-\s]+)?20\d{2})\b[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
+        # "expected to close by calendar year-end 2026" -- ACVA's press release.
+        # "year-end" anchors to 31 December the same way "late" does; it is not
+        # a bare year (which is refused downstream as too coarse -- see
+        # validate_close_date). The captured group keeps "year-end"/"year end"
+        # in the string so that qualifier survives past this function: the
+        # greedy catch-alls below would otherwise chop this to "end 2026",
+        # which self-aborts as an unqualified word+year fragment, and the
+        # filing's real guidance was lost to TBD.
+        r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?(?:(?:fiscal|calendar)\s+)?(year[\s-]?end\s+20\d{2})',
+        r'(?:(?:fiscal|calendar)\s+)?(year[\s-]?end\s+20\d{2})[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
         r'(?:clos\w+|complet\w+|consummat\w+)[^.]{0,130}?(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})',
         r'(?:fiscal|calendar)\s+(?:year\s+)?(20\d{2})[^.]{0,130}?(?:clos\w+|complet\w+|consummat\w+)',
         # Greedy catch-alls last — only fire if nothing above matched
