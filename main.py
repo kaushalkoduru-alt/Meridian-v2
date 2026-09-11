@@ -177,6 +177,50 @@ def fetch_sec_ticker_map():
         print(f"[SEC] Ticker map fetch error: {e}")
 
 
+_CIK_FALLBACK_CACHE = {}  # ticker -> CIK, per-process, so one delisted-mid-merger
+                          # ticker costs one browse-edgar lookup per run, not one
+                          # per enforcing check that needs a CIK this scan.
+
+def cik_for(ticker):
+    """
+    SEC_CIK_MAP.get(ticker), with a browse-edgar fallback for tickers
+    company_tickers.json has already dropped.
+
+    That file tracks currently-listed tickers, and a merger target delists
+    partway through its own deal — ALOT, AVNS and CPRX all vanished from it
+    while still live merger targets. Every ENFORCING check (gate, direction)
+    re-derives its CIK from SEC_CIK_MAP fresh every scan rather than from a
+    CIK captured once at detection, so losing the map entry means losing the
+    ability to verify at all: gate_deal refuses outright with no CIK, and a
+    deal that was proof-positive real is dropped for a bookkeeping reason,
+    not a substantive one. capital_structure.py's _cik_for_ticker already
+    carries this exact fallback for the extractor; this gives the live feed
+    pipeline the same one.
+    """
+    if not ticker:
+        return ''
+    cik = SEC_CIK_MAP.get(ticker, '')
+    if cik:
+        return cik
+    if ticker in _CIK_FALLBACK_CACHE:
+        return _CIK_FALLBACK_CACHE[ticker]
+    found = ''
+    try:
+        r = requests.get(
+            "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany"
+            f"&CIK={ticker}&type=10-K&count=1&output=atom",
+            headers=EDGAR_HEADERS, timeout=15)
+        m = re.search(r'<cik>\s*(\d+)\s*</cik>', r.text, re.I)
+        if m:
+            found = m.group(1).zfill(10)
+            print(f"[SEC] {ticker}: CIK {found} recovered via browse-edgar "
+                  f"— missing from company_tickers.json (likely delisted mid-deal)")
+    except Exception as e:
+        print(f"[SEC] {ticker}: browse-edgar CIK lookup failed: {e}")
+    _CIK_FALLBACK_CACHE[ticker] = found
+    return found
+
+
 def resolve_company_name(ticker):
     """
     Returns the official company name for a ticker.
@@ -2413,6 +2457,37 @@ def fetch_deals_from_edgar():
     except Exception as _pe:
         print(f"[Direction] could not capture prior verdicts: {_pe}")
 
+    # Same capture, same reason, for the gate verdict — and this one shipped
+    # without it. gate_deal() is documented to trust a VERIFIED cached_verdict
+    # and make zero network calls, but the call site below passed
+    # cached_verdict=_d.get('gate') straight off the freshly-built `results`
+    # dict, which never carries a 'gate' key (results is rebuilt from scratch
+    # every scan, same as direction/commitment/outside_date above). So the
+    # short-circuit never fired — every deal, every scan, re-ran the EDGAR
+    # lookup from zero — and it stayed invisible for months because
+    # _find_announcement_filing_for_validation reliably re-derived VERIFIED.
+    # The one time EDGAR/rate-limiting made it flaky for a batch of tickers in
+    # the same scan, GATE_ENFORCING dropped all of them, with no cached fact to
+    # fall back on. A verdict already proven true does not stop being true
+    # because this scan's fresh lookup had a bad moment — see gate_deal's own
+    # comment: "a filing that proved a deal exists does not stop being proof."
+    _prior_gates = {}
+    try:
+        for _row in (load_cache() or []):
+            _tk, _gv = _row.get('ticker'), _row.get('gate')
+            if not _tk or not _gv:
+                continue
+            if isinstance(_gv, str) and _gv.strip().startswith('{'):
+                try:
+                    import ast as _ast
+                    _gv = _ast.literal_eval(_gv)
+                except Exception:
+                    continue
+            if isinstance(_gv, dict) and _gv.get('verdict'):
+                _prior_gates[_tk] = _gv
+    except Exception as _pge:
+        print(f"[Gate] could not capture prior verdicts: {_pge}")
+
     # Same capture, same reason, for the two readings taken off the merger
     # agreement. This is the fourth time this shape has appeared: the deal dict
     # built below carries neither field, and save_cache() writes those fresh
@@ -3579,16 +3654,37 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         try:
             from deal_gate import gate_deal, gate_report, GATE_ENFORCING, VERDICT_VERIFIED
             
+            _gate_restored = 0
             for _d in results:
+                # _d.get('gate') is checked first in case something upstream
+                # already carried it this scan; _prior_gates is what actually
+                # supplies it, since `results` starts as a fresh dict with no
+                # 'gate' key at all (see the capture at the top of this
+                # function for why). Once VERIFIED, gate_deal trusts this and
+                # makes zero network calls — a filing that proved a deal is
+                # real does not stop being proof because this hour's lookup
+                # had a bad moment.
+                _tk = _d.get('ticker')
+                _cached_gate = _d.get('gate') or _prior_gates.get(_tk)
+                if _cached_gate and _cached_gate.get('verdict') == VERDICT_VERIFIED:
+                    _gate_restored += 1
+                    _cik = SEC_CIK_MAP.get(_tk, '')  # gate_deal ignores this once already VERIFIED
+                else:
+                    # A fresh check is about to run — worth the browse-edgar
+                    # fallback if this ticker delisted mid-merger and dropped
+                    # out of company_tickers.json (ALOT, AVNS, CPRX all did).
+                    # Without it a real, live deal fails verification for a
+                    # bookkeeping reason: no CIK to look an announcement up by.
+                    _cik = cik_for(_tk)
                 _d['gate'] = gate_deal(
-                    _d.get('ticker'),
-                    SEC_CIK_MAP.get(_d.get('ticker', ''), ''),
-                    _d.get('filed'),
-                    cached_verdict=_d.get('gate'),
+                    _tk, _cik, _d.get('filed'),
+                    cached_verdict=_cached_gate,
                     finder=_find_announcement_filing_for_validation,
                     merger_signals=VALIDATION_MERGER_SIGNALS,
                     irrelevant_signals=VALIDATION_IRRELEVANT_SIGNALS,
                 )
+            print(f"[Gate] {_gate_restored} deal(s) trusted from a prior VERIFIED "
+                  f"verdict, zero network calls")
             _hdr, _lines = gate_report(results)
             print(_hdr)
             for _ln in _lines:
