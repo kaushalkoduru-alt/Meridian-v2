@@ -2620,8 +2620,29 @@ def fetch_deals_from_edgar():
     results=[]
     seen_tickers=set()
 
-    # Pre-deduplicate hits by ticker to avoid processing same company multiple times
-    seen_pre = set()
+    # Pre-deduplicate hits by ticker to avoid processing same company multiple
+    # times -- but keep the hit actually worth processing, not just the first
+    # one alphabetically-by-query. WBD (Paramount/WBD, a real signed deal)
+    # showed up twice: once from the "Cash + Stock" 8-K query as a December
+    # 2025 Item 7.01/8.01/9.01 filing (a strategic-review update, no price,
+    # no Item 1.01 -- the 8-K item filter below would skip it on its own
+    # merits), and once from the "All Cash" DEFM14A query, which resolves
+    # backward via Path B to the actual signing 8-K three months later: Item
+    # 1.01, $31.00/share in cash. Because "Cash + Stock" is queried before
+    # the DEFM14A phrase, first-hit-wins dedup kept the useless December
+    # filing and threw away the DEFM14A hit before Path B, the item filter,
+    # or price extraction ever got to run on the document that actually
+    # proves the deal. A hit with Item 1.01 (or a proxy, which resolves to
+    # one via Path B) always outranks one without, regardless of query order.
+    def _has_item_101(src):
+        return any('1.01' in str(i) for i in (src.get('items') or []))
+    def _is_proxy(src):
+        return 'DEFM14A' in (src.get('form') or '').upper() or \
+               'PREM14A' in (src.get('form') or '').upper()
+    def _hit_rank(src):
+        return 1 if (_has_item_101(src) or _is_proxy(src)) else 0
+
+    seen_pre = {}   # ticker -> index into deduped_hits
     deduped_hits = []
     for hit in all_hits:
         src = hit['_source']
@@ -2632,8 +2653,16 @@ def fetch_deals_from_edgar():
         t = tm.group(1) if tm else None
         key = t if t else src.get('adsh', str(len(deduped_hits)))
         if key not in seen_pre:
-            seen_pre.add(key)
+            seen_pre[key] = len(deduped_hits)
             deduped_hits.append(hit)
+        else:
+            idx = seen_pre[key]
+            kept_src = deduped_hits[idx]['_source']
+            if _hit_rank(src) > _hit_rank(kept_src):
+                print(f"  [Dedup] {key}: replacing {kept_src.get('form')} "
+                      f"{kept_src.get('adsh')} (no Item 1.01) with "
+                      f"{src.get('form')} {src.get('adsh')}")
+                deduped_hits[idx] = hit
     all_hits = deduped_hits
     print(f"After deduplication: {len(all_hits)} unique hits")
 
