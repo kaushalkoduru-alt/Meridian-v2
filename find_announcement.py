@@ -245,12 +245,24 @@ def _merger_language_is_early(text, merger_signals):
     return any(s in head for s in merger_signals)
 
 
+MAX_SECONDS_PER_TICKER = 45  # wall-clock cap on one ticker's whole backward
+# search, not per HTTP request. text_fetcher already times out at 10s per
+# fetch, but that bounds only ONE of up to 25 sequential fetches -- a ticker
+# whose filings are all slow-but-not-quite-timing-out could still burn
+# 25 * ~10s = over four minutes, and with several such tickers in one scan
+# (every proxy now correctly reaches this path -- see the dedup fix) that is
+# enough to stall the whole scan for tens of minutes with nothing to show
+# for it. A missing deal is recoverable next scan; a hung scan is not -- so
+# this abandons the SEARCH, not a single request, once the budget is spent,
+# and returns whatever fallback was found so far (possibly none).
+
 def find_announcement_8k_backward(cik, from_date_str, headers,
                                   lookback_days=240,
                                   merger_signals=None,
                                   text_fetcher=None,
                                   irrelevant_signals=None,
-                                  hint_out=None):
+                                  hint_out=None,
+                                  max_seconds=MAX_SECONDS_PER_TICKER):
     """
     cik            zero-padded CIK string
     from_date_str  the proxy's filing date, 'YYYY-MM-DD' -- search back from here
@@ -259,6 +271,9 @@ def find_announcement_8k_backward(cik, from_date_str, headers,
                    the company did the year before -- which is exactly how
                    iRobot came back dated a year early at the wrong price.
     text_fetcher   function(url) -> text. Pass main._get_text_for_validation.
+    max_seconds    wall-clock budget for the WHOLE search (not one request).
+                   Checked before each fetch; exceeding it abandons this
+                   ticker's lookup and returns the best fallback found so far.
     hint_out       optional list. Agreement dates cited by rejected follow-up
                    filings are appended here, so a caller that finds nothing
                    knows where the announcement actually is.
@@ -308,7 +323,14 @@ def find_announcement_8k_backward(cik, from_date_str, headers,
         print(f"    [Lookback] CIK {cik}: checking up to {min(len(candidates), 25)} filings within {lookback_days}d, newest first")
 
     fallback = None
-    for date_str, acc, form, doc, _ in candidates[:25]:
+    deadline = time.monotonic() + max_seconds
+    for i, (date_str, acc, form, doc, _) in enumerate(candidates[:25]):
+        if time.monotonic() > deadline:
+            print(f"    [Lookback] CIK {cik}: {max_seconds}s budget spent after "
+                  f"{i}/{min(len(candidates), 25)} filings — abandoning this "
+                  f"ticker's search, moving on"
+                  + (" (returning fallback found so far)" if fallback else ""))
+            break
         acc_clean = acc.replace("-", "")
         url = (f"https://www.sec.gov/Archives/edgar/data/"
                f"{int(cik)}/{acc_clean}/{doc}")

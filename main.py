@@ -3006,17 +3006,32 @@ def fetch_deals_from_edgar():
             except Exception as ve:
                 print(f'  [Validate] {ticker}: detection check error — {ve}')
 
-            if len(results) % 10 == 0:
-                save_cache(results)
         except Exception as _deal_ex:
             print(f"  [ScanError] {ticker}: inner processing failed — {_deal_ex}")
             continue
 
-    
+
 
     if results:
-        save_cache(results)
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Scan complete.")
+        # No save_cache() here, and none through the enrichment passes below.
+        # This dict has no gate or direction yet -- those run further down --
+        # so a save at this point publishes deals the fail-closed verification
+        # filter has to read as unverified (SKIPPED, not FAILED) and hide. That
+        # is not a hypothetical: the live feed went 18 deals to 9 exactly this
+        # way when a gate re-check happened to come back flaky for a batch of
+        # tickers with nothing cached to fall back on. Every scan reopens the
+        # SAME window while detection, enrichment, capital structure, gate and
+        # direction all run -- tens of minutes on a slow scan -- and it is
+        # only luck that a client (or a kill) doesn't land in it every time.
+        # The old cache entry stays live and served for the whole rest of this
+        # function; the one save_cache() at the very end, after GATE_ENFORCING
+        # has filtered on a real gate/direction verdict, is what the feed
+        # commits to. A crash before that save loses this scan's detection
+        # work, not the live feed -- the prior scan's result is exactly what
+        # was being served a moment ago, still fully verified.
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Detection complete: "
+              f"{len(results)} deal(s) found. Running enrichment and "
+              f"verification before publishing.")
         # Background enrichment — fill missing tx_value and close_date via Groq
         groq_key = os.environ.get("GROQ_API_KEY", "")
         anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -3171,9 +3186,11 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     print(f"  [Enrich] Error {ticker}: {e}")
                     continue
             if enriched:
-                clean = [{k: v for k, v in r.items() if k != '_filing_text'} for r in results]
-                save_cache(clean)
-                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Enrichment complete — cache updated.")
+                # Same reasoning as detection above: still no gate or direction
+                # on these dicts. Left in memory for the gate/direction passes
+                # below to build on; not published until they have run.
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] "
+                      f"Groq enrichment complete — held for verification.")
         # ── VERIFICATION GATE (shadow mode) ──────────────────────────────────
         # Every deal must be provable by a real EDGAR filing. Records a verdict
         # and an accession number; blocks nothing until GATE_ENFORCING is True.
