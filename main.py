@@ -2596,8 +2596,18 @@ def fetch_deals_from_edgar():
     print(f"[Scan] EDGAR window {_queries[0]['url'].split('startdt=')[1].split('&')[0]}"
           f" -> {_queries[0]['url'].split('enddt=')[1].split('&')[0]}"
           f" ({DEAL_SEARCH_LOOKBACK_DAYS}d lookback, matching the age gate)")
+    # 300 (3 pages) missed most of the candidate pool: "Tender Offer" alone
+    # runs ~2,000 hits some weeks, so only the newest ~15% were ever examined,
+    # every scan, silently. Raised to 1,200 (12 pages) rather than removed --
+    # full depth would multiply page-fetch and cheap-filter volume for a query
+    # this large, for a query the cheap filters mostly want to reject anyway.
+    # This is a starting depth to measure against, not a final answer; the
+    # cheap filters above now run before Path B or any LLM call regardless of
+    # how many raw hits come in, so widening this costs page-fetches and cheap
+    # in-memory checks, not the pipeline's expensive stages.
+    EDGAR_QUERY_MAX_START = 1200
     for q in _queries:
-        for start in range(0,300,100):
+        for start in range(0, EDGAR_QUERY_MAX_START, 100):
             url=q['url'].format(start=start)
             try:
                 resp=requests.get(url,headers=headers,timeout=25)
@@ -2680,11 +2690,51 @@ def fetch_deals_from_edgar():
         accession=src['adsh']
         if not ticker or not cik or not accession: continue
         print(f"  [Loop] processing {ticker} ({form_type}) {accession}")
+
+        # ── CHEAP FILTERS FIRST, on the RAW hit, before Path B or anything that
+        # costs a network call. With the fetch going deeper (below), most of a
+        # 2,000-hit query is junk that these five checks already know how to
+        # reject for free — seen this scan, hand-excluded, too old, a SPAC, or
+        # (for a plain 8-K) missing Item 1.01. None of that should ever reach
+        # Path B's EDGAR lookups or an LLM call. Path B itself runs only after
+        # a candidate survives all of these, and only for the proxy forms that
+        # actually need it.
+        if ticker in seen_tickers: continue
+        if ticker in EXCLUDED_TICKERS: continue
+        try:
+            _raw_date = src.get('file_date') or src.get('filing_date') or ''
+            _age_days = (datetime.utcnow().date()
+                         - datetime.strptime(_raw_date, '%Y-%m-%d').date()).days
+            if _age_days > 548:
+                print(f"  [AgeSkip] {ticker}: filed {_age_days} days ago — skipping before Path B / price fetch")
+                seen_tickers.add(ticker)
+                continue
+        except Exception:
+            pass
+        spac_keywords = ['acquisition corp', 'acquisition co', 'blank check',
+                        'special purpose acquisition', 'spac', 'business combination corp',
+                        'acquisition ii', 'acquisition iii', 'acquisition iv', 'acquisition v',
+                        'stonebridge acquisition']
+        company_name_lower = str(src.get('display_names', '')).lower()
+        if any(kw in company_name_lower for kw in spac_keywords):
+            print(f"  Skip {ticker}: SPAC detected in display name")
+            continue
+        # A DEFM14A/PREM14A carries no 'items' (that's an 8-K concept), so this
+        # is a no-op for proxies and only screens plain 8-Ks -- exactly the
+        # ones Path B never touches anyway.
+        if not ('DEFM14A' in form_type.upper() or 'PREM14A' in form_type.upper()):
+            _items_pre = src.get('items', [])
+            if _items_pre and not any('1.01' in str(i) for i in _items_pre):
+                print(f"  Skip {ticker}: 8-K items {_items_pre} — no Item 1.01")
+                continue
+
         # ── PATH B: proxy hits resolve back to their announcement 8-K ─────────
         # A DEFM14A proves a deal exists but buries the terms. The announcement
         # 8-K states them in a press release, which our extractor handles well.
         # If no announcement is found, the deal is skipped rather than guessed at.
-        
+        # Only reached now by a candidate that already survived every cheap
+        # filter above -- an excluded, stale, or SPAC-named proxy never pays
+        # for a backward EDGAR search at all.
         if 'DEFM14A' in form_type.upper() or 'PREM14A' in form_type.upper():
             _proxy_date = src.get('file_date') or src.get('filing_date') or ''
             _ann = find_announcement_8k_backward(
@@ -2702,42 +2752,18 @@ def fetch_deals_from_edgar():
             accession = _aacc
             src = dict(src)
             src['file_date'] = _adate
-        if ticker in seen_tickers: continue
-        if ticker in EXCLUDED_TICKERS: continue
-        # ── Age gate (moved up) ───────────────────────────────────────────────
-        # Age was checked ~100 lines below, after a Yahoo price lookup. Path B
-        # surfaces many old proxies whose targets have already delisted, so that
-        # ordering meant a slow failing price fetch for deals we then discarded.
-        # Checking the date first skips them before any network call.
-        try:
-            _age_days = (datetime.utcnow().date()
-                         - datetime.strptime(src['file_date'], '%Y-%m-%d').date()).days
-            if _age_days > 548:
-                print(f"  [AgeSkip] {ticker}: announced {_age_days} days ago — skipping before price fetch")
-                seen_tickers.add(ticker)
-                continue
-        except Exception:
-            pass
-        # ── SPAC filter ───────────────────────────────────────────────────────
-        # SPACs have no real merger target yet — exclude them entirely
-        spac_keywords = ['acquisition corp', 'acquisition co', 'blank check', 
-                        'special purpose acquisition', 'spac', 'business combination corp',
-                        'acquisition ii', 'acquisition iii', 'acquisition iv', 'acquisition v',
-                        'stonebridge acquisition']
-        company_name_lower = str(src.get('display_names', '')).lower()
-        if any(kw in company_name_lower for kw in spac_keywords):
-            print(f"  Skip {ticker}: SPAC detected in display name")
-            continue
-
-        # ── 8-K Item filter ───────────────────────────────────────────────────
-        # Only process filings that include Item 1.01 (Entry into Material Definitive Agreement)
-        items = src.get('items', [])
-        if items:  
-            item_strs = [str(i) for i in items]
-            has_101 = any('1.01' in i for i in item_strs)
-            if not has_101:
-                print(f"  Skip {ticker}: 8-K items {items} — no Item 1.01")
-                continue
+            # The proxy's own date passed the cheap check above; the RESOLVED
+            # announcement can still be older than the window (Path B looks
+            # back up to 400 days from the proxy) -- re-check on the real date.
+            try:
+                _age_days2 = (datetime.utcnow().date()
+                             - datetime.strptime(_adate, '%Y-%m-%d').date()).days
+                if _age_days2 > 548:
+                    print(f"  [AgeSkip] {ticker}: resolved announcement {_age_days2} days ago — skipping")
+                    seen_tickers.add(ticker)
+                    continue
+            except Exception:
+                pass
         try:
             # yfinance 1.5.1 wraps history() as (*args, **kwargs) and swallows a
             # timeout kwarg, so a delisted ticker can hang the scan indefinitely.
@@ -3007,7 +3033,17 @@ def fetch_deals_from_edgar():
                 print(f'  [Validate] {ticker}: detection check error — {ve}')
 
         except Exception as _deal_ex:
-            print(f"  [ScanError] {ticker}: inner processing failed — {_deal_ex}")
+            # This wraps the entire per-ticker block, so a candidate that
+            # throws ANYWHERE in it -- price extraction, gate lookups, dict
+            # construction -- disappears with just this one line to explain
+            # it. str(exception) alone can be uselessly terse (a bare
+            # KeyError prints only the missing key, nothing about where).
+            # Full traceback, so a silently-dropped candidate is traceable
+            # instead of just absent.
+            import traceback as _tb
+            print(f"  [ScanError] {ticker}: inner processing failed — "
+                  f"{type(_deal_ex).__name__}: {_deal_ex}")
+            print(f"  [ScanError] {ticker} traceback:\n" + _tb.format_exc())
             continue
 
 
