@@ -3693,8 +3693,23 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
         # deal; it is a disclosure section, wired the way commitment is.
         try:
             import capital_structure as _cs
+            import concurrent.futures as _cf
             _cs_llm = _cs.anthropic_llm_fn(anthropic_key, max_tokens=20000)
-            _cs_restored = _cs_read = 0
+            # One ticker's read can chain several sequential network calls plus
+            # an LLM call (up to 120s on its own) with no aggregate cap between
+            # them -- only the per-request timeouts inside capital_structure.py.
+            # Harmless when the cache hits (the common case, zero calls made),
+            # but the one time it doesn't -- an EXTRACTOR_VERSION bump, or any
+            # scan that has never completed cleanly enough to seed the cache --
+            # every one of ~20 tickers needs a fresh read, capital structure
+            # runs BEFORE the gate/direction checks that decide what publishes,
+            # and a single slow ticker in that uncapped loop delays every
+            # ticker behind it from ever reaching the save at the end. Same
+            # fix as Path B, same reason: a missing capital-structure reading
+            # is recoverable next scan; a stalled scan blocks everything,
+            # including deals that have nothing to do with this feature.
+            CS_MAX_SECONDS_PER_TICKER = 150
+            _cs_restored = _cs_read = _cs_timeout = 0
             for _d in results:
                 _tk = _d.get('ticker')
                 _cached = _prior_capital_structure.get(_tk)
@@ -3703,9 +3718,20 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     _cs_restored += 1
                     continue
                 try:
-                    _r = _cs.assess_capital_structure(
-                        _tk, cik=SEC_CIK_MAP.get(_tk or '', '') or None,
-                        llm_fn=_cs_llm)
+                    with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
+                        _fut = _ex.submit(
+                            _cs.assess_capital_structure, _tk,
+                            cik=SEC_CIK_MAP.get(_tk or '', '') or None,
+                            llm_fn=_cs_llm)
+                        try:
+                            _r = _fut.result(timeout=CS_MAX_SECONDS_PER_TICKER)
+                        except _cf.TimeoutError:
+                            print(f"  [CapStructure] {_tk}: exceeded "
+                                  f"{CS_MAX_SECONDS_PER_TICKER}s — abandoning, "
+                                  f"will retry next scan")
+                            _cs_timeout += 1
+                            continue  # thread is left to finish on its own;
+                            # we just stop waiting, same as the yfinance guard
                     _d['capital_structure'] = _r
                     _cs_read += 1
                     _nt = len(_r.get('tranches') or [])
@@ -3715,8 +3741,8 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                 except Exception as _cse1:
                     print(f"  [CapStructure] {_tk}: {_cse1}")
             print(f"[CapStructure] {_cs_restored} restored from cache, "
-                  f"{_cs_read} read this scan "
-                  f"(extractor {_cs.EXTRACTOR_VERSION})")
+                  f"{_cs_read} read this scan, {_cs_timeout} abandoned on "
+                  f"timeout (extractor {_cs.EXTRACTOR_VERSION})")
         except Exception as _cse:
             print(f"[CapStructure] pass failed (non-fatal, nothing changed): {_cse}")
 
