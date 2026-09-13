@@ -2651,7 +2651,24 @@ def fetch_deals_from_edgar():
                'PREM14A' in (src.get('form') or '').upper()
     def _hit_rank(src):
         return 1 if (_has_item_101(src) or _is_proxy(src)) else 0
+    def _hit_date(src):
+        # '' sorts before any real date string, so a hit with no parseable
+        # date never wins a tie against one that has one.
+        d = src.get('file_date') or src.get('filing_date') or ''
+        return d if re.match(r'^\d{4}-\d{2}-\d{2}$', d or '') else ''
 
+    # Two Item-1.01 hits for the same ticker are not automatically the same
+    # candidate -- WBD had TWO: a January 8-K amending its ORIGINAL Netflix
+    # agreement to all-cash ("$27.75 per WBD share" -- a phrase the price
+    # regex doesn't match, "per WBD share" not "per share"), and a February
+    # 8-K for the Paramount Skydance agreement that superseded it entirely
+    # ($31.00/share, in the phrasing the regex expects). Both rank equally
+    # under "has Item 1.01", so the first-seen one (January, stale, no
+    # matching price) won and the operative one three positions later never
+    # got a look. A merger that gets amended, superseded, or re-priced is not
+    # a rare edge case here -- it is exactly the shape a bidding war takes.
+    # Same rank now goes to the LATER filing, which is what "the deal" means
+    # once one exists: whatever superseded everything before it.
     seen_pre = {}   # ticker -> index into deduped_hits
     deduped_hits = []
     for hit in all_hits:
@@ -2668,10 +2685,13 @@ def fetch_deals_from_edgar():
         else:
             idx = seen_pre[key]
             kept_src = deduped_hits[idx]['_source']
-            if _hit_rank(src) > _hit_rank(kept_src):
+            new_rank, kept_rank = _hit_rank(src), _hit_rank(kept_src)
+            if new_rank > kept_rank or (new_rank == kept_rank
+                                        and _hit_date(src) > _hit_date(kept_src)):
                 print(f"  [Dedup] {key}: replacing {kept_src.get('form')} "
-                      f"{kept_src.get('adsh')} (no Item 1.01) with "
-                      f"{src.get('form')} {src.get('adsh')}")
+                      f"{kept_src.get('adsh')} ({_hit_date(kept_src) or 'no date'}) "
+                      f"with {src.get('form')} {src.get('adsh')} "
+                      f"({_hit_date(src) or 'no date'})")
                 deduped_hits[idx] = hit
     all_hits = deduped_hits
     print(f"After deduplication: {len(all_hits)} unique hits")
