@@ -2700,7 +2700,24 @@ def fetch_deals_from_edgar():
     def _is_proxy(src):
         return 'DEFM14A' in (src.get('form') or '').upper() or \
                'PREM14A' in (src.get('form') or '').upper()
+    def _is_completion_filing(src):
+        # Item 2.01 (Completion of Acquisition) or 5.01 (Changes in Control)
+        # riding alongside 1.01 means this 8-K reports a transaction CLOSING,
+        # not a new or superseding merger agreement -- GBCS's tender offer
+        # closed successfully (90.93% tendered, accepted for payment) and its
+        # closing 8-K carries 1.01/2.01/3.03/5.01/5.02, where the 1.01 is for
+        # an unrelated post-closing Credit Agreement the buyer signed the same
+        # day. Under the later-date tie-break below, that 1.01 let this
+        # completion filing outrank and replace the real June 2026
+        # Agreement-and-Plan-of-Merger 8-K as "the" tracked accession, which
+        # discarded the correctly-cached, already-passed outside date (the
+        # accession-changed path assumes any change means an amendment) and
+        # left nothing to re-read (a closing 8-K carries no EX-2 exhibit).
+        items = [str(i) for i in (src.get('items') or [])]
+        return any('2.01' in i for i in items) or any('5.01' in i for i in items)
     def _hit_rank(src):
+        if _is_completion_filing(src):
+            return 0
         return 1 if (_has_item_101(src) or _is_proxy(src)) else 0
     def _hit_date(src):
         # '' sorts before any real date string, so a hit with no parseable
