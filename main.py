@@ -995,7 +995,7 @@ def score_consideration(deal_type, blended=None):
     return 0
 
 
-def score_deadline(outside_date):
+def score_deadline(outside_date, closing_signal=False):
     """
     Time, worth 0 to -25 -- the input the score did not have.
 
@@ -1009,11 +1009,23 @@ def score_deadline(outside_date):
     purpose: past the outside date either party may walk without paying a break
     fee, so the contract has stopped protecting the position and the deal
     continues only by agreement.
+
+    UNLESS `closing_signal` is set -- a passed deadline has two opposite
+    meanings and a flat -25 conflates them. GBCS passed its Aug 31 outside
+    date because the tender SUCCEEDED (90.93% tendered, accepted for payment),
+    not because it stalled; the deadline stopped mattering the moment the
+    tender cleared, and a squeeze-out merger with no conditions left is not
+    penalized for a clock that no longer runs against it. `closing_signal`
+    comes from validate_deal()'s existing Item 2.01 / deregistration check
+    (see _has_completion_signal) -- a filing fact, not an inference. Without
+    it, the passed branch still fires at full force: a deal past deadline
+    with no completion filing on record is exactly the stalled case this
+    penalty exists for.
     """
     if not isinstance(outside_date, dict) or not outside_date.get('date'):
         return 0                      # no deadline read; assert nothing
     if outside_date.get('passed'):
-        return -25
+        return 0 if closing_signal else -25
     d = outside_date.get('days_remaining')
     if d is None:
         return 0
@@ -1024,7 +1036,7 @@ def score_deadline(outside_date):
     return 0
 
 
-def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_price=None, deal_price=None, financing_signal='unknown', outside_date=None, blended=None):
+def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_price=None, deal_price=None, financing_signal='unknown', outside_date=None, blended=None, closing_signal=False):
     score = 50
     # HALVED. The spread was 60 points of a 153-point range -- 39% -- and then
     # get_risk used it AGAIN as the primary gate, so the risk band was largely
@@ -1047,14 +1059,14 @@ def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_pri
     score += score_regulatory_complexity(reg_tags or [])
     score += score_deal_premium(break_price, deal_price)   # now always 0
     score += score_financing_signal(financing_signal)
-    score += score_deadline(outside_date)
+    score += score_deadline(outside_date, closing_signal)
     # Range: 50 -18 +0 -15 -20 -10 -25 = -38 at worst, 50 +12 +8 +10 +5 +10 = 95
     # at best. Both bounds move with the bands above and are stated here so a
     # change to any band that is not reflected here shows up as a shifted scale.
     normalized = ((score - (-38)) / (95 - (-38))) * 100
     return min(100, max(0, round(normalized)))
 
-def get_risk(score, outside_date=None):
+def get_risk(score, outside_date=None, closing_signal=False):
     """
     The risk band, from the score and from hard facts the score smooths over.
 
@@ -1065,8 +1077,19 @@ def get_risk(score, outside_date=None):
     A passed deadline is an override rather than a band, because it is not a
     matter of degree. Past the outside date the contract has stopped protecting
     the position, whatever the rest of the composite says.
+
+    That override assumed only one reason a deadline passes: the deal stalled.
+    GBCS passed Aug 31 because its tender SUCCEEDED -- 90.93% tendered,
+    accepted for payment, squeeze-out merger pending, no conditions left --
+    and the override read that the same as a deal that blew its deadline with
+    the tender still open, marking a nearly-closed deal High. `closing_signal`
+    (a completion 8-K or deregistration filing already on record for this
+    ticker -- see _has_completion_signal) is what tells the two apart: past
+    deadline WITH a closing filing means the clock stopped mattering because
+    the deal finished, not because it broke. Only a passed deadline with no
+    such filing is the stalled case the override exists for.
     """
-    if isinstance(outside_date, dict) and outside_date.get('passed'):
+    if isinstance(outside_date, dict) and outside_date.get('passed') and not closing_signal:
         return 'High'
     if score >= 75:       return 'Very Low'
     if score >= 55:       return 'Low'
@@ -1630,7 +1653,8 @@ def apply_blended_to_spread(deal):
     # but it does take the deadline, so a deal past its outside date keeps its
     # override here rather than losing it on the blended path.
     if deal.get('score') is not None:
-        deal['risk'] = get_risk(deal['score'], deal.get('outside_date'))
+        deal['risk'] = get_risk(deal['score'], deal.get('outside_date'),
+                                _has_completion_signal(deal.get('ticker')))
     return {'ticker': deal.get('ticker'), 'blended': b,
             'sp_pct': (old_sp, new_sp), 'ann': (old_ann, deal['ann']),
             'risk': (old_risk, deal.get('risk'))}
@@ -3732,6 +3756,7 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                 elif not _d.get('financing_source'):
                     _d['financing_source'] = 'press_release'
                 _od = _d.get('outside_date')
+                _closing = _has_completion_signal(_d.get('ticker'))
                 _before = (_d.get('score'), _d.get('risk'))
                 try:
                     _sp = float(_d.get('sp_pct'))
@@ -3752,8 +3777,8 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     # what the SCORE sees is 'unknown' unless the evidence is
                     # strong enough to move a number.
                     scoring_financing_signal(_d),
-                    _od, _d.get('blended'))
-                _d['risk'] = get_risk(_d['score'], _od)
+                    _od, _d.get('blended'), _closing)
+                _d['risk'] = get_risk(_d['score'], _od, _closing)
                 if (_d['score'], _d['risk']) != _before:
                     _rescored.append(f"{_d.get('ticker')} {_before[0]}/{_before[1]}"
                                      f" -> {_d['score']}/{_d['risk']}")
@@ -4378,6 +4403,27 @@ ADMIN_TOKEN      = os.environ.get('ADMIN_TOKEN', '')
 REVIEW_QUEUE     = []   # close-date abstentions from Groq enrichment
 VALIDATION_FLAGS = []   # deals flagged by validate_deal() — reviewed before any removal
 PENDING_EXCLUSIONS = []  # deals shadow-mode would auto-exclude — inspect at /api/admin/pending-exclusions
+
+def _has_completion_signal(ticker):
+    """
+    True when validate_deal()'s Check 3 has already found a completion 8-K
+    (Item 2.01, acquirer-mention verified) or a deregistration filing (Form
+    25/15) for this ticker -- a filing fact that the deal is closing or
+    closed, not an inference from the deadline. Feeds score_deadline() and
+    get_risk() so a passed outside date on a deal that finished (GBCS: 90.93%
+    tendered, accepted for payment) is not scored the same as one that
+    stalled.
+
+    Reads the same VALIDATION_FLAGS list /api/admin/validation-flags shows,
+    populated by daily_validation_loop -- no new EDGAR calls here.
+    """
+    for entry in VALIDATION_FLAGS:
+        if entry.get('ticker') != ticker:
+            continue
+        for f in (entry.get('flags') or []):
+            if f.get('check') in ('COMPLETION_8K', 'COMPLETION_DEREGISTRATION'):
+                return True
+    return False
 # When true, completion-confirmed deals are written to completed_deals in Redis and filtered from feed.
 # Default false (shadow mode) — flip to true only after verifying PENDING_EXCLUSIONS for 1+ week.
 COMPLETION_AUTO_EXCLUDE = os.environ.get('COMPLETION_AUTO_EXCLUDE', 'false').lower() == 'true'
