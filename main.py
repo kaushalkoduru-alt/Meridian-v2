@@ -61,6 +61,16 @@ REDIS_URL   = os.environ.get('UPSTASH_REDIS_REST_URL', '')
 REDIS_TOKEN = os.environ.get('UPSTASH_REDIS_REST_TOKEN', '')
 CACHE_KEY   = 'meridian_deals_v1'
 CACHE_FILE  = "meridian_cache.csv"
+# Terminated tickers, persisted separately from the deal feed itself so a
+# dropped deal has nowhere to be resurrected FROM. VALIDATION_FLAGS (in main.py's
+# admin/validation module) is in-memory and clears on a Railway restart -- for
+# a completion signal that just means re-flagging on the next daily_validation_loop
+# pass, but for termination it meant a dead deal (STAA) could come back on the
+# feed until re-detected. This key is checked before termination status is ever
+# re-derived, and once a ticker is in it, it is never re-admitted from a fresh
+# EDGAR hit either -- see check_terminations().
+TERMINATED_KEY  = 'meridian_terminated_v1'
+TERMINATED_FILE = 'terminated_deals.json'
 # ─── SEC COMPLIANCE ───────────────────────────────────────────────────────────
 # No 'Host' header — requests manages this dynamically to avoid TLS mismatches
 SEC_HEADERS = {
@@ -310,6 +320,142 @@ def redis_set(deals):
         print(f"Redis set error: {e}")
         return False
 
+def load_terminated():
+    """
+    {ticker: {date, accession}} for every deal already confirmed terminated.
+
+    Redis first (raw JSON body, same shape as redis_get/redis_set -- no
+    percent-encoded URL path, so this does not repeat the bug that dropped
+    every enriched write for days), then the local file, so a deal already
+    known dead survives both a restart and a missing Redis config.
+    """
+    if REDIS_URL and REDIS_TOKEN:
+        try:
+            r = requests.get(
+                f"{REDIS_URL}/get/{TERMINATED_KEY}",
+                headers={"Authorization": f"Bearer {REDIS_TOKEN}"}, timeout=10)
+            result = r.json().get('result')
+            if result:
+                parsed = json.loads(result) if isinstance(result, str) else result
+                if isinstance(parsed, dict):
+                    return parsed
+        except Exception as e:
+            print(f"[Terminated] Redis load error: {e}")
+    try:
+        with open(TERMINATED_FILE, encoding='utf-8') as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def save_terminated(terminated):
+    """Writes the terminated-ticker map to both stores, same as save_cache does
+    for the deal feed -- the local file so a Redis outage still keeps a
+    termination sticky, Redis so it survives a restart of the local file too."""
+    if REDIS_URL and REDIS_TOKEN:
+        try:
+            r = requests.post(
+                f"{REDIS_URL}/set/{TERMINATED_KEY}",
+                headers={"Authorization": f"Bearer {REDIS_TOKEN}",
+                         "Content-Type": "text/plain"},
+                data=json.dumps(terminated).encode('utf-8'), timeout=15)
+            if r.status_code != 200:
+                print(f"[Terminated] Redis save FAILED: {r.status_code} — {r.text[:200]}")
+        except Exception as e:
+            print(f"[Terminated] Redis save error: {e}")
+    try:
+        tmp = TERMINATED_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(terminated, f)
+        os.replace(tmp, TERMINATED_FILE)
+    except Exception as e:
+        print(f"[Terminated] local file save error: {e}")
+
+
+# Filing language that names an actual merger-agreement termination, not an
+# unrelated contract's. Checked only inside an Item 1.02 8-K that also mentions
+# "merger agreement" -- see check_terminations() -- so a terminated credit
+# facility or lease can't false-positive a live deal off the feed.
+TERMINATION_SIGNALS = [
+    'mutually terminat', 'agreement has been terminated', 'agreement was terminated',
+    'termination of the merger agreement', 'terminated the merger agreement',
+    'merger agreement has been terminated', 'abandon',
+    'terminate the agreement and plan of merger', 'entered into a termination agreement',
+    'was terminated in accordance with its terms',
+]
+
+def _check_termination_filing(ticker, announced_date_str):
+    """
+    Reads this ticker's own EDGAR filing history for a post-announcement
+    Item 1.02 8-K ("Termination of a Material Definitive Agreement") whose
+    text names the merger agreement as terminated. Returns (date, accession)
+    or None. One submissions-history fetch per ticker -- the same call
+    validate_deal()'s completion check already makes for Item 2.01.
+    """
+    cik = SEC_CIK_MAP.get(ticker or '', '')
+    if not cik or not announced_date_str:
+        return None
+    try:
+        ann_date = datetime.strptime(announced_date_str[:10], '%Y-%m-%d')
+    except Exception:
+        return None
+    try:
+        sub = requests.get(f"https://data.sec.gov/submissions/CIK{cik}.json",
+                           headers=EDGAR_HEADERS, timeout=10).json()
+        time.sleep(0.12)
+    except Exception as e:
+        print(f"  [Terminate] {ticker}: submissions fetch error — {e}")
+        return None
+    recent = sub.get('filings', {}).get('recent', {})
+    for form, date_str, acc, item, doc in zip(
+            recent.get('form', []), recent.get('filingDate', []),
+            recent.get('accessionNumber', []), recent.get('items', []),
+            recent.get('primaryDocument', [])):
+        if form != '8-K' or '1.02' not in str(item or ''):
+            continue
+        try:
+            if datetime.strptime(date_str, '%Y-%m-%d') <= ann_date:
+                continue
+        except Exception:
+            continue
+        text = _get_text_for_validation(
+            f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc.replace('-','')}/{doc}")
+        if not text:
+            continue
+        tl = text.lower()
+        if any(s in tl for s in TERMINATION_SIGNALS) and (
+                'merger agreement' in tl or 'agreement and plan of merger' in tl):
+            return date_str, acc
+    return None
+
+def check_terminations(deals, terminated):
+    """
+    Drops every deal already known terminated (sticky -- no re-check, no
+    re-admission) and checks every survivor for a fresh termination filing.
+    Runs inside save_cache, the one choke point every deal — fresh or
+    carried — passes through before being persisted, so a dead deal is gone
+    from the very next scan rather than the next day.
+
+    Returns (survivors, newly_terminated). Caller persists newly_terminated
+    via save_terminated() so it outlives this process.
+    """
+    survivors, newly = [], {}
+    for d in deals:
+        tk = d.get('ticker')
+        if tk in terminated:
+            print(f"  [Terminate] {tk}: already known terminated "
+                  f"({terminated[tk].get('date')}) — dropped, not re-checked")
+            continue
+        found = _check_termination_filing(tk, d.get('filed'))
+        if found:
+            date_str, acc = found
+            newly[tk] = {'date': date_str, 'accession': acc}
+            print(f"  [Terminate] {tk}: merger agreement terminated {date_str} "
+                  f"({acc}) — dropped from feed")
+            continue
+        survivors.append(d)
+    return survivors, newly
+
 def append_snapshot(deal, sp_pct, score, risk):
     """
     Appends one timestamped snapshot to spread_history and score_history.
@@ -445,6 +591,24 @@ def save_cache(records):
                     _bf += 1
             if _bf:
                 print(f"[BreakBand] backfilled {_bf} deal(s) with a pre-announcement band")
+
+            # Exit check. Every deal -- fresh or carried -- passes through
+            # `merged` before it is persisted, so this is the one place that
+            # guarantees a terminated deal (STAA, mutually terminated with
+            # Alcon on 2026-01-06) cannot survive to the next cache write, and
+            # cannot be re-admitted by a fresh EDGAR hit either. terminated
+            # is loaded fresh every scan and re-saved whenever it grows, so a
+            # restart never resurrects a deal already confirmed dead.
+            _terminated = load_terminated()
+            _before_term = len(merged)
+            merged, _newly_terminated = check_terminations(merged, _terminated)
+            if _newly_terminated:
+                _terminated.update(_newly_terminated)
+                save_terminated(_terminated)
+                print(f"[Terminate] {len(_newly_terminated)} newly terminated, "
+                      f"{_before_term - len(merged)} dropped this scan "
+                      f"({len(_terminated)} terminated total, persisted)")
+
             # The return value is checked. Ignoring it is what let a failed
             # Redis write print "Cache saved" for days while the enrichment
             # silently never persisted.
