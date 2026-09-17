@@ -224,12 +224,15 @@ check("the displayed close date is no longer capped",
       'the cap existed because the deadline was invisible; it is rendered now')
 check("guidance and deadline each get their own row",
       'function _daTimingRows' in _TPL, True)
+_rows_fn = _TPL[_TPL.index('function _daTimingRows'):]
+_rows_fn = _rows_fn[:_rows_fn.index('\nfunction ')]
 check("the deadline row reads the outside date",
-      'outside_date' in _TPL[_TPL.index('function _daTimingRows'):
-                             _TPL.index('function _daTimingRows') + 2200], True)
+      'outside_date' in _rows_fn[:2200], True)
 check("each row computes days from its OWN date",
-      _TPL.count('(r.d - new Date())'), 1,
-      'one shared day count was the defect')
+      'dayTxt(g)' in _rows_fn and 'dayTxt(o,' in _rows_fn, True,
+      'one shared day count was the defect -- now = new Date() is hoisted '
+      'once, but dayTxt() still takes each row\'s own date (g or o) as its '
+      'argument, so the two rows never share a count')
 check("'Days to Close' is gone from the metrics strip",
       "l:'Days to Close'" in _TPL, False,
       'it implied a prediction the product does not make')
