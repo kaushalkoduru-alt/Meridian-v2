@@ -1907,6 +1907,36 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </section>
 
+  <!-- extraction accuracy (facts, not forecasts -- distinct from the track record below) -->
+  <section style="margin:0 auto; padding:32px 20px 20px; max-width:1400px;">
+    <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:20px;">
+      <span style="font-size:11px; letter-spacing:0.28em; color:#6fe6d0; text-transform:uppercase;">Extraction accuracy</span>
+      <span style="font-family:'DM Mono',monospace; font-style:italic; font-size:16px; color:#cfc5b5;">facts, not forecasts</span>
+      <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
+    </div>
+    <p style="margin:0 0 20px; font-size:14px; line-height:1.75; color:#e8e0d0; font-family:'DM Mono',monospace;">This is not the track record below — that is whether the <em>score</em> predicts outcomes (§20). This is whether the <em>facts underneath</em> it are read correctly. We picked 50 already-resolved deals, read each one's deal price, consideration, reverse termination fee, and outside date straight from its primary SEC filing ourselves, then compared that to what Meridian's extractor pulled from the same filing — checked against the source document every time, never against Meridian's own cache.</p>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px;">
+      <div style="border:1px solid rgba(95,224,201,0.28); background:linear-gradient(165deg, #17130c, #120f09); padding:20px; text-align:center;">
+        <div style="font-family:'Playfair Display',serif; font-size:26px; color:#5fe0c9;">100%</div>
+        <div style="margin-top:8px; font-size:10.5px; letter-spacing:0.06em; color:#8f8772; text-transform:uppercase;">Deal price · 50/50</div>
+      </div>
+      <div style="border:1px solid rgba(238,228,208,0.12); background:linear-gradient(165deg, #17130c, #120f09); padding:20px; text-align:center;">
+        <div style="font-family:'Playfair Display',serif; font-size:26px; color:#e8e0d0;">98%</div>
+        <div style="margin-top:8px; font-size:10.5px; letter-spacing:0.06em; color:#8f8772; text-transform:uppercase;">Reverse fee · 49/50</div>
+      </div>
+      <div style="border:1px solid rgba(238,228,208,0.12); background:linear-gradient(165deg, #17130c, #120f09); padding:20px; text-align:center;">
+        <div style="font-family:'Playfair Display',serif; font-size:26px; color:#e8e0d0;">90%</div>
+        <div style="margin-top:8px; font-size:10.5px; letter-spacing:0.06em; color:#8f8772; text-transform:uppercase;">Outside date · 45/50</div>
+      </div>
+      <div style="border:1px solid rgba(238,228,208,0.12); background:linear-gradient(165deg, #17130c, #120f09); padding:20px; text-align:center;">
+        <div style="font-family:'Playfair Display',serif; font-size:26px; color:#e8e0d0;">94%</div>
+        <div style="margin-top:8px; font-size:10.5px; letter-spacing:0.06em; color:#8f8772; text-transform:uppercase;">Consideration · 47/50</div>
+      </div>
+    </div>
+    <p style="margin:16px 0 0; font-size:12.5px; line-height:1.7; color:#9a9079; font-family:'DM Mono',monospace;">"Correct" covers three outcomes, not one: the value matches the filing; the filing genuinely discloses nothing and Meridian correctly left it blank (an honest blank counts as correct, not as a gap); or Meridian correctly flagged a reading as partial rather than guessing. Only a wrong value, or a blank where the filing is clear, counts against it.</p>
+    <p style="margin:12px 0 0; font-size:11.5px; line-height:1.6; color:#6f6753;">Not covered by this run: capital structure, which is hand-verified separately rather than checked automatically here; a cash-plus-CVR consideration type Meridian has no category for yet; and a handful of one-off outside-date clause phrasings still being worked through. Full deal list and every miss: BACKTEST_EXTRACTION.md.</p>
+  </section>
+
   <!-- track record notice (replaces fabricated backtest) -->
   <section style="margin:0 auto; padding:36px 20px 72px; max-width:1400px;">
     <div style="border-top:1px solid rgba(238,228,208,0.12); padding-top:36px;">
