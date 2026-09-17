@@ -207,6 +207,15 @@ ACQUIRER_FEE_NAMES = (
     r'[Pp]urchaser\s+[Tt]ermination\s+[Ff]ee',
     r'[Rr]egulatory\s+[Tt]ermination\s+[Ff]ee',
     r'[Aa]ntitrust\s+[Tt]ermination\s+[Ff]ee',
+    # HA (Hawaiian Holdings/Alaska Air) drops "Termination" from the name
+    # entirely -- "the Parent Regulatory Fee" -- which none of the patterns
+    # above can match since they all require that word.
+    r'[Pp]arent\s+[Rr]egulatory\s+[Ff]ee',
+    # AMED (Amedisys/Optum) does the same with a different name: the fee
+    # Parent actually pays ($250M gross / $144M net) is the "Regulatory Break
+    # Fee" -- "Amedisys Termination Fee" nearby is the unrelated, one-way fee
+    # Amedisys itself pays, not this one.
+    r'[Rr]egulatory\s+[Bb]reak\s+[Ff]ee',
 )
 # Fee names that mean "the target pays to walk".
 # APGE names the target's fee with no qualifier at all: a fee of $381,273,716 in
@@ -284,6 +293,23 @@ def _fee_patterns(names):
 REVERSE_FEE_PATTERNS = _fee_patterns(ACQUIRER_FEE_NAMES)
 COMPANY_FEE_PATTERNS = _fee_patterns(TARGET_FEE_NAMES)
 
+
+def _party_fee_name(name):
+    """
+    A '{Name} Termination Fee' shape for one specific company.
+
+    Large strategic mergers of near-equals routinely name each fee after the
+    party who pays it rather than by role: Berry/Amcor's agreement has an
+    "Amcor Termination Fee" AND a "Berry Termination Fee" (each party's own,
+    genuinely reciprocal), and IPG/Omnicom's has an "Omnicom Termination Fee"
+    (Omnicom, the acquirer, pays it -- $676M) and an "IPG Termination Fee"
+    (IPG, the target, pays it). None of ACQUIRER_FEE_NAMES/TARGET_FEE_NAMES
+    can match either without knowing the deal's actual party names.
+    """
+    if not name or len(name) < 2:
+        return None
+    return rf'{re.escape(name)}\s+[Tt]ermination\s+[Ff]ee'
+
 # A fee named after neither party belongs to some other transaction.
 THIRD_PARTY_FEE = re.compile(
     r'\b([A-Z][A-Za-z]+)\s+[Tt]ermination\s+[Ff]ee')
@@ -299,7 +325,39 @@ KNOWN_FEE_WORDS = {'reverse', 'parent', 'buyer', 'regulatory', 'antitrust',
                    'company', 'target', 'general', 'purchaser',
                    'the', 'a', 'such', 'applicable',
                    'recitals', 'article', 'section', 'schedule', 'exhibit', 'annex',
-                   'preamble', 'appendix'}
+                   'preamble', 'appendix',
+                   # Structural qualifiers on THIS deal's own fee, not another
+                   # company's name. TGNA's "Parent Financing Termination Fee"
+                   # and AMED's "OPCH Agreement Termination Fee Refund" both
+                   # name their own fee this way and were read as belonging to
+                   # a stranger's transaction because of it — dropping $272M
+                   # and $144-250M respectively that the agreement plainly states.
+                   'financing', 'agreement'}
+
+# Corporate-suffix and filler words stripped when a party's own name is turned
+# into fee-name tokens below — "Berry Global Group, Inc." must yield "Berry"
+# and "Global", not swallow "Inc" as if it were part of the name.
+_CORP_SUFFIX_WORDS = {'inc', 'corp', 'corporation', 'ltd', 'llc', 'holdings',
+                      'group', 'company', 'co', 'plc', 'nv', 'ag', 'sa',
+                      'limited', 'the', 'and', 'of', 'international'}
+
+
+def _own_name_words(party_names):
+    """
+    Turns raw company/ticker strings into the single capitalized tokens that
+    might show up as a fee's defined name — "Amedisys", "Omnicom", "Amcor",
+    "Berry", "IPG" — so third_party_fee_names() can tell a party's own name
+    apart from an actual stranger's ("Netflix" in WBD's agreement, which pays a
+    DIFFERENT company to break a different deal entirely).
+    """
+    words = set()
+    for name in party_names:
+        if not name:
+            continue
+        for w in re.findall(r"[A-Za-z][A-Za-z']*", name):
+            if len(w) > 1 and w.lower() not in _CORP_SUFFIX_WORDS:
+                words.add(w.lower())
+    return words
 
 # A bare section reference -- 7.3(a)(iii), 3.17(b) -- as it appears in an index
 # row, where nothing but numbering separates one defined term from the next.
@@ -491,7 +549,7 @@ def _amount_from(match):
     return _to_dollars(amount, unit)
 
 
-def third_party_fee_names(text):
+def third_party_fee_names(text, party_names=()):
     """
     Fee names belonging to neither party. WBD's agreement carries a $2.8bn
     "Netflix Termination Fee" -- a payment to a company outside this deal
@@ -500,12 +558,20 @@ def third_party_fee_names(text):
     A name is only reported out of prose. The same detector reading an
     agreement's index of defined terms found a fee owed to "Recitals" -- the
     kind of confident nonsense that costs trust in the readings that are right.
+
+    `party_names` are this deal's own target/acquirer/ticker strings. Large
+    strategic mergers routinely name their fees after the parties themselves
+    -- "Amcor Termination Fee" and "Berry Termination Fee" in the Berry/Amcor
+    agreement, "Omnicom Termination Fee" in IPG's -- and without this, every
+    one of those reads as a fee belonging to some other transaction and gets
+    thrown out, taking a real, filing-stated figure with it.
     """
     text = text or ""
+    own = _own_name_words(party_names)
     out = set()
     for m in THIRD_PARTY_FEE.finditer(text):
         word = m.group(1)
-        if word.lower() in KNOWN_FEE_WORDS:
+        if word.lower() in KNOWN_FEE_WORDS or word.lower() in own:
             continue
         if _looks_like_index_row(text[max(0, m.start() - 160):m.end() + 160]):
             continue
@@ -556,22 +622,41 @@ def _resolve_cross_reference(flat, names, foreign=()):
     return None, None
 
 
-def extract_termination_fees(text, deal_value=None):
+def extract_termination_fees(text, deal_value=None, party_names=(),
+                             acquirer_names=(), target_names=()):
     """
     Both fees plus the asymmetry between them.
 
     The acquirer's fee is what walking away costs. Set against the target's fee
     it says who wants this more; set against deal value it says whether the cost
     is real.
+
+    `party_names` (ticker, target name, acquirer name — unordered) keeps a fee
+    named after one of THIS deal's own parties from being misread as belonging
+    to someone else's transaction — see third_party_fee_names(). `acquirer_names`
+    and `target_names` are the same names, ROLE-ASSIGNED, so a fee actually
+    named after a party ("Omnicom Termination Fee") can be FOUND at all, not
+    merely not-suppressed — see _party_fee_name().
     """
     if not text:
         return {}
 
     flat = re.sub(r'\s+', ' ', text)
     out = {}
-    foreign = third_party_fee_names(flat)
+    foreign = third_party_fee_names(
+        flat, party_names=party_names or (tuple(acquirer_names) + tuple(target_names)))
     if foreign:
         out['third_party_fees_ignored'] = sorted(foreign)
+
+    reverse_patterns = REVERSE_FEE_PATTERNS
+    _acq_extra = [n for n in (_party_fee_name(x) for x in acquirer_names) if n]
+    if _acq_extra:
+        reverse_patterns = list(REVERSE_FEE_PATTERNS) + _fee_patterns(tuple(_acq_extra))
+
+    company_patterns = COMPANY_FEE_PATTERNS
+    _tgt_extra = [n for n in (_party_fee_name(x) for x in target_names) if n]
+    if _tgt_extra:
+        company_patterns = list(COMPANY_FEE_PATTERNS) + _fee_patterns(tuple(_tgt_extra))
 
     def _find(patterns, exclude_span=None):
         """
@@ -601,18 +686,18 @@ def extract_termination_fees(text, deal_value=None):
                     return amt, m.group(0)[:180], (m.start(), m.end())
         return None, None, None
 
-    amt, txt, span = _find(REVERSE_FEE_PATTERNS)
+    amt, txt, span = _find(reverse_patterns)
     if not amt:
         # No figure stated against the name. It may still be defined by
         # reference to a term that does carry one.
-        amt, txt = _resolve_cross_reference(flat, ACQUIRER_FEE_NAMES, foreign)
+        amt, txt = _resolve_cross_reference(flat, ACQUIRER_FEE_NAMES + tuple(_acq_extra), foreign)
     if amt:
         out['reverse_fee'], out['reverse_fee_text'] = amt, txt
     reverse_span = span
 
-    amt, txt, _ = _find(COMPANY_FEE_PATTERNS, exclude_span=reverse_span)
+    amt, txt, _ = _find(company_patterns, exclude_span=reverse_span)
     if not amt:
-        amt, txt = _resolve_cross_reference(flat, TARGET_FEE_NAMES, foreign)
+        amt, txt = _resolve_cross_reference(flat, TARGET_FEE_NAMES + tuple(_tgt_extra), foreign)
         # The resolver reports no span, so a same-amount result there cannot be
         # told apart from a re-read of the acquirer's fee. Left out.
         if amt == out.get('reverse_fee'):
@@ -628,7 +713,8 @@ def extract_termination_fees(text, deal_value=None):
     return out
 
 
-def assess_commitment(agreement_text, deal_value=None):
+def assess_commitment(agreement_text, deal_value=None, party_names=(),
+                      acquirer_names=(), target_names=()):
     """
     Everything at once. Returns a dict the UI can render directly.
 
@@ -636,11 +722,22 @@ def assess_commitment(agreement_text, deal_value=None):
     verdict. Deliberately not a score: three binary readings do not average into
     anything meaningful, and a number would invite exactly the false precision
     the V3 backtest already warned about.
+
+    `party_names` — this deal's ticker/target/acquirer strings, unordered — is
+    passed straight through to extract_termination_fees so a fee named after
+    one of them is never mistaken for a stranger's transaction. `acquirer_names`
+    and `target_names` are the same names, ROLE-ASSIGNED (pass at least the
+    resolved company/acquirer strings when known), so a fee actually named
+    after a party — Berry/Amcor's agreement has an "Amcor Termination Fee" AND
+    a "Berry Termination Fee", each named for who pays it, and Omnicom's
+    $676M fee against IPG's is the same shape — can be found at all, not
+    merely spared from suppression.
     """
     anti_v, anti_why, anti_q = check_antitrust_efforts(agreement_text)
     fin_v, fin_why, fin_q = check_financing(agreement_text)
     sp_v, sp_why, sp_q = check_specific_performance(agreement_text)
-    fees = extract_termination_fees(agreement_text, deal_value)
+    fees = extract_termination_fees(agreement_text, deal_value, party_names=party_names,
+                                    acquirer_names=acquirer_names, target_names=target_names)
 
     terms = [
         {'term': 'Antitrust obligation', 'verdict': anti_v, 'meaning': anti_why, 'quote': anti_q},

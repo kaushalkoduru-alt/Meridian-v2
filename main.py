@@ -1941,21 +1941,72 @@ def validate_deal_price(deal_price, current_price, ticker):
         print(f"  Reject {ticker}: deal ${deal_price} / current ${current_price:.2f} = {ratio:.2f} — too high, likely extraction error")
         return False
     return True
+# A headline blended price ("the purchase price of $11.25 per share," an
+# election deal's total consideration) outranks the frequency heuristic below.
+# Without this, a deal with a cash leg AND a stock leg near "per share" --
+# ENFN's $5.85 cash + $5.40 stock, totaling $11.25 -- picks whichever leg is
+# repeated more often in the document, which understated ENFN's real headline
+# price by very close to half.
+_HEADLINE_PRICE = re.compile(
+    r'(?:purchase\s+price|total\s+consideration|aggregate\s+(?:merger\s+)?consideration)'
+    r'\s+(?:of|is|was|will\s+be)\s+\$(\d+(?:\.\d+)?)\s+per\s+share', re.IGNORECASE)
+
+# "common stock, par value $0.01 per share" is boilerplate on nearly every
+# filing and matches the bare "$X per share" pattern below just as well as a
+# real deal price does. So does a warrant's strike ("exercise price of
+# $0.2744 per share," GLS). Both sit immediately against their own figure, so
+# a short window excludes them without reaching into an unrelated clause --
+# MRNS states its real $0.55 deal price in the same sentence as a routine
+# "par value $0.001 per share" recital only ~70 characters earlier, which a
+# wider window wrongly caught too.
+_PRICE_FALSE_POSITIVE_NEAR = re.compile(
+    r'par\s+value|exercise\s+price', re.IGNORECASE)
+# A routine dividend ("$0.15 per share ... to holders of record," ROIC) reads
+# the same way but sits further from its own figure -- "the regular quarterly
+# cash dividend and distribution on the Company Common Stock and the OP
+# Partnership Units, respectively, in the amount of $0.15 per share" puts
+# "dividend" 90 characters before the number it describes, so it needs the
+# wider window the par-value/exercise-price check above must NOT have.
+_PRICE_FALSE_POSITIVE_FAR = re.compile(r'dividend|distribution', re.IGNORECASE)
+
 def extract_price_from_text(clean_text):
     patterns=[
-        r'\$(\d+\.\d+)\s+per\s+share\s+in\s+cash',
-        r'(\d+\.\d+)\s+USD\s+per\s+share\s+in\s+cash',
-        r'\$(\d+\.\d+)\s+per\s+share',
-        r'(\d+\.\d+)\s+USD\s+per\s+share',
-        r'(\d+\.\d+)\s+per\s+share\s+in\s+cash',
+        r'\$(\d+(?:\.\d+)?)\s+per\s+share\s+in\s+cash',
+        r'(\d+(?:\.\d+)?)\s+USD\s+per\s+share\s+in\s+cash',
+        r'\$(\d+(?:\.\d+)?)\s+per\s+share',
+        r'(\d+(?:\.\d+)?)\s+USD\s+per\s+share',
+        r'(\d+(?:\.\d+)?)\s+per\s+share\s+in\s+cash',
+        # MRNS (a Swedish acquirer) writes the currency code BEFORE the
+        # number -- "USD 0.55 per share" -- reversed from every pattern above.
+        r'USD\s+(\d+(?:\.\d+)?)\s+per\s+share',
+        # "converted into the right to receive $71.00 in cash" (AXNX, LGTY,
+        # FNA, IVAC) states the per-share cash consideration without "per
+        # share" anywhere nearby -- every pattern above requires it and reads
+        # this shape as silence, though the filing is unambiguous.
+        r'right\s+to\s+receive\s+\$(\d+(?:\.\d+)?)\s+(?:per\s+share\s+)?in\s+cash',
+        # ROIC phrases the same fact as "converted into the right to receive
+        # an amount in cash equal to $17.50," with "in cash" BEFORE the figure
+        # instead of after.
+        r'right\s+to\s+receive\s+an\s+amount\s+in\s+cash\s+equal\s+to\s+\$(\d+(?:\.\d+)?)',
     ]
     all_prices=[]
     for pat in patterns:
-        matches=re.findall(pat,clean_text,re.IGNORECASE)
-        all_prices.extend([float(p) for p in matches if 1<float(p)<1000])
-    deal_prices=[p for p in all_prices if p>5]
-    if not deal_prices: return None
-    return max(set(deal_prices),key=deal_prices.count)
+        for m in re.finditer(pat, clean_text, re.IGNORECASE):
+            p = float(m.group(1))
+            if not (0 < p < 1000):
+                continue
+            if _PRICE_FALSE_POSITIVE_NEAR.search(clean_text[max(0, m.start()-40):m.start()]):
+                continue
+            if _PRICE_FALSE_POSITIVE_FAR.search(clean_text[max(0, m.start()-120):m.start()]):
+                continue
+            all_prices.append(p)
+    if not all_prices: return None
+    headline = _HEADLINE_PRICE.search(clean_text)
+    if headline:
+        hp = float(headline.group(1))
+        if 0 < hp < 1000:
+            return hp
+    return max(set(all_prices),key=all_prices.count)
 
 LEAD_JUNK = re.compile(
     r'^(?:'
@@ -2918,12 +2969,44 @@ def fetch_deals_from_edgar():
                     _fd_sig,_fd_src=financing_from_filed_disclosure(cik,accession,headers)
                     if _fd_sig and financing_source!='filed_disclosure':
                         financing_signal,financing_source=_fd_sig,_fd_src
-                    # Reclassify deal type from filing text — overrides query-assigned type
-                    full_ct_lower = full_ct.lower()
-                    has_cash = 'per share in cash' in full_ct_lower or 'per common share in cash' in full_ct_lower
-                    has_stock = any(kw in full_ct_lower for kw in ['stock consideration','equity consideration','per share in a combination of cash and','per share in cash and stock'])
-                    has_tender = 'tender offer' in full_ct_lower
-                    has_pe = any(kw in full_ct_lower for kw in ['equity sponsor','private equity sponsor','portfolio company of','backed by']) and not has_cash
+                    # Reclassify deal type from filing text — overrides query-assigned type.
+                    # Whitespace is flattened before the substring checks below: EMKR's
+                    # source HTML had a literal newline inside "per share in\ncash", which
+                    # defeated the plain 'in' substring match, flipped has_cash to False,
+                    # and let has_pe's "not has_cash" guard mislabel an all-cash deal
+                    # "Private Equity". The regex-based extractors elsewhere already use
+                    # \s+ and were never exposed to this.
+                    full_ct_flat = re.sub(r'\s+', ' ', full_ct).lower()
+                    # "all-cash transaction ... for $101 per share" (AMED, HA) and
+                    # "$61 per share in an all-cash ..." (IRBT) state the same fact
+                    # as "per share in cash" without ever using that exact phrase.
+                    has_cash = (
+                        'per share in cash' in full_ct_flat
+                        or 'per common share in cash' in full_ct_flat
+                        or 'all-cash transaction' in full_ct_flat
+                        or 'all cash transaction' in full_ct_flat
+                        or 'in an all-cash' in full_ct_flat
+                        or 'all-cash deal' in full_ct_flat
+                        # "converted into the right to receive $71.00 in cash"
+                        # (AXNX, GLS, IRBT, HCP, LGTY, IVAC) and "...the right
+                        # to receive an amount in cash equal to $17.50" (ROIC)
+                        # state cash consideration with neither "per share"
+                        # nor any of the phrases above anywhere nearby.
+                        # [^\n] not [^.]: LGTY's own price, "$14.30", contains
+                        # a period, which [^.] can never cross -- the same
+                        # decimal trap deal_flags.py already documents.
+                        or bool(re.search(r'right\s+to\s+receive[^\n]{0,60}?in\s+cash', full_ct_flat)))
+                    has_stock = any(kw in full_ct_flat for kw in [
+                        'stock consideration','equity consideration',
+                        'per share in a combination of cash and','per share in cash and stock',
+                        # Pure stock-for-stock phrasing — none of the above ever fires on
+                        # a deal with no cash leg at all (DFS, BERY, STAF, ESSA, IPG,
+                        # PWOD, WMPN all went undetected without these).
+                        'exchange ratio','stock-for-stock','all-stock transaction',
+                        'common stock for each','shares for each','share for each',
+                        '100% stock'])
+                    has_tender = 'tender offer' in full_ct_flat
+                    has_pe = any(kw in full_ct_flat for kw in ['equity sponsor','private equity sponsor','portfolio company of','backed by']) and not has_cash
                     if has_tender:
                         deal_type = 'Tender Offer'
                     elif has_pe:
@@ -2932,6 +3015,15 @@ def fetch_deals_from_edgar():
                         deal_type = 'Cash + Stock'
                     elif has_cash:
                         deal_type = 'All Cash'
+                    elif has_stock:
+                        deal_type = 'All Stock'
+                        # A pure stock deal has no fixed cash price by nature. Whatever
+                        # extract_price_from_text matched here is a floating reference
+                        # value, not a price paid to anyone -- WMPN's $31.88 was Mid
+                        # Penn's OWN stock price near "per share" text, and BERY's $73.59
+                        # was Amcor's exchange-ratio reference value, both asserted as
+                        # "the deal price" when neither one is a number anybody is owed.
+                        dp = None
                     break
                 except Exception as e:
                     print(f"  Filing parse error {ticker}: {e}")
@@ -3578,7 +3670,11 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                             _dv = float(_d.get('tx_value')) * 1e9 if _d.get('tx_value') else None
                         except (TypeError, ValueError):
                             _dv = None
-                        _d['commitment'] = assess_commitment(_txt, deal_value=_dv)
+                        _d['commitment'] = assess_commitment(
+                            _txt, deal_value=_dv,
+                            party_names=(_tk, _d.get('company'), _d.get('acquirer')),
+                            target_names=(_tk, _d.get('company')),
+                            acquirer_names=(_d.get('acquirer'),))
                     if _need_od:
                         # filed anchors plausibility: a deadline sits after
                         # signing. It arrives as NaN on some cached rows, and

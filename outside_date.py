@@ -139,18 +139,78 @@ _AGREEMENT_DATE = rf'dated\s+as\s+of\s+{_DATE_WORDS}'
 # "twelve (12) months", "one hundred and fifty (150) days", and HZO's bare
 # "nine months" with no numeral at all. The numeral wins when present; the words
 # carry it when not.
+_PERIOD_PHRASE = (
+    # "the first Business Day that is", "the date that is", "the date which is"
+    r'(?:(?:first|last)\s+Business\s+Day\s+(?:that\s+|which\s+)?is\s+|'
+    r'date\s+(?:that|which)\s+is\s+)?'
+    r'(?:(?P<pword>[A-Za-z][A-Za-z\s\-]{2,28}?)\s+)?'
+    r'(?:\(\s*(?P<pnum>\d{1,3})\s*\)\s*)?'
+    r'(?P<punit>month|day|year)s?\s+(?:after|following|from)\s+'
+    r'the\s+date\s+(?:of\s+this\s+Agreement|hereof)'
+)
+
+# IRBT ("twelve (12) month anniversary of the date of this Agreement"), CPRI
+# ("first anniversary of the date of this Agreement") and THPTF ("nine
+# (9)-month anniversary of this Agreement") state the same kind of deadline as
+# an anniversary rather than as "N months after/following/from" — a shape
+# _PERIOD_PHRASE alone never matched, even with the agreement date in hand.
+_ANNIVERSARY_PHRASE = (
+    # IRBT reads "...consummated by THE DATE THAT IS THE twelve (12) month
+    # anniversary of the date of this Agreement" -- two "the"s, one before
+    # "date that is" (eaten by the wrapper in _RELATIVE_DEADLINE) and one
+    # after it, right before the count -- so both the lead-in phrase itself
+    # and a second, inner "the" need to be optional here.
+    r'(?:(?:first|last)\s+Business\s+Day\s+(?:that\s+|which\s+)?is\s+|'
+    r'date\s+(?:that|which)\s+is\s+)?(?:the\s+)?'
+    r'(?:'
+    # THPTF writes "nine (9)-month anniversary" -- a hyphen, not a space,
+    # between the parenthetical and the unit word.
+    r'(?:(?P<aword>[A-Za-z][A-Za-z\-]{2,11})\s+)?(?:\(\s*(?P<anum>\d{1,2})\s*\)[\s\-]*)?'
+    r'(?P<aunit>month|year)s?[\s\-]?anniversary'
+    r'|'
+    r'(?P<aord>first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+anniversary'
+    r')'
+    r'\s+of\s+(?:the\s+date\s+of\s+this\s+Agreement|this\s+Agreement|the\s+date\s+hereof)'
+)
+
+_ORDINAL_WORDS = {'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5,
+                  'sixth': 6, 'seventh': 7, 'eighth': 8, 'ninth': 9, 'tenth': 10}
+
 _RELATIVE_DEADLINE = (
     rf'(?:has|shall|will|would)\s+not\s+(?:have\s+)?(?:been\s+)?'
     rf'(?:occurred|consummated|closed|become\s+effective)[^.]{{0,140}}?'
-    rf'{_PREP}\s+(?:the\s+)?'
-    # "the first Business Day that is", "the date that is", "the date which is"
-    rf'(?:(?:first|last)\s+Business\s+Day\s+(?:that\s+|which\s+)?is\s+|'
-    rf'date\s+(?:that|which)\s+is\s+)?'
-    rf'(?:([A-Za-z][A-Za-z\s\-]{{2,28}}?)\s+)?'
-    rf'(?:\(\s*(\d{{1,3}})\s*\)\s*)?'
-    rf'(month|day|year)s?\s+(?:after|following|from)\s+'
-    rf'the\s+date\s+(?:of\s+this\s+Agreement|hereof)'
+    # HCP inserts a cutoff-time clause between the preposition and the date --
+    # "by 11:59 p.m., Eastern time, on the date that is twelve (12) months
+    # after..." -- the same shape the absolute-date PATTERNS already allow
+    # for via _TIME, which _RELATIVE_DEADLINE never included.
+    rf'{_PREP}\s+{_TIME}(?:the\s+)?(?:{_PERIOD_PHRASE}|{_ANNIVERSARY_PHRASE})'
 )
+
+# HCP and TGI never wrap the period in a "has not been consummated" trigger
+# clause at all -- HCP's is a bare "twelve (12) months after the date of this
+# Agreement" and TGI's reads "'End Date' shall mean the date that is six (6)
+# months following the date of this Agreement," each in its own sentence, one
+# clause removed from any operative "shall not have occurred" language.
+# _RELATIVE_DEADLINE requires that trigger and so read neither one, despite
+# extract_agreement_date having the anchor date in hand both times.
+_RELATIVE_DEADLINE_DEFINITION = (
+    rf'[“”"\']?\s*(?:End|Outside|Termination)\s+Date[“”"\']?\s*'
+    rf'(?:means|shall\s+mean)\s*[^\n]{{0,40}}?(?:the\s+)?'
+    rf'(?:{_PERIOD_PHRASE}|{_ANNIVERSARY_PHRASE})'
+)
+
+
+def _resolve_period_match(m):
+    """Reads whichever of _PERIOD_PHRASE's or _ANNIVERSARY_PHRASE's named
+    groups actually fired -- exactly one branch of the alternation can match,
+    so exactly one set is non-None."""
+    gd = m.groupdict()
+    if gd.get('aunit'):
+        return _period(gd.get('aword'), gd.get('anum'), gd['aunit'])
+    if gd.get('aord'):
+        n = _ORDINAL_WORDS.get(gd['aord'].lower())
+        return (n, 'year') if n else None
+    return _period(gd.get('pword'), gd.get('pnum'), gd.get('punit'))
 
 
 def extract_agreement_date(agreement_text):
@@ -177,13 +237,20 @@ def _relative_deadline(flat, agreement_date):
     Returns None without an agreement date rather than falling back to anything
     else: the whole value of this reading is that the anchor is the signing day,
     and an anchor off by two days is a deadline off by two days.
+
+    Tries the "shall not have occurred by ..." trigger shape first, then a bare
+    "'End Date' means/shall mean ..." definition with no trigger clause nearby
+    (HCP, TGI) — each shape also accepts an anniversary phrasing alongside the
+    original "N months after/following/from" one (IRBT, CPRI, THPTF).
     """
     if not agreement_date:
         return None
     m = re.search(_RELATIVE_DEADLINE, flat, re.IGNORECASE)
     if not m:
+        m = re.search(_RELATIVE_DEADLINE_DEFINITION, flat, re.IGNORECASE)
+    if not m:
         return None
-    period = _period(m.group(1), m.group(2), m.group(3))
+    period = _resolve_period_match(m)
     if not period:
         return None
     n, unit = period
@@ -192,6 +259,8 @@ def _relative_deadline(flat, agreement_date):
     if unit == 'month' and n > 36:
         return None
     if unit == 'day' and n > 1100:
+        return None
+    if unit == 'year' and n > 3:
         return None
     return _apply_period(agreement_date, n, unit), m.group(0)[:260]
 
@@ -334,7 +403,12 @@ _MONTH_LENGTHS = {1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30,
 # Outside Date may be so extended on no more than two occasions", and counting
 # textual occurrences of the period saw one extension where the contract grants
 # two -- understating the deadline by a full three months.
-_OCCASIONS = (r'(?:no\s+more\s+than|up\s+to|a\s+maximum\s+of)\s+'
+#
+# CTLT phrases the same idea without any of "no more than"/"up to"/"a maximum
+# of" at all: "automatically extended by three (3) months on four (4)
+# occasions". Missing that lead-in read one occasion where the agreement
+# grants four, understating the true outer deadline by nine months.
+_OCCASIONS = (r'(?:no\s+more\s+than|up\s+to|a\s+maximum\s+of|on)\s+'
               r'(?:([A-Za-z][A-Za-z\-]{2,11})|(\d{1,2}))\s*'
               r'(?:\(\s*(\d{1,2})\s*\)\s*)?'
               r'(?:separate\s+|additional\s+|further\s+)?'
