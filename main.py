@@ -1089,6 +1089,37 @@ def score_financing_signal(signal):
     if signal == 'contingent': return -10
     return 0
 
+# ── reverse termination fee → score ──────────────────────────────────────────
+# Analyst priors, pending the forward record -- the same honesty the V3 weights
+# already carry. The reverse fee is what the acquirer pays to walk: a large one
+# is a real commitment signal (the buyer bleeds to leave), a token one is not,
+# and until now the score never looked at it despite the field extracting at
+# 98% accuracy against hand-verified filings (BACKTEST_EXTRACTION.md) -- one of
+# the best-read fields in the product, feeding nothing. The cutoffs and point
+# values below are the reviewer's proposed shape, not a weight fit to data: the
+# model backtest that found regulatory separation ran n=38 with 5 breaks, nowhere
+# near enough to size a sixth factor let alone add a seventh. Revisit both
+# numbers once the forward record has enough closes and breaks to check the
+# direction empirically.
+RTF_STRONG_PCT    = 5.0   # reverse fee >= this % of deal value: real money to walk
+RTF_WEAK_PCT      = 2.0   # reverse fee below this %: a token, not a deterrent
+RTF_STRONG_BONUS  = 5
+RTF_WEAK_PENALTY  = -5
+
+def score_reverse_fee(reverse_fee_pct):
+    """
+    Worth +5 to -5. Silent (0) on the broad 2%-5% middle and whenever no fee
+    was read -- an unread fee asserts nothing, the same discipline as
+    score_deadline's `if not outside_date: return 0`.
+    """
+    if reverse_fee_pct is None:
+        return 0
+    if reverse_fee_pct >= RTF_STRONG_PCT:
+        return RTF_STRONG_BONUS
+    if reverse_fee_pct < RTF_WEAK_PCT:
+        return RTF_WEAK_PENALTY
+    return 0
+
 def score_regulatory_complexity(reg_tags):
     if not reg_tags: return 5
     if len(reg_tags) == 1 and reg_tags[0].get('agency') == 'Standard Review': return 5
@@ -1200,7 +1231,7 @@ def score_deadline(outside_date, closing_signal=False):
     return 0
 
 
-def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_price=None, deal_price=None, financing_signal='unknown', outside_date=None, blended=None, closing_signal=False):
+def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_price=None, deal_price=None, financing_signal='unknown', outside_date=None, blended=None, closing_signal=False, reverse_fee_pct=None):
     score = 50
     # HALVED. The spread was 60 points of a 153-point range -- 39% -- and then
     # get_risk used it AGAIN as the primary gate, so the risk band was largely
@@ -1228,9 +1259,52 @@ def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_pri
     # at best. Both bounds move with the bands above and are stated here so a
     # change to any band that is not reflected here shows up as a shifted scale.
     normalized = ((score - (-38)) / (95 - (-38))) * 100
+    # Reverse fee is applied AFTER normalization, not folded into the composite
+    # above. Folding it in would widen the composite's own range, which
+    # compresses every OTHER deal's normalized score too -- including deals
+    # with no fee reading at all, moving them for a reason that has nothing to
+    # do with them. Applied here, a deal with reverse_fee_pct=None scores
+    # byte-identical to before this factor existed; only a deal with an actual
+    # reading moves, and only by the amount the reading earns.
+    normalized += score_reverse_fee(reverse_fee_pct)
     return min(100, max(0, round(normalized)))
 
-def get_risk(score, outside_date=None, closing_signal=False):
+# ── downside-distance cap on the risk band ───────────────────────────────────
+# Analyst prior, not a validated weight -- and derived from a value the product
+# already computes (break_downside: current price vs. the break-price estimate)
+# rather than a fresh, invented "premium" cutoff. That distinction matters: a
+# hardcoded 40%-premium threshold is exactly the `p>5`-floor bug class, a round
+# number picked with no reference to what the book actually looks like.
+#
+# §4 already found break_price biased HIGH -- it is described on the site as
+# "an optimistic downside estimate" for that reason -- so whatever downside
+# this shows, the real one is worse. A deal cannot read "Very Low" purely
+# because its spread, financing, regulatory and deadline factors look clean
+# while its stock would still crater on a break: probability of closing and
+# consequence of not closing are two different questions, and the score only
+# ever answered the first one.
+#
+# Set at -30%, just inside the worst quartile of break_downside across the
+# live book on 2026-09-17 (25th percentile: -29.68%) and rounded TOWARD zero
+# rather than away from it, since the true downside is worse than the shown
+# figure. This is one day's book, not a statistically fit boundary -- revisit
+# as the book turns over and reconsider it entirely once forward outcomes
+# exist to check against.
+SEVERE_DOWNSIDE_PCT = -30.0
+
+def cap_risk_for_downside(risk, break_downside):
+    """
+    Holds a band down, never raises one. Only 'Very Low' is capped (to 'Low')
+    -- 'Low', 'Medium' and 'High' already read as something other than safest,
+    so there is nothing here for the cap to correct.
+    """
+    if break_downside is None:
+        return risk
+    if break_downside <= SEVERE_DOWNSIDE_PCT and risk == 'Very Low':
+        return 'Low'
+    return risk
+
+def get_risk(score, outside_date=None, closing_signal=False, break_downside=None):
     """
     The risk band, from the score and from hard facts the score smooths over.
 
@@ -1255,10 +1329,11 @@ def get_risk(score, outside_date=None, closing_signal=False):
     """
     if isinstance(outside_date, dict) and outside_date.get('passed') and not closing_signal:
         return 'High'
-    if score >= 75:       return 'Very Low'
-    if score >= 55:       return 'Low'
-    if score >= 40:       return 'Medium'
-    return 'High'
+    if score >= 75:       band = 'Very Low'
+    elif score >= 55:     band = 'Low'
+    elif score >= 40:     band = 'Medium'
+    else:                 band = 'High'
+    return cap_risk_for_downside(band, break_downside)
 
 def get_acquirer_type(deal_type, acquirer):
     """
@@ -1818,7 +1893,8 @@ def apply_blended_to_spread(deal):
     # override here rather than losing it on the blended path.
     if deal.get('score') is not None:
         deal['risk'] = get_risk(deal['score'], deal.get('outside_date'),
-                                _has_completion_signal(deal.get('ticker')))
+                                _has_completion_signal(deal.get('ticker')),
+                                break_downside=deal.get('break_downside'))
     return {'ticker': deal.get('ticker'), 'blended': b,
             'sp_pct': (old_sp, new_sp), 'ann': (old_ann, deal['ann']),
             'risk': (old_risk, deal.get('risk'))}
@@ -3295,7 +3371,7 @@ def fetch_deals_from_edgar():
             # rescore block after the commitment loop.
             sc=score_deal(sp_pct,days,deal_type,reg_tags,break_price,dp,
                           financing_signal,None,None)
-            risk=get_risk(sc,None)
+            risk=get_risk(sc,None,break_downside=break_downside)
             # Annualized against THIS deal's time to close, not a constant.
             # None where the close date is unknown or has passed — see
             # annualized_spread. The UI already renders null as an em-dash.
@@ -3941,8 +4017,10 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                     # what the SCORE sees is 'unknown' unless the evidence is
                     # strong enough to move a number.
                     scoring_financing_signal(_d),
-                    _od, _d.get('blended'), _closing)
-                _d['risk'] = get_risk(_d['score'], _od, _closing)
+                    _od, _d.get('blended'), _closing,
+                    (_d.get('commitment') or {}).get('fees', {}).get('reverse_fee_pct'))
+                _d['risk'] = get_risk(_d['score'], _od, _closing,
+                                       break_downside=_d.get('break_downside'))
                 if (_d['score'], _d['risk']) != _before:
                     _rescored.append(f"{_d.get('ticker')} {_before[0]}/{_before[1]}"
                                      f" -> {_d['score']}/{_d['risk']}")
