@@ -1247,11 +1247,23 @@ def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_pri
     elif spread_pct >= 25:       score -= 18
     elif spread_pct < 0:         score -= 13
     score += score_consideration(deal_type, blended)
+    # Elapsed time is only evidence of stalling when nothing explains it. A deal
+    # under FTC/DOJ/CFIUS/Market Concentration review is already marked down by
+    # score_regulatory_complexity below for carrying that exposure -- penalizing
+    # the same review's time cost a second time here double-counts one cause as
+    # two, and rewards nothing for a deal that discloses WHY it is taking long
+    # over one that offers no explanation at all. Standard Review and HSR-only
+    # deals (no substantive tag) still age on the original schedule: an
+    # unexplained clock, or an outside-date extension with no regulatory update
+    # behind it, is exactly the stalled case this penalty exists for.
+    _reg_tags = reg_tags or []
+    _in_active_review = any(t.get('agency') in ('FTC Antitrust', 'DOJ Antitrust', 'CFIUS Review', 'Market Concentration') for t in _reg_tags)
     if days_since_filed < 90:    score += 10
+    elif _in_active_review:      pass
     elif days_since_filed < 270: score += 0
     elif days_since_filed < 500: score -= 5
     else:                        score -= 15
-    score += score_regulatory_complexity(reg_tags or [])
+    score += score_regulatory_complexity(_reg_tags)
     score += score_deal_premium(break_price, deal_price)   # now always 0
     score += score_financing_signal(financing_signal)
     score += score_deadline(outside_date, closing_signal)
@@ -3440,6 +3452,26 @@ def fetch_deals_from_edgar():
             continue
 
 
+
+    if results:
+        # Exit gate BEFORE enrichment. check_terminations() lives in save_cache,
+        # which runs after every enrichment pass, so a deal already known dead
+        # was re-detected by each scan's fresh EDGAR hit, run through the whole
+        # expensive pipeline (STAA: a 10-K fetch plus a large model call for
+        # capital structure, ~24x/day), and only then dropped at the save --
+        # which is also why it never had a cached reading to restore. Sticky
+        # terminations only: no network, just the persisted map. New
+        # terminations are still detected in save_cache.
+        try:
+            _dead = load_terminated()
+            _skipped = sorted({d.get('ticker') for d in results
+                               if d.get('ticker') in _dead})
+            if _skipped:
+                results = [d for d in results if d.get('ticker') not in _dead]
+                print(f"[Terminated] {len(_skipped)} known-terminated deal(s) "
+                      f"skipped before enrichment: {', '.join(_skipped)}")
+        except Exception as _tpe:
+            print(f"[Terminated] pre-enrichment filter error (non-fatal): {_tpe}")
 
     if results:
         # No save_cache() here, and none through the enrichment passes below.
