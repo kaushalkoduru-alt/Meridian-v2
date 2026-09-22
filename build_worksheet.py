@@ -269,7 +269,15 @@ def recompute():
         log("no worksheet yet")
         return
     with open(WORKSHEET, newline="", encoding="utf-8", errors="replace") as f:
-        rows = list(csv.DictReader(f))
+        reader = csv.DictReader(f)
+        # The file has grown columns (deal_type, acquirer_type) by hand since
+        # FIELDS was written. Writing back with the stale constant either
+        # crashes (DictWriter refuses an unknown key) or, in repull()'s
+        # explicit `for k in FIELDS` form, silently drops those columns
+        # instead -- the quieter and worse failure. Round-trip whatever the
+        # file actually has.
+        actual_fields = reader.fieldnames or FIELDS
+        rows = list(reader)
     filled = 0
     for r in rows:
         try:
@@ -282,7 +290,7 @@ def recompute():
             filled += 1
     tmp = WORKSHEET + ".tmp"
     with open(tmp, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w = csv.DictWriter(f, fieldnames=actual_fields)
         w.writeheader()
         w.writerows(rows)
     os.replace(tmp, WORKSHEET)
@@ -338,7 +346,9 @@ def repull():
         return
 
     with open(WORKSHEET, newline="", encoding="utf-8", errors="replace") as f:
-        rows = list(csv.DictReader(f))
+        reader = csv.DictReader(f)
+        actual_fields = reader.fieldnames or FIELDS
+        rows = list(reader)
 
     todo = [r for r in rows
             if (r.get("deal_price") or "").strip()
@@ -383,10 +393,10 @@ def repull():
                  .replace("\u2019", "'").replace("\u201c", '"')
                  .replace("\u201d", '"').replace("\u2026", "..."))
     with open(tmp, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w = csv.DictWriter(f, fieldnames=actual_fields)
         w.writeheader()
         for r in rows:
-            w.writerow({k: _safe(r.get(k, "")) for k in FIELDS})
+            w.writerow({k: _safe(r.get(k, "")) for k in actual_fields})
     os.replace(tmp, WORKSHEET)
 
     log("=" * 74)
@@ -412,8 +422,8 @@ def main():
     if a.recompute:
         recompute()
         return
-    if not a.year or not (2022 <= a.year <= 2025):
-        log("--year required, 2022-2025")
+    if not a.year or not (2020 <= a.year <= 2025):
+        log("--year required, 2020-2025")
         raise SystemExit(1)
     if not TIINGO_KEY:
         log("TIINGO_API_KEY not set -- announcement prices will be blank\n")
