@@ -4177,13 +4177,28 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
             # is recoverable next scan; a stalled scan blocks everything,
             # including deals that have nothing to do with this feature.
             CS_MAX_SECONDS_PER_TICKER = 150
-            _cs_restored = _cs_read = _cs_timeout = 0
+            _cs_restored = _cs_read = _cs_timeout = _cs_priceless = 0
             for _d in results:
                 _tk = _d.get('ticker')
                 _cached = _prior_capital_structure.get(_tk)
                 if _cached:
                     _d['capital_structure'] = _cached
                     _cs_restored += 1
+                    continue
+                # save_cache drops any row where cp is null or <=0 (main.py's
+                # `df['cp'].notna() & (df['cp'] > 0)` filter) -- AFTER this loop
+                # already ran. A deal with a chronic pricing gap (illiquid,
+                # delisted-but-still-filing, a Tiingo/yfinance miss) never
+                # survives to be saved, so it never accumulates a cached
+                # reading, so it paid for this same $0.05-0.15 extraction fresh
+                # on every single scan since the feature shipped -- billed,
+                # then thrown away, forever. Same condition, checked here
+                # instead, so a priceless deal is skipped before the call.
+                if not (isinstance(_d.get('cp'), (int, float)) and _d.get('cp') > 0):
+                    print(f"  [CapStructure] {_tk}: skipped — no valid price "
+                          f"this scan (cp={_d.get('cp')!r}); would be dropped "
+                          f"by save_cache before persisting anyway")
+                    _cs_priceless += 1
                     continue
                 try:
                     with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
@@ -4209,8 +4224,9 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
                 except Exception as _cse1:
                     print(f"  [CapStructure] {_tk}: {_cse1}")
             print(f"[CapStructure] {_cs_restored} restored from cache, "
-                  f"{_cs_read} read this scan, {_cs_timeout} abandoned on "
-                  f"timeout (extractor {_cs.EXTRACTOR_VERSION})")
+                  f"{_cs_read} read this scan, {_cs_priceless} skipped for no "
+                  f"price, {_cs_timeout} abandoned on timeout "
+                  f"(extractor {_cs.EXTRACTOR_VERSION})")
         except Exception as _cse:
             print(f"[CapStructure] pass failed (non-fatal, nothing changed): {_cse}")
 
