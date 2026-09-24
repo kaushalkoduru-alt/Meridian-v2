@@ -3706,7 +3706,14 @@ def fetch_deals_from_edgar():
                         # [^\n] not [^.]: LGTY's own price, "$14.30", contains
                         # a period, which [^.] can never cross -- the same
                         # decimal trap deal_flags.py already documents.
-                        or bool(re.search(r'right\s+to\s+receive[^\n]{0,60}?in\s+cash', full_ct_flat)))
+                        or bool(re.search(r'right\s+to\s+receive[^\n]{0,60}?in\s+cash', full_ct_flat))
+                        # A cash-or-stock ELECTION states its cash leg as a bare
+                        # amount: "either (i) $90.00 in cash or (ii) 0.3210
+                        # shares of Amazon common stock" (GSAT). None of the
+                        # phrases above match that, so has_stock alone (via the
+                        # proration sentence's "stock consideration") called it
+                        # All Stock and the branch below nulled a real $90 price.
+                        or bool(re.search(r'\$\s?\d[\d,]*(?:\.\d+)?\s+(?:per\s+share\s+)?in\s+cash', full_ct_flat)))
                     has_stock = any(kw in full_ct_flat for kw in [
                         'stock consideration','equity consideration',
                         'per share in a combination of cash and','per share in cash and stock',
