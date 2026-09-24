@@ -175,5 +175,39 @@ for bid, n in tally.items():
     print(f"  barrier {bid:>2} blocked {n}x — {BARRIER_NAMES[bid]}")
 check("tally records which barriers blocked", len(tally) > 0, f"{tally}")
 
+# ── recovered fixed-mix and drifted-election deals ────────────────────────────
+print("\nFIXED MIX AND DRIFT")
+print("-" * 80)
+
+# PEN (Boston Scientific / Penumbra), terms from EX-2.1 section 2.01: $374.00 cash
+# or 3.8721 BSX shares, cash for at most 73.26% of shares. BSX was ~$90 on the
+# announcement date and is $44.68 now, so the legs no longer match today.
+PEN_TERMS = {'cash': 374.00, 'ratio': 3.8721, 'acquirer_ticker': 'BSX',
+             'cash_cap': 0.7326, 'structure_hint': 'ELECTION_CAPPED'}
+PEN_TEXT = "Boston Scientific (NYSE: BSX) will acquire Penumbra ... $374 in cash or 3.8721 shares"
+b, why, r = run_barriers(PEN_TERMS, 374.00, 319.72, 44.68, FRESH, PEN_TEXT, PEN_TEXT,
+                         announcement_acquirer_price=90.03)
+check("drifted election: parity measured at announcement passes, blended is computed",
+      b is not None and abs(b - 320.27) < 0.05, f"blended {b}")
+b, why, r = run_barriers(PEN_TERMS, 374.00, 319.72, 44.68, FRESH, PEN_TEXT, PEN_TEXT)
+check("without the announcement price the old behaviour stands (fails closed)",
+      b is None and any(x.barrier == B_LEG_PARITY and not x.passed for x in r))
+b, why, r = run_barriers(dict(PEN_TERMS, ratio=1.0), 374.00, 319.72, 44.68, FRESH, PEN_TEXT, PEN_TEXT,
+                         announcement_acquirer_price=90.03)
+check("a misread ratio still fails parity at announcement",
+      b is None and any(x.barrier == B_LEG_PARITY and not x.passed for x in r))
+
+# KVUE: $3.50 cash plus 0.14625 Kimberly-Clark shares, both legs received. Cash is a
+# fifth of the stock leg at announcement and parity has nothing to say about it.
+KVUE_TERMS = {'cash': 3.50, 'ratio': 0.14625, 'acquirer_ticker': 'KMB',
+              'structure_hint': 'CASH_AND_STOCK'}
+KVUE_TEXT = "$3.50 per share in cash as well as 0.14625 Kimberly-Clark (NYSE: KMB) shares"
+b, why, r = run_barriers(KVUE_TERMS, 21.01, 17.61, 97.22, FRESH, KVUE_TEXT, KVUE_TEXT)
+check("fixed cash-and-stock: cash and stock legs are added, not compared for parity",
+      b is not None and abs(b - 17.72) < 0.02 and all(x.passed for x in r), f"blended {b}")
+b, why, r = run_barriers(dict(KVUE_TERMS, ratio=1.4625), 21.01, 17.61, 97.22, FRESH, KVUE_TEXT, KVUE_TEXT)
+check("fixed cash-and-stock: a ratio off by 10x is still caught (divergence from headline)",
+      b is None and any(x.barrier == B_DIVERGENCE and not x.passed for x in r))
+
 print("\n" + "=" * 80)
 print("ALL PASS" if ok else "SOMETHING FAILED — do not wire in until every barrier fires correctly")

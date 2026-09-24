@@ -274,7 +274,7 @@ def run_barriers(terms, headline_price, target_price, acquirer_price,
                  acquirer_price_time=None, filing_text="", filing_quote="",
                  stated_premium=None, unaffected_price=None,
                  second_extraction=None, previous_blended=None,
-                 previous_acquirer_price=None):
+                 previous_acquirer_price=None, announcement_acquirer_price=None):
     """
     Every barrier runs, always. Nothing short-circuits.
 
@@ -368,13 +368,33 @@ def run_barriers(terms, headline_price, target_price, acquirer_price,
             f"${cash} {'appears' if found else 'does NOT appear'} in the filing quote"))
 
     # ── 3 · leg parity at announcement ───────────────────────────────────────
-    if cash and ratio and acquirer_price:
-        stock_leg = ratio * acquirer_price
+    if structure == 'CASH_AND_STOCK':
+        # The holder receives BOTH legs, so there is nothing for them to be near
+        # parity with: KVUE is $3.50 cash beside ~$17 of Kimberly-Clark stock,
+        # ROKU $96.00 beside ~$60, and both are exactly what the filing says.
+        # Parity is a check that an EITHER/OR election was read correctly. What
+        # guards a misread fixed mix is barrier 5, which holds cash + stock leg
+        # to within 45% of the headline the filing states.
+        results.append(BarrierResult(B_LEG_PARITY, True,
+            "fixed cash-and-stock: the legs are added, not chosen between, so "
+            "parity does not apply"))
+    elif cash and ratio and (announcement_acquirer_price or acquirer_price):
+        # AT ANNOUNCEMENT means at the acquirer's announcement-date price. Measured
+        # at today's price this barrier answered a different question -- "has the
+        # acquirer moved more than 30% since?" -- and answered it by deleting the
+        # blended value, which is exactly when the headline is most wrong. PEN:
+        # $374 cash against 3.8721 Boston Scientific shares, ~$97 each on the day
+        # and $44.68 now; the barrier blocked a blended $320 and left the flat $374
+        # showing a 17% spread on a deal trading at +0.2% of what a holder receives.
+        # Callers that cannot supply the announcement price get the old behaviour.
+        parity_px = announcement_acquirer_price or acquirer_price
+        when = "at announcement" if announcement_acquirer_price else "at the current price"
+        stock_leg = ratio * parity_px
         if stock_leg > 0:
             drift = abs(cash - stock_leg) / max(cash, stock_leg)
             ok = drift <= LEG_PARITY_TOLERANCE
             results.append(BarrierResult(B_LEG_PARITY, ok,
-                f"cash ${cash:.2f} vs stock leg ${stock_leg:.2f} "
+                f"cash ${cash:.2f} vs stock leg ${stock_leg:.2f} {when} "
                 f"({drift*100:.1f}% apart, tolerance {LEG_PARITY_TOLERANCE*100:.0f}%)"))
         else:
             results.append(BarrierResult(B_LEG_PARITY, False, "stock leg computed to zero"))

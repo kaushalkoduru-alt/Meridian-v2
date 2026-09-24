@@ -13,6 +13,7 @@ import asyncio
 import ast
 import json
 import math
+import collections
 import random
 import time
 from contextlib import asynccontextmanager
@@ -49,6 +50,53 @@ DEAL_STRUCTURES = {
         'collar_high': 90.00,
         'structure_hint': 'ELECTION_CAPPED',
         'source': 'hand-verified from 8-K 0001140361-26-014528',
+    },
+    # Fixed cash-and-stock: every Roku share receives BOTH legs.
+    'ROKU': {
+        'cash': 96.00,
+        'ratio': 0.9693,
+        'acquirer_ticker': 'FOXA',
+        'structure_hint': 'CASH_AND_STOCK',
+        'source': 'hand-verified from 8-K 0001140361-26-025115 EX-99.1: "$96.00 in '
+                  'cash and 0.9693 shares of FOX Class A common stock for each Roku '
+                  'share", $160.00 headline',
+    },
+    'UNF': {
+        'cash': 155.00,
+        'ratio': 0.7720,
+        'acquirer_ticker': 'CTAS',
+        'structure_hint': 'CASH_AND_STOCK',
+        'source': 'hand-verified from 8-K 0001193125-26-101128 EX-99.1: "$155.00 in '
+                  'cash and 0.7720 shares of Cintas stock for each UniFirst share", '
+                  '$310.00 combined value',
+    },
+    'KVUE': {
+        'cash': 3.50,
+        'ratio': 0.14625,
+        'acquirer_ticker': 'KMB',
+        'structure_hint': 'CASH_AND_STOCK',
+        'source': 'hand-verified from 8-K 0001104659-25-105216 EX-99.1: "$3.50 per '
+                  'share in cash as well as 0.14625 Kimberly-Clark shares", $21.01 '
+                  'total consideration',
+    },
+    'SMTI': {
+        'cash': 33.00,
+        'ratio': 0.4735,
+        'acquirer_ticker': 'MDXG',
+        'structure_hint': 'CASH_AND_STOCK',
+        'source': 'hand-verified from 8-K 0001493152-26-035196 EX-99.1: "$33.00 in '
+                  'cash and 0.4735 shares of MIMEDX common stock", $35 headline',
+    },
+    # Election, capped: cash for at most 73.26% of shares (EX-2.1 section 2.01: the
+    # stock consideration goes to 26.74%), the rest converting at 3.8721 BSX shares.
+    'PEN': {
+        'cash': 374.00,
+        'ratio': 3.8721,
+        'acquirer_ticker': 'BSX',
+        'cash_cap': 0.7326,
+        'structure_hint': 'ELECTION_CAPPED',
+        'source': 'hand-verified from 8-K 0000950103-26-000523 EX-2.1 section 2.01: '
+                  '$374.00 cash or 3.8721 BSX shares, cash shares 73.26% of the total',
     },
 }
 
@@ -2301,7 +2349,11 @@ def extract_targeted_section(html_text):
         for header in MERGER_CONSIDERATION_HEADERS:
             idx = full_lower.find(header)
             if idx != -1:
-                block = full_text[idx:idx + 2500]
+                # A little text BEFORE the header comes along: the window can
+                # open mid-sentence ("consideration represents $64.00 per ROKU
+                # share"), and the guards that tell a stock leg's dollar value
+                # from a price need the words in front of it to do so.
+                block = full_text[max(0, idx - 300):idx + 2500]
                 # Validate this block actually contains price language before returning
                 if any(kw in block.lower() for kw in [
                     'per share', 'per common share', 'in cash', 'cash consideration'
@@ -2364,6 +2416,54 @@ _PRICE_FALSE_POSITIVE_NEAR = re.compile(
 # wider window the par-value/exercise-price check above must NOT have.
 _PRICE_FALSE_POSITIVE_FAR = re.compile(r'dividend|distribution', re.IGNORECASE)
 
+# A dollar figure that is a MARKET price, not what the holder is paid. ROKU's
+# release states its headline ("$160.00 per ROKU share") and then values the
+# stock leg "based on a reference price of $66.03 per share" -- the acquirer's
+# 10-day VWAP -- and the frequency vote below picked the $66.03. The phrase has
+# to END at the figure, so a real price later in a sentence that merely mentions
+# a closing price earlier is not caught.
+_PRICE_REFERENCE_BEFORE = re.compile(
+    r'(?:reference\s+price|(?:average\s+)?closing\s+(?:stock\s+|sale\s+|share\s+)?price'
+    r'|unaffected\s+(?:stock\s+|share\s+)?price|last\s+reported\s+sale\s+price'
+    r'|volume[- ]weighted\s+average(?:\s+(?:trading|closing|sale))?\s+(?:stock\s+|share\s+)?price'
+    r'|vwap|trading\s+price'
+    # The stock leg restated in dollars ("The stock consideration represents
+    # $64.00 per ROKU share"), and the ceiling of a contingent right ("the
+    # right to receive up to $12.00 per share", LNTH): neither is the price.
+    r'|(?:stock|equity)\s+(?:consideration|component|portion)\s+(?:represents?|representing|equals?)'
+    r'|up\s+to)'
+    r'(?:\s+per\s+share)?'
+    r'(?:\s+(?:on|as\s+of)\s+[A-Za-z]+\s+\d{1,2},?\s+\d{4})?'
+    r'(?:\s+(?:of|was|is|at))?\s*(?:approximately\s+|about\s+)?\s*$', re.IGNORECASE)
+
+# One LEG of a fixed-mix deal, not the price: "$3.50 per share in cash as well as
+# 0.14625 Kimberly-Clark shares" (KVUE). Read as the deal price it is the cash leg
+# alone, a fifth of what a holder receives. The stock leg beside it (or before it)
+# is what marks it.
+_LEG_AFTER = re.compile(
+    r'^(?:\s+in\s+cash)?[\s,]*(?:and|plus|as\s+well\s+as|together\s+with)\s+(?:\(\w{1,3}\)\s+)?'
+    r'(?:\d[\d.,]*\s+(?:of\s+a\s+)?(?:[\w\-&.]+\s+){0,3}?shares?\b'
+    r'|(?:a\s+)?fraction\s+of\s+a\s+share|shares?\s+of\b)', re.IGNORECASE)
+_LEG_BEFORE = re.compile(
+    r'\d[\d.,]*\s+(?:of\s+a\s+)?(?:[\w\-&.]+\s+){0,4}?shares?\b[^$.]{0,80}?\b(?:and|plus)\s*(?:\(\w{1,3}\)\s*)?$',
+    re.IGNORECASE)
+# The stock leg's own VALUE, restated in dollars beside its exchange ratio: ROKU's
+# "The stock consideration represents $64.00 per ROKU share" and SMTI's "0.4735
+# shares ... which represents a value of $2.00 per share". A ratio with three or
+# more decimals, then "represents" / "worth" / "valued at" leading straight to
+# the figure, is the acquirer's stock priced, not what the target is bought for.
+_STOCK_LEG_VALUE = re.compile(
+    r'\d\.\d{3,}\s+(?:[\w\-&.]+\s+){0,4}?shares?\b[^$]{0,220}?'
+    r'(?:represents?|representing|worth|valued\s+at|equal\s+to|equivalent\s+to)\s+(?:a\s+)?(?:value\s+of\s+)?(?:approximately\s+)?$',
+    re.IGNORECASE)
+
+# "$160.00 per ROKU share", "$35 per Sanara share": the target named between
+# "per" and "share". Case-sensitive on the name words, which is what keeps it
+# from reading "per fully diluted share" style filler; applied without the
+# IGNORECASE the list below runs under.
+_PER_TARGET_SHARE = re.compile(
+    r'\$(\d+(?:\.\d+)?)\s+(?i:per)\s+(?:[A-Z][A-Za-z0-9&.\-]*\s+){1,3}(?i:share)\b')
+
 def extract_price_from_text(clean_text):
     patterns=[
         r'\$(\d+(?:\.\d+)?)\s+per\s+share\s+in\s+cash',
@@ -2385,16 +2485,30 @@ def extract_price_from_text(clean_text):
         r'right\s+to\s+receive\s+an\s+amount\s+in\s+cash\s+equal\s+to\s+\$(\d+(?:\.\d+)?)',
     ]
     all_prices=[]
-    for pat in patterns:
-        for m in re.finditer(pat, clean_text, re.IGNORECASE):
-            p = float(m.group(1))
-            if not (0 < p < 1000):
-                continue
-            if _PRICE_FALSE_POSITIVE_NEAR.search(clean_text[max(0, m.start()-40):m.start()]):
-                continue
-            if _PRICE_FALSE_POSITIVE_FAR.search(clean_text[max(0, m.start()-120):m.start()]):
-                continue
-            all_prices.append(p)
+    matches = [m for pat in patterns for m in re.finditer(pat, clean_text, re.IGNORECASE)]
+    matches += list(_PER_TARGET_SHARE.finditer(clean_text))
+    for m in matches:
+        p = float(m.group(1))
+        if not (0 < p < 1000):
+            continue
+        # Several patterns begin AFTER the dollar sign, so the text before the
+        # match can end in a stray "$" that the end-anchored guards below would
+        # trip on: "(B) $1.14 per share in cash" (GPRO) slipped past the
+        # stock-leg check that way.
+        def _ctx(n):
+            return clean_text[max(0, m.start()-n):m.start()].rstrip('$ ') + ' '
+        before = _ctx(120)
+        if _PRICE_FALSE_POSITIVE_NEAR.search(clean_text[max(0, m.start()-40):m.start()]):
+            continue
+        if _PRICE_FALSE_POSITIVE_FAR.search(before):
+            continue
+        if _PRICE_REFERENCE_BEFORE.search(before):
+            continue
+        if _LEG_AFTER.match(clean_text[m.end():m.end()+90]) or _LEG_BEFORE.search(_ctx(240)):
+            continue
+        if _STOCK_LEG_VALUE.search(_ctx(320)):
+            continue
+        all_prices.append(p)
     if not all_prices: return None
     headline = _HEADLINE_PRICE.search(clean_text)
     if headline:
@@ -2402,6 +2516,55 @@ def extract_price_from_text(clean_text):
         if 0 < hp < 1000:
             return hp
     return max(set(all_prices),key=all_prices.count)
+
+# Sentences that are about something other than the consideration, even when
+# they contain "per share" and an acquisition verb.
+_NOT_CONSIDERATION = re.compile(
+    r'termination\s+fee|break-?up\s+fee|repurchase|buy-?back|dividend|per\s+share\s+(?:basis|earnings)'
+    r'|\beps\b|exercise\s+price', re.IGNORECASE)
+_DEAL_VERB = re.compile(
+    r'\b(?:acquire[sd]?|acquisition|merger|tender\s+offer|will\s+receive|right\s+to\s+receive'
+    r'|be\s+converted|purchase\s+price)\b', re.IGNORECASE)
+_PRICE_WORDS = re.compile(r'\bper\s+(?:\w+\s+){0,3}?share\b|\bin\s+cash\b', re.IGNORECASE)
+
+
+def extract_price_from_document(html_text):
+    """
+    The deal price stated ANYWHERE in the document, for when the targeted window
+    found none.
+
+    extract_targeted_section returns the 2,500 characters after the FIRST header
+    that has price words in range, and on a long release that window can be an
+    accretion paragraph: MarketAxess's "ICE will acquire all outstanding shares
+    of MarketAxess for $167 per share in cash" sat past it, so a vanilla all-cash
+    deal was dropped as NoPrice. The window exists to keep exec-comp tables and
+    fee schedules out; this keeps them out a different way, sentence by
+    sentence -- only a sentence that is both about the transaction and states a
+    per-share or cash figure is read, through the same guards as the windowed
+    pass -- and it answers only when the answer is unambiguous: one figure, or
+    one that strictly outnumbers the rest. A tie is blank, not a guess.
+    """
+    try:
+        text = BeautifulSoup(html_text, 'html.parser').get_text(separator=' ', strip=True)
+    except Exception:
+        return None
+    text = re.sub(r'\s+', ' ', text)
+    found = []
+    for sent in re.split(r'(?<=[.!?])\s+(?=[A-Z“"(])', text):
+        if not (_DEAL_VERB.search(sent) and _PRICE_WORDS.search(sent)):
+            continue
+        if _NOT_CONSIDERATION.search(sent):
+            continue
+        p = extract_price_from_text(sent)
+        if p:
+            found.append(p)
+    if not found:
+        return None
+    counts = collections.Counter(found).most_common()
+    if len(counts) > 1 and counts[0][1] == counts[1][1]:
+        return None
+    return counts[0][0]
+
 
 LEAD_JUNK = re.compile(
     r'^(?:'
@@ -3632,6 +3795,15 @@ def fetch_deals_from_edgar():
                     ct=extract_targeted_section(dr.text)
                     dp_try=extract_price_from_text(ct)
                     if not dp_try:
+                        # The window is the 2,500 characters after the first
+                        # consideration header, and on a long release that is
+                        # not where the price sentence is (MKTX). Read the
+                        # sentences of the whole document before giving up;
+                        # the ratio check just below still applies to it.
+                        dp_try=extract_price_from_document(dr.text)
+                        if dp_try:
+                            print(f"  [PriceDoc] {ticker}: ${dp_try} found outside the targeted window")
+                    if not dp_try:
                         continue
                     # Price validation runs FIRST before anything else
                     if not validate_deal_price(dp_try, cp, ticker):
@@ -4036,6 +4208,31 @@ def fetch_deals_from_edgar():
                 _acq_quotes[tk] = (_px, _ts)
                 return _acq_quotes[tk]
 
+            _acq_ann = {}  # (acquirer ticker, filed date) -> close on that day
+
+            def _acquirer_announcement_price(tk, filed):
+                """The acquirer's close on the announcement date, or the last close
+                before it. None when it cannot be read -- the barrier then falls
+                back to the current price, which fails closed."""
+                key = (tk, str(filed)[:10])
+                if key in _acq_ann:
+                    return _acq_ann[key]
+                _v = None
+                try:
+                    import concurrent.futures as _cf
+                    _d0 = datetime.strptime(key[1], '%Y-%m-%d')
+                    with _cf.ThreadPoolExecutor(max_workers=1) as _ex:
+                        _h = _ex.submit(lambda: yf.Ticker(tk).history(
+                            start=(_d0 - timedelta(days=7)).strftime('%Y-%m-%d'),
+                            end=(_d0 + timedelta(days=1)).strftime('%Y-%m-%d'))
+                        ).result(timeout=10)
+                    if _h is not None and not _h.empty:
+                        _v = float(_h['Close'].iloc[-1])
+                except Exception as _ae:
+                    print(f"  [Pricing] acquirer {tk} announcement price failed ({_ae})")
+                _acq_ann[key] = _v
+                return _v
+
             for _d in results:
                 _terms = DEAL_STRUCTURES.get(_d.get('ticker'))
                 if not _terms:
@@ -4058,6 +4255,8 @@ def fetch_deals_from_edgar():
                     acquirer_price_time=_ts,
                     filing_text=_d.get('_filing_text', '') or '',
                     filing_quote=_quote,
+                    announcement_acquirer_price=_acquirer_announcement_price(
+                        _terms.get('acquirer_ticker', ''), _d.get('filed')),
                 )
                 _d['pricing'] = {
                     'blended': _blended,
