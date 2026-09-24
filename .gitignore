@@ -22,3 +22,4 @@ meridian_cache_backup.csv
 python
 deals.json
 terminated_deals.json
+llm_cache.json

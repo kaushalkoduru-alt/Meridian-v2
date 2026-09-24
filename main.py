@@ -19,7 +19,8 @@ from contextlib import asynccontextmanager
 import stripe
 from find_announcement import find_announcement_8k_backward
 from deal_direction import (check_direction, direction_report,
-                            DIRECTION_ENFORCING, VERDICT_TARGET)
+                            DIRECTION_ENFORCING, VERDICT_TARGET,
+                            VERDICT_ACQUIRER, VERDICT_UNCLEAR)
 from provenance import provenance_map
 from explain import explain_deal
 from verification import verification_state
@@ -370,6 +371,124 @@ def save_terminated(terminated):
         os.replace(tmp, TERMINATED_FILE)
     except Exception as e:
         print(f"[Terminated] local file save error: {e}")
+
+
+# ─── PAID-CALL CACHE ─────────────────────────────────────────────────────────
+# Direction verdicts and enrichment readings are a function of ONE filing, so
+# once a filing has been asked, asking it again is buying the same answer. The
+# feed row cannot hold them: a deal the direction gate rejects (a SPAC shell,
+# an acquirer-side filing) is dropped before it is ever saved, so it has no row
+# to carry a cached verdict -- which is why only TARGET verdicts (deals that DO
+# reach the feed) were ever cached, and every rejected deal was re-asked, and
+# re-enriched, on every scan. This store is keyed by ticker|accession and lives
+# beside the feed, not in it. Redis first (raw JSON body, same shape as
+# redis_set/save_terminated) plus a local file, and every write says which store
+# it reached: a cache that silently fails to save is the same bug as no cache.
+LLM_CACHE_KEY  = 'meridian_llmcache_v1'
+LLM_CACHE_FILE = 'llm_cache.json'
+LLM_CACHE_MAX_AGE_DAYS = 45
+
+
+def load_llm_cache():
+    """{'direction': {key: {answer, ts}}, 'enrich': {key: {...}}} -- never raises."""
+    data = None
+    if REDIS_URL and REDIS_TOKEN:
+        try:
+            r = requests.get(f"{REDIS_URL}/get/{LLM_CACHE_KEY}",
+                             headers={"Authorization": f"Bearer {REDIS_TOKEN}"}, timeout=10)
+            result = r.json().get('result')
+            if result:
+                data = json.loads(result) if isinstance(result, str) else result
+        except Exception as e:
+            print(f"[LLMCache] Redis load error: {e}")
+    if not isinstance(data, dict):
+        try:
+            with open(LLM_CACHE_FILE, encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            data = None
+    if not isinstance(data, dict):
+        data = {}
+    for sect in ('direction', 'enrich'):
+        if not isinstance(data.get(sect), dict):
+            data[sect] = {}
+    return data
+
+
+def save_llm_cache(cache):
+    """Prunes entries older than LLM_CACHE_MAX_AGE_DAYS, writes both stores,
+    and returns {'redis': True/False/None, 'file': True/False}."""
+    cutoff = (datetime.utcnow() - timedelta(days=LLM_CACHE_MAX_AGE_DAYS)).strftime('%Y-%m-%d')
+    for sect in ('direction', 'enrich'):
+        cache[sect] = {k: v for k, v in (cache.get(sect) or {}).items()
+                       if str((v or {}).get('ts', ''))[:10] >= cutoff}
+    payload = json.dumps(cache)
+    out = {'redis': None, 'file': False}
+    if REDIS_URL and REDIS_TOKEN:
+        try:
+            r = requests.post(f"{REDIS_URL}/set/{LLM_CACHE_KEY}",
+                              headers={"Authorization": f"Bearer {REDIS_TOKEN}",
+                                       "Content-Type": "text/plain"},
+                              data=payload.encode('utf-8'), timeout=15)
+            out['redis'] = (r.status_code == 200)
+            if not out['redis']:
+                print(f"[LLMCache] Redis save FAILED: {r.status_code} — {r.text[:200]}")
+        except Exception as e:
+            out['redis'] = False
+            print(f"[LLMCache] Redis save error: {e}")
+    try:
+        tmp = LLM_CACHE_FILE + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            f.write(payload)
+        os.replace(tmp, LLM_CACHE_FILE)
+        out['file'] = True
+    except Exception as e:
+        print(f"[LLMCache] local file save error: {e}")
+    print(f"[LLMCache] saved — redis={out['redis']} file={out['file']} "
+          f"({len(cache['direction'])} direction, {len(cache['enrich'])} enrichment entries)")
+    return out
+
+
+def _llm_text(resp_json):
+    """The first TEXT block of a Messages response, '' if there is none.
+
+    `content[0]['text']` assumed the first block is text. When the model thinks
+    first, content[0] is a thinking block with no 'text' key: KeyError('text'),
+    54 of them in 30 hours, each read as a failed call -- and in the direction
+    check, as a forced UNCLEAR that got the deal re-asked on the next scan."""
+    for b in (resp_json.get('content') or []):
+        if isinstance(b, dict) and b.get('type') == 'text':
+            return b.get('text') or ''
+    return ''
+
+
+_THINKING_OFF_REJECTED = False
+
+
+def _post_small_llm(api_key, system, user, max_tokens, timeout):
+    """One tiny extraction call to Sonnet 5, thinking OFF.
+
+    Sonnet 5 runs adaptive thinking when `thinking` is omitted, and these calls
+    allow 20-150 output tokens: the reasoning can consume the whole budget and
+    leave no answer. They are one-word / one-JSON-object reads and gain nothing
+    from it. If the API ever rejects the disabled setting (400), retry once
+    without it and stop sending it, rather than failing every call."""
+    global _THINKING_OFF_REJECTED
+    body = {"model": "claude-sonnet-5", "max_tokens": max_tokens, "system": system,
+            "messages": [{"role": "user", "content": user}]}
+    headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01",
+               "Content-Type": "application/json"}
+    if not _THINKING_OFF_REJECTED:
+        body["thinking"] = {"type": "disabled"}
+    resp = requests.post("https://api.anthropic.com/v1/messages",
+                         headers=headers, json=body, timeout=timeout)
+    if resp.status_code == 400 and "thinking" in body:
+        _THINKING_OFF_REJECTED = True
+        print(f"[LLM] thinking=disabled rejected (400: {resp.text[:160]}) — retrying without it")
+        body.pop("thinking")
+        resp = requests.post("https://api.anthropic.com/v1/messages",
+                             headers=headers, json=body, timeout=timeout)
+    return resp
 
 
 # Filing language that names an actual merger-agreement termination, not an
@@ -2782,6 +2901,305 @@ def get_filing_links(cik, accession, headers):
 
 # ─── CORE PIPELINE ───────────────────────────────────────────────────────────
 
+def _touch_cache_entry(entry, now_s):
+    """Refresh an entry's timestamp at most once a day, so a filing still being
+    read keeps its cached answer past the prune age without dirtying the cache
+    (and forcing a Redis write) on every scan."""
+    if isinstance(entry, dict) and str(entry.get('ts', ''))[:10] != now_s[:10]:
+        entry['ts'] = now_s
+
+
+def _direction_word(raw):
+    """The first TARGET / ACQUIRER / UNCLEAR word in a model reply -- the same
+    leading-token rule check_direction applies -- or None if the reply names none
+    (empty, cut off, prose). Only a real answer is worth caching."""
+    for w in re.split(r'[^A-Z]+', (raw or '').strip().upper()):
+        if w in (VERDICT_TARGET, VERDICT_ACQUIRER, VERDICT_UNCLEAR):
+            return w
+    return None
+
+
+def run_direction_stage(results, anthropic_key, prior_directions, llm_cache,
+                        llm_call=None, enforcing=None):
+    """
+    Direction verdict for every detected deal; returns the deals that stay.
+
+    Runs BEFORE enrichment. Direction reads only ticker, company, filing text and
+    the price fields; enrichment only ever fills acquirer / tx_value / close_date
+    -- neither feeds the other -- so the set of deals that survive is identical
+    in either order. Direction first means a deal that will be thrown away (a
+    SPAC shell, an acquirer-side filing) never reaches a paid enrichment call.
+
+    A model answer is cached by ticker|accession, ALL THREE outcomes: only TARGET
+    deals survive to a feed row that could carry a verdict, so ACQUIRER and
+    UNCLEAR deals were re-asked on every scan. Only a reply that actually names a
+    verdict is stored; a failure, an empty reply or a cut-off one is retried.
+    The structural layer is free and price-dependent, so it is never cached.
+    """
+    if enforcing is None:
+        enforcing = DIRECTION_ENFORCING
+    stats = {'calls': 0, 'cached': 0, 'stored': 0}
+    dcache = llm_cache.setdefault('direction', {})
+    now_s = datetime.utcnow().strftime('%Y-%m-%dT%H:%M')
+    try:
+        if llm_call is None and anthropic_key:
+            def llm_call(prompt):
+                _r = _post_small_llm(anthropic_key,
+                                     "You answer with exactly one word. No explanation.",
+                                     prompt, 20, 25)
+                if _r.status_code != 200:
+                    raise RuntimeError(f"HTTP {_r.status_code}")
+                return _llm_text(_r.json())
+
+        def _cached_llm(deal):
+            key = f"{deal.get('ticker')}|{deal.get('accession')}" if deal.get('accession') else None
+
+            def _fn(prompt):
+                if key and (dcache.get(key) or {}).get('answer'):
+                    stats['cached'] += 1
+                    _touch_cache_entry(dcache[key], now_s)
+                    return dcache[key]['answer']
+                raw = llm_call(prompt)
+                stats['calls'] += 1
+                word = _direction_word(raw)
+                if key and word:
+                    dcache[key] = {'answer': word, 'ts': now_s}
+                    stats['stored'] += 1
+                return raw
+            return _fn
+
+        print(f"[DirDebug] _prior_directions has {len(prior_directions)} entries; "
+              f"tickers: {sorted(list(prior_directions))[:5]}")
+        for _d in results:
+            _cached = _d.get('direction') or prior_directions.get(_d.get('ticker'))
+            if isinstance(_cached, dict):
+                _v = _cached.get('verdict')
+            elif isinstance(_cached, str):
+                _v = VERDICT_TARGET if ('TARGET' in _cached and 'ACQUIRER' not in _cached) else None
+            else:
+                _v = None
+            if _d.get('ticker') == 'NATH':
+                print(f"[DirDebug] NATH cached={type(_cached).__name__} "
+                      f"_v={_v!r} VERDICT_TARGET={VERDICT_TARGET!r} match={_v == VERDICT_TARGET}")
+            if _v == VERDICT_TARGET:
+                # Already established as a target on a previous scan. Keep the
+                # verdict and skip the model call -- re-asking a settled
+                # question every hour is what turned this into ~3,500 API
+                # calls a month.
+                _d['direction'] = _cached
+                continue
+            _d['direction'] = check_direction(
+                _d.get('ticker'), _d.get('company'), _d.get('_filing_text', ''),
+                deal_price=_d.get('dp'), current_price=_d.get('cp'),
+                spread_pct=_d.get('sp_pct'),
+                llm_fn=_cached_llm(_d) if llm_call else None,
+            )
+        _dhdr, _dlines = direction_report(results)
+        print(_dhdr)
+        for _ln in _dlines:
+            print(_ln)
+        print(f"[Direction] model calls this scan: {stats['calls']} paid, "
+              f"{stats['cached']} answered from cache, {stats['stored']} newly cached")
+        # A missing API key makes every deal UNCLEAR, which enforcing would
+        # treat as a rejection and wipe the feed. Never enforce blind.
+        if enforcing and anthropic_key:
+            _pre = len(results)
+
+            def _verdict_of(r):
+                """A cached verdict arrives as a string from the CSV, so a bare
+                .get('verdict') raises. This crashed the whole direction block
+                once, and the handler swallowed it."""
+                v = r.get('direction')
+                if isinstance(v, dict):
+                    return v.get('verdict')
+                if isinstance(v, str):
+                    return VERDICT_TARGET if ('TARGET' in v and 'ACQUIRER' not in v) else None
+                return None
+            results = [r for r in results if _verdict_of(r) == VERDICT_TARGET]
+            if len(results) != _pre:
+                print(f"[Direction] blocked {_pre - len(results)} deal(s) not confirmed as targets "
+                      f"— dropped BEFORE enrichment, no enrichment call spent on them")
+    except Exception as _de:
+        print(f"[Direction] error (non-fatal, nothing blocked): {_de}")
+    return results
+
+
+def run_enrichment_stage(results, anthropic_key, llm_cache, post=None, sleep=time.sleep):
+    """
+    Fill a missing acquirer, tx_value and close_date from the filing text via the
+    model; returns True if any deal changed. Runs AFTER direction, on the deals
+    that will actually publish.
+
+    Every reading is cached by ticker|accession, the negative ones too: an
+    acquirer the model could not name, a tx_value or close_date it could not
+    find, is a property of that filing, and re-asking bought the same "nothing"
+    on every scan (SLP, BWMN, DSGR, ACA ... every hour). A transport failure, a
+    429 or an unparseable reply is NOT a finding and is retried next scan.
+    """
+    post = post or (lambda system, user, max_tokens, timeout:
+                    _post_small_llm(anthropic_key, system, user, max_tokens, timeout))
+    enr = llm_cache.setdefault('enrich', {})
+    now_s = datetime.utcnow().strftime('%Y-%m-%dT%H:%M')
+    SYS = "You are an M&A data extractor. Return only valid JSON, no other text."
+    enriched = False
+    calls = {'acquirer': 0, 'txcd': 0}
+    restored = skipped = 0
+
+    for deal in results:
+        ticker = deal.get('ticker')
+        filing_text = deal.get('_filing_text', '')
+        key = f"{ticker}|{deal.get('accession')}" if deal.get('accession') else None
+        ent = enr.get(key) if key else None
+
+        # 1. Re-apply what an earlier scan already read from THIS filing.
+        if ent:
+            _touch_cache_entry(ent, now_s)
+            if deal.get('acquirer') == 'Undisclosed' and ent.get('acquirer'):
+                deal['acquirer'] = ent['acquirer']
+                deal['acquirer_source'] = 'llm_enriched'
+                deal['acquirer_type'] = get_acquirer_type(deal.get('deal_type'), ent['acquirer'])
+                restored += 1
+            if not deal.get('tx_value') and ent.get('tx_value'):
+                deal['tx_value'] = ent['tx_value']
+                deal['tx_value_source'] = 'llm_enriched'
+                restored += 1
+            if deal.get('close_date') == 'TBD' and ent.get('close_date'):
+                deal['close_date'] = ent['close_date']
+                deal['close_date_source'] = 'llm_enriched'
+                _d2 = days_to_close(ent['close_date'])
+                deal['days_to_close'] = _d2
+                deal['ann'] = annualized_spread(deal.get('sp_pct'), _d2)
+                restored += 1
+
+        needs_acquirer = deal.get('acquirer') == 'Undisclosed'
+        needs_tx = not deal.get('tx_value')
+        needs_cd = deal.get('close_date') == 'TBD'
+        if not needs_acquirer and not needs_tx and not needs_cd:
+            continue
+        do_acq = bool(needs_acquirer and filing_text and not (ent and ent.get('acq_done')))
+        do_txcd = bool((needs_tx or needs_cd) and not (ent and ent.get('txcd_done')))
+        if not do_acq and not do_txcd:
+            skipped += 1
+            continue
+        print(f"  [Enrich] {ticker} — acquirer: {deal.get('acquirer')}, tx_value: {deal.get('tx_value')}, close_date: {deal.get('close_date')}")
+        if key:
+            ent = enr.setdefault(key, {'ts': now_s})
+
+        # 2. Acquirer
+        if do_acq:
+            try:
+                sleep(3.0)
+                calls['acquirer'] += 1
+                resp = post(SYS, f"""Extract the acquiring company name from this SEC 8-K merger filing.
+The TARGET company ticker is {ticker} and company name is {deal.get('company')} — do NOT return this as the acquirer.
+The acquirer is the company BUYING the target.
+
+Filing text:
+{filing_text[:3000]}
+
+Return JSON only: {{"acquirer": "Company Name"}}
+If you cannot identify the acquirer with confidence, return: {{"acquirer": null}}""", 100, 15)
+                if resp.status_code == 200:
+                    content = _llm_text(resp.json()).strip()
+                    content = content.replace('```json', '').replace('```', '').strip()
+                    data = json.loads(content)
+                    acq = data.get('acquirer')
+                    _ok, _why = validate_enriched_acquirer(acq, filing_text, deal.get('company', ''))
+                    if ent is not None:
+                        ent['acq_done'] = True          # a finding, positive or not
+                    if _ok:
+                        deal['acquirer'] = _ok
+                        deal['acquirer_source'] = 'llm_enriched'
+                        # acquirer_type is READ FROM the acquirer, so it is stale
+                        # the moment the acquirer changes (CBZ and DSGR carried
+                        # Unknown while naming Grant Thornton and LKCM Headwater).
+                        _oldtype = deal.get('acquirer_type')
+                        deal['acquirer_type'] = get_acquirer_type(deal.get('deal_type'), _ok)
+                        if ent is not None:
+                            ent['acquirer'] = _ok
+                        enriched = True
+                        print(f"  [Enrich] {ticker} acquirer: {_ok}"
+                              + (f" (acquirer_type {_oldtype} -> {deal['acquirer_type']})"
+                                 if _oldtype != deal['acquirer_type'] else ""))
+                    else:
+                        print(f"  [Enrich] {ticker} acquirer REFUSED — {_why}")
+                elif resp.status_code == 429:
+                    print(f"  [Enrich] Rate limited on acquirer, stopping")
+                    break
+            except Exception as e:
+                print(f"  [Enrich] Acquirer error {ticker}: {e}")
+
+        # 3. Transaction value and close date (only when one of them is missing --
+        #    the reply is used for nothing else)
+        if do_txcd:
+            try:
+                sleep(3.0)
+                calls['txcd'] += 1
+                resp = post(SYS, f"""Extract from this SEC 8-K merger filing text:
+1. Total transaction value in billions (number only, e.g. 2.5 for $2.5 billion, 0.45 for $450 million)
+2. Expected closing timeframe (e.g. 'Q3 2026', 'second half of 2026', 'early 2027')
+
+Filing text:
+{filing_text[:2000]}
+
+Return JSON only: {{"tx_value": 2.5, "close_date": "Q3 2026"}}
+IMPORTANT: tx_value is the TOTAL deal value in billions, NOT the per-share price.
+Total deal values are typically described as "$X billion" or "$X million" in the aggregate.
+Per-share prices like "$31.00 per share" are NOT the transaction value.
+If you cannot find the total deal value clearly stated, use null. Do not guess.""", 150, 15)
+                if resp.status_code == 200:
+                    content = _llm_text(resp.json()).strip()
+                    content = content.replace('```json', '').replace('```', '').strip()
+                    data = json.loads(content)
+                    tx = data.get('tx_value')
+                    cd = data.get('close_date')
+                    if ent is not None:
+                        ent['txcd_done'] = True         # a finding, positive or not
+                    _txok, _txwhy = (tx_value_plausible(float(tx), deal.get('dp'), ticker)
+                                     if isinstance(tx, (int, float)) else (False, 'not a number'))
+                    if not _txok and tx is not None:
+                        print(f"  [Enrich] {ticker} tx_value REFUSED — {_txwhy}")
+                    if (_txok and tx and isinstance(tx, (int, float)) and 0.01 <= float(tx) <= 500):
+                        if not deal.get('tx_value'):
+                            deal['tx_value'] = round(float(tx), 2)
+                            # 'regex_enterprise' was a lie: this number came from a
+                            # model, not a regex. The provenance field is the whole
+                            # audit trail, so it has to say which one produced it.
+                            deal['tx_value_source'] = 'llm_enriched'
+                            if ent is not None:
+                                ent['tx_value'] = deal['tx_value']
+                            enriched = True
+                            print(f"  [Enrich] {ticker} tx_value: {deal['tx_value']}B "
+                                  f"(model estimate, not filing-extracted)")
+                    if deal.get('close_date') == 'TBD':
+                        _cd, _why = validate_close_date(cd, deal.get('filed'))
+                        if _cd:
+                            deal['close_date'] = _cd
+                            deal['close_date_source'] = 'llm_enriched'
+                            # Everything measured from the close date was computed
+                            # off the 'TBD' that was here then; recompute (APGE
+                            # showed Q3 2026 beside a null days_to_close).
+                            _d2 = days_to_close(_cd)
+                            deal['days_to_close'] = _d2
+                            deal['ann'] = annualized_spread(deal.get('sp_pct'), _d2)
+                            if ent is not None:
+                                ent['close_date'] = _cd
+                            enriched = True
+                            print(f"  [Enrich] {ticker} close_date: {_cd} "
+                                  f"(days_to_close {_d2}, ann {deal['ann']})")
+                        elif _why not in ('empty', 'no date offered'):
+                            print(f"  [Enrich] {ticker} close_date REFUSED — {_why}")
+                elif resp.status_code == 429:
+                    print(f"  [Enrich] Rate limited, stopping enrichment")
+                    break
+            except Exception as e:
+                print(f"  [Enrich] Error {ticker}: {e}")
+                continue
+    print(f"[Enrich] paid calls this scan: {calls['acquirer']} acquirer + {calls['txcd']} tx/close-date; "
+          f"{restored} field(s) restored from cache, {skipped} deal(s) skipped as already read")
+    return enriched
+
+
 def fetch_deals_from_edgar():
     # Capture prior direction verdicts BEFORE anything writes to the cache.
     # The direction block near the end of this function runs after save_cache()
@@ -3493,238 +3911,34 @@ def fetch_deals_from_edgar():
         print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Detection complete: "
               f"{len(results)} deal(s) found. Running enrichment and "
               f"verification before publishing.")
-        # Background enrichment — fill missing tx_value and close_date via Groq
-        groq_key = os.environ.get("GROQ_API_KEY", "")
+        # ── DIRECTION FIRST, THEN ENRICHMENT ─────────────────────────────────
+        # Enrichment (acquirer / tx_value / close_date) is a paid model call per
+        # deal, and it used to run on every detected deal BEFORE the direction
+        # gate threw 13-41 of them away (SPAC shells, acquirer-side filings) --
+        # the same compute-then-discard shape as the capital-structure bug.
+        # Direction reads nothing enrichment writes and enrichment reads nothing
+        # direction writes, so the surviving set is identical in either order;
+        # only the wasted calls go. Both stages cache by ticker|accession.
         anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if anthropic_key:
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting background enrichment...")
-            enriched = False
-            for deal in results:
-                needs_acquirer = deal.get('acquirer') == 'Undisclosed'
-                needs_tx = not deal.get('tx_value')
-                needs_cd = deal.get('close_date') == 'TBD'
-                if not needs_acquirer and not needs_tx and not needs_cd:
-                    continue
-                # Prioritize acquirer first — only do tx/cd if acquirer already known
-                if needs_acquirer:
-                    needs_tx = False
-                    needs_cd = False
-                ticker = deal.get('ticker')
-                filing_text = deal.get('_filing_text', '')
-                print(f"  [Enrich] {ticker} — acquirer: {deal.get('acquirer')}, tx_value: {deal.get('tx_value')}, close_date: {deal.get('close_date')}")
-
-                # Acquirer enrichment
-                if needs_acquirer and filing_text:
-                    try:
-                        time.sleep(3.0)
-                        resp = requests.post(
-                            "https://api.anthropic.com/v1/messages",
-                            headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
-                            json={
-                                "model": "claude-sonnet-5",
-                                "max_tokens": 100,
-                                
-                                "system": "You are an M&A data extractor. Return only valid JSON, no other text.",
-                                "messages": [
-                                    {"role": "user", "content": f"""Extract the acquiring company name from this SEC 8-K merger filing.
-The TARGET company ticker is {ticker} and company name is {deal.get('company')} — do NOT return this as the acquirer.
-The acquirer is the company BUYING the target.
-
-Filing text:
-{filing_text[:3000]}
-
-Return JSON only: {{"acquirer": "Company Name"}}
-If you cannot identify the acquirer with confidence, return: {{"acquirer": null}}"""}
-                                ]
-                            },
-                            timeout=15
-                        )
-                        if resp.status_code == 200:
-                            content = resp.json()['content'][0]['text'].strip()
-                            content = content.replace('```json','').replace('```','').strip()
-                            data = json.loads(content)
-                            acq = data.get('acquirer')
-                            _ok, _why = validate_enriched_acquirer(
-                                acq, filing_text, deal.get('company', ''))
-                            if _ok:
-                                deal['acquirer'] = _ok
-                                deal['acquirer_source'] = 'llm_enriched'
-                                # acquirer_type is READ FROM the acquirer, so it
-                                # is stale the moment the acquirer changes. It
-                                # was computed at detection, when this deal said
-                                # 'Undisclosed', which returns 'Unknown' — and
-                                # CBZ and DSGR carried that Unknown while naming
-                                # Grant Thornton and LKCM Headwater. Fourth
-                                # appearance of the enrichment-ordering shape:
-                                # a field written after its consumers have run.
-                                _oldtype = deal.get('acquirer_type')
-                                deal['acquirer_type'] = get_acquirer_type(
-                                    deal.get('deal_type'), _ok)
-                                enriched = True
-                                print(f"  [Enrich] {ticker} acquirer: {_ok}"
-                                      + (f" (acquirer_type {_oldtype} -> "
-                                         f"{deal['acquirer_type']})"
-                                         if _oldtype != deal['acquirer_type'] else ""))
-                            else:
-                                print(f"  [Enrich] {ticker} acquirer REFUSED — {_why}")
-                        elif resp.status_code == 429:
-                            print(f"  [Enrich] Rate limited on acquirer, stopping")
-                            break
-                    except Exception as e:
-                        print(f"  [Enrich] Acquirer error {ticker}: {e}")
-                try:
-                    time.sleep(3.0)
-                    resp = requests.post(
-                        "https://api.anthropic.com/v1/messages",
-                        headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01", "Content-Type": "application/json"},
-                        json={
-                            "model": "claude-sonnet-5",
-                            "max_tokens": 150,
-                            "system": "You are an M&A data extractor. Return only valid JSON, no other text.",
-                            "messages": [
-                                {"role": "user", "content": f"""Extract from this SEC 8-K merger filing text:
-1. Total transaction value in billions (number only, e.g. 2.5 for $2.5 billion, 0.45 for $450 million)
-2. Expected closing timeframe (e.g. 'Q3 2026', 'second half of 2026', 'early 2027')
-
-Filing text:
-{deal.get('_filing_text', '')[:2000]}
-
-Return JSON only: {{"tx_value": 2.5, "close_date": "Q3 2026"}}
-IMPORTANT: tx_value is the TOTAL deal value in billions, NOT the per-share price. 
-Total deal values are typically described as "$X billion" or "$X million" in the aggregate.
-Per-share prices like "$31.00 per share" are NOT the transaction value.
-If you cannot find the total deal value clearly stated, use null. Do not guess."""}
-                            ]
-                        },
-                        timeout=15
-                    )
-                    if resp.status_code == 200:
-                        content = resp.json()['content'][0]['text'].strip()
-                        content = content.replace('```json','').replace('```','').strip()
-                        data = json.loads(content)
-                        tx = data.get('tx_value')
-                        cd = data.get('close_date')
-                        _txok, _txwhy = (tx_value_plausible(
-                            float(tx), deal.get('dp'), ticker)
-                            if isinstance(tx, (int, float)) else (False, 'not a number'))
-                        if not _txok and tx is not None:
-                            print(f"  [Enrich] {ticker} tx_value REFUSED — {_txwhy}")
-                        if (_txok and tx and isinstance(tx, (int, float))
-                                and 0.01 <= float(tx) <= 500):
-                            if not deal.get('tx_value'):
-                                deal['tx_value'] = round(float(tx), 2)
-                                # 'regex_enterprise' was a lie: this number came
-                                # from a model, not from a regex over the filing.
-                                # The provenance field is the whole audit trail,
-                                # so it has to say which one produced the value.
-                                deal['tx_value_source'] = 'llm_enriched'
-                                enriched = True
-                                print(f"  [Enrich] {ticker} tx_value: {deal['tx_value']}B "
-                                      f"(model estimate, not filing-extracted)")
-                        if deal.get('close_date') == 'TBD':
-                            _cd, _why = validate_close_date(cd, deal.get('filed'))
-                            if _cd:
-                                deal['close_date'] = _cd
-                                deal['close_date_source'] = 'llm_enriched'
-                                # Everything measured from the close date was
-                                # computed hundreds of lines ago, off the 'TBD'
-                                # that was here then. Recompute, or the date sits
-                                # in the record parseable and unused -- which is
-                                # what left APGE showing Q3 2026 beside a null
-                                # days_to_close and no annualized figure.
-                                _d2 = days_to_close(_cd)
-                                deal['days_to_close'] = _d2
-                                deal['ann'] = annualized_spread(deal.get('sp_pct'), _d2)
-                                enriched = True
-                                print(f"  [Enrich] {ticker} close_date: {_cd} "
-                                      f"(days_to_close {_d2}, ann {deal['ann']})")
-                            elif _why not in ('empty', 'no date offered'):
-                                print(f"  [Enrich] {ticker} close_date REFUSED — {_why}")
-                    elif resp.status_code == 429:
-                        print(f"  [Enrich] Rate limited, stopping enrichment")
-                        break
-                except Exception as e:
-                    print(f"  [Enrich] Error {ticker}: {e}")
-                    continue
-            if enriched:
-                # Same reasoning as detection above: still no gate or direction
-                # on these dicts. Left in memory for the gate/direction passes
-                # below to build on; not published until they have run.
+        _llm_cache = load_llm_cache()
+        _llm_cache_before = json.dumps(_llm_cache, sort_keys=True)
+        # Layer 1 is arithmetic; layer 2 asks Sonnet. UNCLEAR is not a pass --
+        # with enforcing on, only TARGET ships.
+        results = run_direction_stage(results, anthropic_key, _prior_directions, _llm_cache)
+        if anthropic_key and results:
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] Starting background enrichment "
+                  f"on {len(results)} confirmed-target deal(s)...")
+            if run_enrichment_stage(results, anthropic_key, _llm_cache):
+                # Same reasoning as detection above: still no gate on these
+                # dicts. Left in memory for the passes below; not published
+                # until they have run.
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] "
-                      f"Groq enrichment complete — held for verification.")
+                      f"Enrichment complete — held for verification.")
+        if json.dumps(_llm_cache, sort_keys=True) != _llm_cache_before:
+            save_llm_cache(_llm_cache)
         # ── VERIFICATION GATE (shadow mode) ──────────────────────────────────
         # Every deal must be provable by a real EDGAR filing. Records a verdict
         # and an accession number; blocks nothing until GATE_ENFORCING is True.
-        # ── DEAL DIRECTION (shadow) ───────────────────────────────────────────
-        # The pipeline assumes the filer is the target. That was wrong twice
-        # (CLST, RKLB). Layer 1 is arithmetic; layer 2 asks Sonnet. UNCLEAR is
-        # not a pass -- with enforcing on, only TARGET ships.
-        try:
-            def _direction_llm(prompt):
-                _r = requests.post(
-                    "https://api.anthropic.com/v1/messages",
-                    headers={"x-api-key": anthropic_key,
-                             "anthropic-version": "2023-06-01",
-                             "Content-Type": "application/json"},
-                    json={"model": "claude-sonnet-5", "max_tokens": 20,
-                          "system": "You answer with exactly one word. No explanation.",
-                          "messages": [{"role": "user", "content": prompt}]},
-                    timeout=25)
-                if _r.status_code != 200:
-                    raise RuntimeError(f"HTTP {_r.status_code}")
-                return _r.json()["content"][0]["text"]
-
-            print(f"[DirDebug] _prior_directions has {len(_prior_directions)} entries; "
-                  f"tickers: {sorted(list(_prior_directions))[:5]}")
-            for _d in results:
-                _cached = _d.get('direction') or _prior_directions.get(_d.get('ticker'))
-                if isinstance(_cached, dict):
-                    _v = _cached.get('verdict')
-                elif isinstance(_cached, str):
-                    _v = VERDICT_TARGET if ('TARGET' in _cached and 'ACQUIRER' not in _cached) else None
-                else:
-                    _v = None
-                if _d.get('ticker') == 'NATH':
-                    print(f"[DirDebug] NATH cached={type(_cached).__name__} "
-                          f"_v={_v!r} VERDICT_TARGET={VERDICT_TARGET!r} match={_v == VERDICT_TARGET}")
-                if _v == VERDICT_TARGET:
-                    # Already established as a target on a previous scan. Keep
-                    # the verdict and skip the model call -- re-asking a settled
-                    # question every hour is what turned this into ~3,500 API
-                    # calls a month.
-                    _d['direction'] = _cached
-                    continue
-                    
-                _d['direction'] = check_direction(
-                    _d.get('ticker'), _d.get('company'), _d.get('_filing_text', ''),
-                    deal_price=_d.get('dp'), current_price=_d.get('cp'),
-                    spread_pct=_d.get('sp_pct'),
-                    llm_fn=_direction_llm if anthropic_key else None,
-                )
-            _dhdr, _dlines = direction_report(results)
-            print(_dhdr)
-            for _ln in _dlines:
-                print(_ln)
-            # A missing API key makes every deal UNCLEAR, which enforcing would
-            # treat as a rejection and wipe the feed. Never enforce blind.
-            if DIRECTION_ENFORCING and anthropic_key:
-                _pre = len(results)
-                def _verdict_of(r):
-                    """A cached verdict arrives as a string from the CSV, so a
-                    bare .get('verdict') raises. This crashed the whole
-                    direction block once, and the handler swallowed it."""
-                    v = r.get('direction')
-                    if isinstance(v, dict):
-                        return v.get('verdict')
-                    if isinstance(v, str):
-                        return VERDICT_TARGET if ('TARGET' in v and 'ACQUIRER' not in v) else None
-                    return None
-                results = [r for r in results if _verdict_of(r) == VERDICT_TARGET]
-                if len(results) != _pre:
-                    print(f"[Direction] blocked {_pre - len(results)} deal(s) not confirmed as targets")
-        except Exception as _de:
-            print(f"[Direction] error (non-fatal, nothing blocked): {_de}")
-
         # ── DEAL FLAGS ─────────────────────────────────────────────────────────
         # Pure string matching against filing text, no API calls. Display-only —
         # must never take down a scan.
