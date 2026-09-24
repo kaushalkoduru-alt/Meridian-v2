@@ -94,6 +94,26 @@ CALLS.clear()
 main.run_direction_stage([mk(t) for t in 'TAUF'], 'k', {}, cache)
 check("second scan re-asks only the unsettled deal", CALLS == ['F'])
 
+# 3b. non-TARGET verdicts expire and are never refreshed; TARGET is permanent
+from datetime import datetime, timedelta
+_old = (datetime.utcnow() - timedelta(hours=main.DIRECTION_NONTARGET_TTL_HOURS + 1)).strftime('%Y-%m-%dT%H:%M')
+_stamp = lambda k: cache['direction'][k]['ts']
+for k in cache['direction']:
+    cache['direction'][k]['ts'] = _old
+ANSWERS.update(T='UNCLEAR', A='TARGET', U='TARGET')   # what a re-check would now say
+CALLS.clear()
+out = main.run_direction_stage([mk(t) for t in 'TAU'], 'k', {}, cache)
+check("expired UNCLEAR/ACQUIRER are re-asked, expired TARGET is not", sorted(CALLS) == ['A', 'U'])
+check("re-asked deals that now read TARGET ship, along with the permanent TARGET", sorted(d['ticker'] for d in out) == ['A', 'T', 'U'])
+check("TARGET verdict stays TARGET despite a contrary model answer", cache['direction']['T|acc-T']['answer'] == 'TARGET')
+check("the re-check replaced the stale verdict", cache['direction']['A|acc-A']['answer'] == 'TARGET')
+cache['direction']['U|acc-U'] = {'answer': 'UNCLEAR', 'ts': datetime.utcnow().strftime('%Y-%m-%dT%H:%M')}
+_ts0 = _stamp('U|acc-U')
+CALLS.clear()
+main.run_direction_stage([mk('U')], 'k', {}, cache)
+check("a fresh UNCLEAR is answered from cache and its timestamp is not touched",
+      CALLS == [] and _stamp('U|acc-U') == _ts0)
+
 # 4. enrichment never runs on a deal direction rejected; negative results are cached
 ENR = []
 

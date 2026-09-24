@@ -2909,6 +2909,24 @@ def _touch_cache_entry(entry, now_s):
         entry['ts'] = now_s
 
 
+# A TARGET verdict is permanent: a confirmed target does not become an acquirer.
+# UNCLEAR / ACQUIRER are the model's reading of one document and can simply be
+# wrong, and the deal they drop never reaches a feed row that could correct them,
+# so they expire and are asked again.
+DIRECTION_NONTARGET_TTL_HOURS = 24
+
+
+def _direction_entry_fresh(entry, now_s):
+    """Whether a cached non-TARGET verdict is younger than its TTL. An entry
+    with no readable timestamp is stale."""
+    try:
+        age = (datetime.strptime(now_s, '%Y-%m-%dT%H:%M')
+               - datetime.strptime(str(entry.get('ts')), '%Y-%m-%dT%H:%M'))
+        return age.total_seconds() < DIRECTION_NONTARGET_TTL_HOURS * 3600
+    except Exception:
+        return False
+
+
 def _direction_word(raw):
     """The first TARGET / ACQUIRER / UNCLEAR word in a model reply -- the same
     leading-token rule check_direction applies -- or None if the reply names none
@@ -2955,10 +2973,16 @@ def run_direction_stage(results, anthropic_key, prior_directions, llm_cache,
             key = f"{deal.get('ticker')}|{deal.get('accession')}" if deal.get('accession') else None
 
             def _fn(prompt):
-                if key and (dcache.get(key) or {}).get('answer'):
+                ent = dcache.get(key) if key else None
+                if ent and ent.get('answer') == VERDICT_TARGET:
                     stats['cached'] += 1
-                    _touch_cache_entry(dcache[key], now_s)
-                    return dcache[key]['answer']
+                    _touch_cache_entry(ent, now_s)
+                    return ent['answer']
+                if ent and ent.get('answer') and _direction_entry_fresh(ent, now_s):
+                    # Not touched: a refresh here would push the expiry out every
+                    # scan and a misread would never be asked again.
+                    stats['cached'] += 1
+                    return ent['answer']
                 raw = llm_call(prompt)
                 stats['calls'] += 1
                 word = _direction_word(raw)
