@@ -3421,6 +3421,98 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
     return enriched
 
 
+def _hit_items_101(src):
+    return any('1.01' in str(i) for i in (src.get('items') or []))
+
+
+def _hit_is_proxy(src):
+    return 'DEFM14A' in (src.get('form') or '').upper() or \
+           'PREM14A' in (src.get('form') or '').upper()
+
+
+def _hit_is_completion(src):
+    # Item 2.01 (Completion of Acquisition) or 5.01 (Changes in Control) riding
+    # alongside 1.01 means this 8-K reports a transaction CLOSING, not a new or
+    # superseding merger agreement -- GBCS's closing 8-K carried 1.01 for an
+    # unrelated post-closing Credit Agreement and, under the later-date tie-break,
+    # replaced the real merger 8-K as "the" tracked accession.
+    items = [str(i) for i in (src.get('items') or [])]
+    return any('2.01' in i for i in items) or any('5.01' in i for i in items)
+
+
+def _hit_rank(src):
+    if _hit_is_completion(src):
+        return 0
+    return 1 if (_hit_items_101(src) or _hit_is_proxy(src)) else 0
+
+
+def _hit_date(src):
+    # '' sorts before any real date string, so a hit with no parseable date
+    # never wins a tie against one that has one.
+    d = src.get('file_date') or src.get('filing_date') or ''
+    return d if re.match(r'^\d{4}-\d{2}-\d{2}$', d or '') else ''
+
+
+def _hit_ticker_key(hit, position):
+    src = hit['_source']
+    name_str = str(src.get('display_names', ''))
+    tm = (re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str) or
+          re.search(r'\(([A-Z]{1,5})\)', name_str) or
+          re.search(r'([A-Z]{1,5})\s+\(CIK', name_str))
+    t = tm.group(1) if tm else None
+    return t if t else src.get('adsh', str(position))
+
+
+def dedupe_hits(all_hits, log=print):
+    """
+    One preferred hit per ticker, plus the hits that lost as FALLBACKS.
+    Returns (preferred_hits, fallback_hits).
+
+    Preference is unchanged: a hit with Item 1.01 (or a proxy, which resolves to
+    one via Path B) outranks one without, a completion filing never outranks, and
+    among equals the LATER filing wins -- because a merger that is amended or
+    superseded (WBD: a January Netflix amendment, then a February Paramount
+    agreement) means the later one is "the deal".
+
+    What used to happen to the losers is that they were thrown away, and that is
+    the gap. The later filing is not always the operative one: AES's Mar 19 8-K
+    amends financing terms and states no price, and it outranked the Mar 2
+    announcement ($15.00 per share); CCO's Apr 13 and NATL's Mar 12 filings did
+    the same to their Feb announcements ($2.43, $50.40). All three real deals
+    dropped as NoPrice. The losers that could themselves be a deal document (an
+    Item 1.01 or a proxy, never a completion filing) now follow as fallbacks, and
+    the scan loop takes one only when the preferred hit yields no price -- a
+    ticker that prices is marked seen and its fallbacks are skipped.
+    """
+    groups = {}
+    order = []
+    for i, hit in enumerate(all_hits):
+        key = _hit_ticker_key(hit, i)
+        if key not in groups:
+            groups[key] = []
+            order.append(key)
+        groups[key].append(hit)
+    preferred, fallbacks = [], []
+    for key in order:
+        hits = groups[key]
+        # Stable sort: an exact tie keeps the first-seen hit, as before.
+        # Newest first; a hit with no parseable date counts as 0 and so sorts last.
+        ranked = sorted(hits, key=lambda h: (-_hit_rank(h['_source']),
+                                             -int(_hit_date(h['_source']).replace('-', '') or 0)))
+        first_seen = hits[0]['_source']
+        best = ranked[0]
+        if best is not hits[0]:
+            log(f"  [Dedup] {key}: replacing {first_seen.get('form')} "
+                f"{first_seen.get('adsh')} ({_hit_date(first_seen) or 'no date'}) "
+                f"with {best['_source'].get('form')} {best['_source'].get('adsh')} "
+                f"({_hit_date(best['_source']) or 'no date'})")
+        preferred.append(best)
+        for other in ranked[1:]:
+            if _hit_rank(other['_source']) >= 1:
+                fallbacks.append(other)
+    return preferred, fallbacks
+
+
 def relabel_from_structure(deal):
     """
     A deal with a hand-verified DEAL_STRUCTURES entry that has a cash leg AND a
@@ -3708,74 +3800,10 @@ def fetch_deals_from_edgar():
     # or price extraction ever got to run on the document that actually
     # proves the deal. A hit with Item 1.01 (or a proxy, which resolves to
     # one via Path B) always outranks one without, regardless of query order.
-    def _has_item_101(src):
-        return any('1.01' in str(i) for i in (src.get('items') or []))
-    def _is_proxy(src):
-        return 'DEFM14A' in (src.get('form') or '').upper() or \
-               'PREM14A' in (src.get('form') or '').upper()
-    def _is_completion_filing(src):
-        # Item 2.01 (Completion of Acquisition) or 5.01 (Changes in Control)
-        # riding alongside 1.01 means this 8-K reports a transaction CLOSING,
-        # not a new or superseding merger agreement -- GBCS's tender offer
-        # closed successfully (90.93% tendered, accepted for payment) and its
-        # closing 8-K carries 1.01/2.01/3.03/5.01/5.02, where the 1.01 is for
-        # an unrelated post-closing Credit Agreement the buyer signed the same
-        # day. Under the later-date tie-break below, that 1.01 let this
-        # completion filing outrank and replace the real June 2026
-        # Agreement-and-Plan-of-Merger 8-K as "the" tracked accession, which
-        # discarded the correctly-cached, already-passed outside date (the
-        # accession-changed path assumes any change means an amendment) and
-        # left nothing to re-read (a closing 8-K carries no EX-2 exhibit).
-        items = [str(i) for i in (src.get('items') or [])]
-        return any('2.01' in i for i in items) or any('5.01' in i for i in items)
-    def _hit_rank(src):
-        if _is_completion_filing(src):
-            return 0
-        return 1 if (_has_item_101(src) or _is_proxy(src)) else 0
-    def _hit_date(src):
-        # '' sorts before any real date string, so a hit with no parseable
-        # date never wins a tie against one that has one.
-        d = src.get('file_date') or src.get('filing_date') or ''
-        return d if re.match(r'^\d{4}-\d{2}-\d{2}$', d or '') else ''
-
-    # Two Item-1.01 hits for the same ticker are not automatically the same
-    # candidate -- WBD had TWO: a January 8-K amending its ORIGINAL Netflix
-    # agreement to all-cash ("$27.75 per WBD share" -- a phrase the price
-    # regex doesn't match, "per WBD share" not "per share"), and a February
-    # 8-K for the Paramount Skydance agreement that superseded it entirely
-    # ($31.00/share, in the phrasing the regex expects). Both rank equally
-    # under "has Item 1.01", so the first-seen one (January, stale, no
-    # matching price) won and the operative one three positions later never
-    # got a look. A merger that gets amended, superseded, or re-priced is not
-    # a rare edge case here -- it is exactly the shape a bidding war takes.
-    # Same rank now goes to the LATER filing, which is what "the deal" means
-    # once one exists: whatever superseded everything before it.
-    seen_pre = {}   # ticker -> index into deduped_hits
-    deduped_hits = []
-    for hit in all_hits:
-        src = hit['_source']
-        name_str = str(src.get('display_names',''))
-        tm = (re.search(r'\(([A-Z]{1,5})\)\s+\(CIK', name_str) or
-              re.search(r'\(([A-Z]{1,5})\)', name_str) or
-              re.search(r'([A-Z]{1,5})\s+\(CIK', name_str))
-        t = tm.group(1) if tm else None
-        key = t if t else src.get('adsh', str(len(deduped_hits)))
-        if key not in seen_pre:
-            seen_pre[key] = len(deduped_hits)
-            deduped_hits.append(hit)
-        else:
-            idx = seen_pre[key]
-            kept_src = deduped_hits[idx]['_source']
-            new_rank, kept_rank = _hit_rank(src), _hit_rank(kept_src)
-            if new_rank > kept_rank or (new_rank == kept_rank
-                                        and _hit_date(src) > _hit_date(kept_src)):
-                print(f"  [Dedup] {key}: replacing {kept_src.get('form')} "
-                      f"{kept_src.get('adsh')} ({_hit_date(kept_src) or 'no date'}) "
-                      f"with {src.get('form')} {src.get('adsh')} "
-                      f"({_hit_date(src) or 'no date'})")
-                deduped_hits[idx] = hit
-    all_hits = deduped_hits
-    print(f"After deduplication: {len(all_hits)} unique hits")
+    all_hits, _fallbacks = dedupe_hits(all_hits)
+    print(f"After deduplication: {len(all_hits)} unique hits"
+          f" (+{len(_fallbacks)} fallback hit(s), tried only if the preferred one yields no price)")
+    all_hits = all_hits + _fallbacks
 
     for i,hit in enumerate(all_hits):
         src=hit['_source']
