@@ -87,6 +87,32 @@ DEAL_STRUCTURES = {
         'source': 'hand-verified from 8-K 0001493152-26-035196 EX-99.1: "$33.00 in '
                   'cash and 0.4735 shares of MIMEDX common stock", $35 headline',
     },
+    'NATL': {
+        'cash': 30.00,
+        'ratio': 0.1574,
+        'acquirer_ticker': 'BCO',
+        'structure_hint': 'CASH_AND_STOCK',
+        'source': 'hand-verified from 8-K 0001104659-26-020528 EX-99.1: "$30.00 in cash '
+                  'and 0.1574 shares of Brink\'s common stock" (NYSE: BCO), $50.40 implied '
+                  'at $129.58',
+    },
+    # Value collar: $27.00 cash plus a stock leg worth $27.00 while Rocket Lab's ten-day
+    # VWAP is between $67.50 and $112.50; below it the ratio is fixed at 0.4000, above
+    # it at 0.2400 (EX-2.1 definition of "Exchange Ratio", section 2.05(a)(i)).
+    'IRDM': {
+        'cash': 27.00,
+        'stock_value': 27.00,
+        'collar_low': 67.50,
+        'collar_high': 112.50,
+        'ratio_low': 0.4000,
+        'ratio_high': 0.2400,
+        'acquirer_ticker': 'RKLB',
+        'structure_hint': 'VALUE_COLLAR',
+        'source': 'hand-verified from 8-K 0001104659-26-078482 EX-2.1 section 2.05(a)(i) and '
+                  'the definition of Exchange Ratio: (A) $27.00 in cash and (B) shares equal '
+                  'to 0.4000 at Parent Stock Price <= $67.50, $27.00 / price between, 0.2400 '
+                  'at >= $112.50; $54.00 notional',
+    },
     # Election, capped: cash for at most 73.26% of shares (EX-2.1 section 2.01: the
     # stock consideration goes to 26.74%), the rest converting at 3.8721 BSX shares.
     'PEN': {
@@ -3523,7 +3549,7 @@ def relabel_from_structure(deal):
     record of what the deal pays, so the label follows it. Returns (old, new) or None.
     """
     terms = DEAL_STRUCTURES.get(deal.get('ticker'))
-    if not terms or not terms.get('cash') or not terms.get('ratio'):
+    if not terms or not terms.get('cash') or not (terms.get('ratio') or terms.get('stock_value')):
         return None
     old = deal.get('deal_type')
     if old == 'Cash + Stock':
@@ -4392,6 +4418,9 @@ def fetch_deals_from_edgar():
                     'cash_cap': _terms.get('cash_cap'),
                     'collar_low': _terms.get('collar_low'),
                     'collar_high': _terms.get('collar_high'),
+                    'stock_value': _terms.get('stock_value'),
+                    'ratio_low': _terms.get('ratio_low'),
+                    'ratio_high': _terms.get('ratio_high'),
                     'acquirer_ticker': _terms.get('acquirer_ticker'),
                     'stock_leg': stock_leg_value(_terms, _px),
                     'acquirer_price': _px,

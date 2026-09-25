@@ -81,6 +81,13 @@ REQUIRED_FIELDS = {
     'CASH_AND_STOCK': ('cash', 'ratio', 'acquirer_ticker'),
     'COLLAR': ('ratio', 'acquirer_ticker', 'collar_low', 'collar_high'),
     'CASH_ONLY': ('cash',),
+    # Cash plus a stock leg whose VALUE is fixed while the acquirer trades inside a
+    # band and whose SHARE COUNT is fixed outside it (IRDM: $27.00 cash plus
+    # $27.00 of Rocket Lab stock between $67.50 and $112.50, 0.4000 shares below
+    # the band and 0.2400 above). The opposite of COLLAR, where the ratio is fixed
+    # inside the band and the value outside it.
+    'VALUE_COLLAR': ('cash', 'stock_value', 'collar_low', 'collar_high',
+                     'ratio_low', 'ratio_high', 'acquirer_ticker'),
 }
 
 
@@ -198,6 +205,20 @@ def stock_leg_value(terms, acquirer_price):
 
     Returns None when this deal has no stock leg or no acquirer price.
     """
+    if terms.get('structure_hint') == 'VALUE_COLLAR':
+        # Value fixed inside the band; share count fixed outside it, so the value
+        # moves with the acquirer again. The two ratios are the band edges'
+        # stock_value / collar, which the field-sanity barrier checks.
+        sv, lo, hi = (_f(terms.get('stock_value')), _f(terms.get('collar_low')),
+                      _f(terms.get('collar_high')))
+        r_lo, r_hi = _f(terms.get('ratio_low')), _f(terms.get('ratio_high'))
+        if None in (sv, lo, hi, r_lo, r_hi) or acquirer_price is None:
+            return None
+        if acquirer_price <= lo:
+            return r_lo * acquirer_price
+        if acquirer_price >= hi:
+            return r_hi * acquirer_price
+        return sv
     ratio = _f(terms.get('ratio'))
     if ratio is None or acquirer_price is None:
         return None
@@ -242,6 +263,17 @@ def compute_blended(terms, acquirer_price):
         return None, "no acquirer price available"
 
     stock_leg = stock_leg_value(terms, acquirer_price)
+
+    if structure == 'VALUE_COLLAR':
+        if stock_leg is None:
+            return None, "value collar stock leg could not be computed"
+        sv, lo, hi = _f(terms.get('stock_value')), _f(terms.get('collar_low')), _f(terms.get('collar_high'))
+        where = ("inside the band, so the stock leg is fixed at "
+                 f"${sv:.2f}" if lo < acquirer_price < hi else
+                 "outside the band, so the share count is fixed and the stock leg moves with the acquirer")
+        return round(cash + stock_leg, 2), (
+            f"${cash:.2f} cash plus stock worth ${stock_leg:.2f} -- acquirer at "
+            f"${acquirer_price:.2f}, {where}")
 
     if structure == 'COLLAR':
         return round(stock_leg, 2), f"{ratio} shares, collared, currently ${stock_leg:.2f}"
@@ -326,6 +358,17 @@ def run_barriers(terms, headline_price, target_price, acquirer_price,
         problems.append(f"cash {cash} outside (0, 10000)")
     if lo is not None and hi is not None and lo >= hi:
         problems.append(f"collar_low {lo} >= collar_high {hi}")
+    if structure == 'VALUE_COLLAR':
+        # The two ratios exist to make the value continuous at the band's edges:
+        # ratio_low * collar_low and ratio_high * collar_high must both equal the
+        # fixed stock value, or one of the four numbers was misread.
+        sv = _f(terms.get('stock_value'))
+        r_lo, r_hi = _f(terms.get('ratio_low')), _f(terms.get('ratio_high'))
+        if None not in (sv, lo, hi, r_lo, r_hi) and sv > 0:
+            if abs(r_lo * lo - sv) > 0.005 * sv:
+                problems.append(f"ratio_low {r_lo} x collar_low {lo} = {r_lo*lo:.4f}, not stock_value {sv}")
+            if abs(r_hi * hi - sv) > 0.005 * sv:
+                problems.append(f"ratio_high {r_hi} x collar_high {hi} = {r_hi*hi:.4f}, not stock_value {sv}")
     results.append(BarrierResult(B_FIELD_SANITY, not problems,
         "; ".join(problems) if problems else "all values within possible ranges"))
 
@@ -376,7 +419,14 @@ def run_barriers(terms, headline_price, target_price, acquirer_price,
             f"${cash} {'appears' if found else 'does NOT appear'} in the filing quote"))
 
     # ── 3 · leg parity at announcement ───────────────────────────────────────
-    if structure == 'CASH_AND_STOCK':
+    if structure == 'VALUE_COLLAR':
+        # Both legs are received and added, exactly as in CASH_AND_STOCK; what
+        # guards a misread here is the continuity check in barrier 2 and the
+        # divergence-from-headline check in barrier 5.
+        results.append(BarrierResult(B_LEG_PARITY, True,
+            "value collar: the legs are added, not chosen between, so parity "
+            "does not apply"))
+    elif structure == 'CASH_AND_STOCK':
         # The holder receives BOTH legs, so there is nothing for them to be near
         # parity with: KVUE is $3.50 cash beside ~$17 of Kimberly-Clark stock,
         # ROKU $96.00 beside ~$60, and both are exactly what the filing says.

@@ -215,5 +215,42 @@ b, why, r = run_barriers(GSAT_TERMS, 90.00, 83.40, float('nan'), FRESH, GSAT_FIL
 check("NaN acquirer quote: no blended value, and barrier 9 fails as 'no acquirer price'",
       b is None and any(x.barrier == B_PRICE_FRESH and not x.passed and 'no acquirer price' in x.detail for x in r))
 
+# IRDM (Rocket Lab / Iridium), EX-2.1: $27.00 cash plus a stock leg worth $27.00 while
+# Rocket Lab's VWAP is inside $67.50-$112.50; 0.4000 shares below it, 0.2400 above.
+IRDM_TERMS = {'cash': 27.00, 'stock_value': 27.00, 'collar_low': 67.50, 'collar_high': 112.50,
+              'ratio_low': 0.4000, 'ratio_high': 0.2400, 'acquirer_ticker': 'RKLB',
+              'structure_hint': 'VALUE_COLLAR'}
+IRDM_TEXT = "$27.00 in cash and Rocket Lab (Nasdaq: RKLB) common stock ... notional value of $54.00"
+check("value collar classifies as VALUE_COLLAR", classify_structure(IRDM_TERMS) == 'VALUE_COLLAR')
+b, why = compute_blended(IRDM_TERMS, 73.61)
+check("inside the band the stock leg is fixed: RKLB $73.61 -> $54.00", b == 54.00, f"got {b} - {why}")
+b, _ = compute_blended(IRDM_TERMS, 90.00)
+check("inside the band the value does not move with the acquirer", b == 54.00)
+b, _ = compute_blended(IRDM_TERMS, 61.96)
+check("below the band the share count is fixed: RKLB $61.96 -> 27 + 0.4 x 61.96 = $51.78",
+      b is not None and abs(b - 51.78) < 0.01, f"got {b}")
+b, _ = compute_blended(IRDM_TERMS, 120.00)
+check("above the band: RKLB $120 -> 27 + 0.24 x 120 = $55.80",
+      b is not None and abs(b - 55.80) < 0.01, f"got {b}")
+b, _ = compute_blended(IRDM_TERMS, 67.50)
+check("continuous at the lower edge: 27 + 0.4 x 67.50 = $54.00", b is not None and abs(b - 54.00) < 0.01)
+b, _ = compute_blended(IRDM_TERMS, 112.50)
+check("continuous at the upper edge: 27 + 0.24 x 112.50 = $54.00", b is not None and abs(b - 54.00) < 0.01)
+b, why, r = run_barriers(IRDM_TERMS, 54.00, 48.89, 73.61, FRESH, IRDM_TEXT, IRDM_TEXT)
+check("IRDM passes every barrier at today's numbers", b == 54.00 and all(x.passed for x in r),
+      "; ".join(x.detail for x in r if not x.passed))
+b, why, r = run_barriers(dict(IRDM_TERMS, ratio_low=0.5), 54.00, 48.89, 73.61, FRESH, IRDM_TEXT, IRDM_TEXT)
+check("a misread edge ratio fails the field-sanity continuity check",
+      b is None and any(x.barrier == B_FIELD_SANITY and not x.passed for x in r))
+b, why, r = run_barriers({k: v for k, v in IRDM_TERMS.items() if k != 'ratio_high'}, 54.00, 48.89, 73.61, FRESH, IRDM_TEXT, IRDM_TEXT)
+check("a missing collar field is blocked as incomplete",
+      b is None and any(x.barrier == B_COMPLETENESS and not x.passed for x in r))
+
+# NATL (Brink's / NCR Atleos): fixed $30.00 cash plus 0.1574 Brink's shares, $50.40 implied.
+NATL_TERMS = {'cash': 30.00, 'ratio': 0.1574, 'acquirer_ticker': 'BCO', 'structure_hint': 'CASH_AND_STOCK'}
+b, _ = compute_blended(NATL_TERMS, 129.58)
+check("NATL at Brink's announcement price reproduces the stated $50.40",
+      b is not None and abs(b - 50.40) < 0.01, f"got {b}")
+
 print("\n" + "=" * 80)
 print("ALL PASS" if ok else "SOMETHING FAILED — do not wire in until every barrier fires correctly")

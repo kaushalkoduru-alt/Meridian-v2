@@ -3705,6 +3705,15 @@ function blendedProse(d, p, b){
     return 'Each share converts into '+sh(ratio)+' shares of '+acq+' stock rather than cash, worth '
          + _pcMoney(b)+' today.' + band + vs;
   }
+  if(p.structure === 'VALUE_COLLAR' && cash!==null && leg!==null && lo!==null && hi!==null){
+    var sv = _pcNum(p.stock_value), rl = _pcNum(p.ratio_low), rh = _pcNum(p.ratio_high);
+    return 'Every share receives '+_pcMoney(cash)+' in cash plus '+acq+' stock. While '+acq
+         + ' trades between '+_pcMoney(lo)+' and '+_pcMoney(hi)+' the stock leg is fixed at '
+         + (sv!==null ? _pcMoney(sv) : _pcMoney(leg))+'; outside that band the share count is fixed instead'
+         + (rl!==null && rh!==null ? ' ('+sh(rl)+' shares below it, '+sh(rh)+' above it)' : '')
+         + ' and the value moves with the stock. Today the stock leg is worth '+_pcMoney(leg)
+         + ', so a shareholder receives '+_pcMoney(b)+'.' + vs;
+  }
   if(p.structure === 'CASH_ONLY' && cash!==null){
     return 'The filing offers '+_pcMoney(cash)+' a share, all of it in cash, so '+_pcMoney(b)
          + ' is what a shareholder receives.';
