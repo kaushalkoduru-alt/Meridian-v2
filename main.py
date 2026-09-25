@@ -1483,13 +1483,45 @@ def cap_risk_for_downside(risk, break_downside):
         return 'Low'
     return risk
 
-def get_risk(score, outside_date=None, closing_signal=False, break_downside=None):
+# A spread this wide is the market's own probability of failure, and the score cannot
+# express it: score_deal's spread penalty stops at -18 (spread >= 25) out of a
+# 133-point range, so a deal with every other factor clean carries that penalty
+# and still lands on 'Low'. IMXI: $16.00 cash offer, shareholder-approved, trading
+# at $10.57 (a 51% spread, ~19% market-implied chance of closing, outside date
+# 46 days out and already auto-extended) scored exactly 55 -- the bottom of Low.
+# These are the tier boundaries score_deal already uses for its two worst spread
+# bands, not new cut-offs, and they only apply to the spread a holder actually
+# faces (measured off the blended price when that governs).
+MARKET_DISTRESS_SPREAD_PCT = 25.0   # score_deal's worst tier: the band is High
+WIDE_SPREAD_PCT = 18.0              # score_deal's next tier: never below Medium
+
+def cap_risk_for_spread(risk, spread_pct):
+    """Raises a band when the spread alone says the market doubts the deal.
+    Never lowers one."""
+    if spread_pct is None:
+        return risk
+    try:
+        sp = float(spread_pct)
+    except (TypeError, ValueError):
+        return risk
+    if sp != sp:                       # NaN is not evidence of anything
+        return risk
+    if sp >= MARKET_DISTRESS_SPREAD_PCT:
+        return 'High'
+    if sp >= WIDE_SPREAD_PCT and risk in ('Very Low', 'Low'):
+        return 'Medium'
+    return risk
+
+def get_risk(score, outside_date=None, closing_signal=False, break_downside=None, spread_pct=None):
     """
     The risk band, from the score and from hard facts the score smooths over.
 
-    Spread is deliberately ABSENT. It reaches the score already, and gating on
-    it here as well was the double count: a deal's band was mostly a restatement
-    of its spread, which is why five other factors could not shift it.
+    The spread reaches the score once, as a graded input, and is NOT re-added
+    here: gating on it as well was the double count -- a deal's band was mostly a
+    restatement of its spread, which is why five other factors could not shift it.
+    The one exception is the extreme end (see cap_risk_for_spread), where the
+    graded penalty has run out of room: past the top two spread tiers the market
+    is pricing real failure and the band says so, as a floor rather than a weight.
 
     A passed deadline is an override rather than a band, because it is not a
     matter of degree. Past the outside date the contract has stopped protecting
@@ -1512,7 +1544,7 @@ def get_risk(score, outside_date=None, closing_signal=False, break_downside=None
     elif score >= 55:     band = 'Low'
     elif score >= 40:     band = 'Medium'
     else:                 band = 'High'
-    return cap_risk_for_downside(band, break_downside)
+    return cap_risk_for_spread(cap_risk_for_downside(band, break_downside), spread_pct)
 
 def get_acquirer_type(deal_type, acquirer):
     """
@@ -1545,6 +1577,7 @@ def get_acquirer_type(deal_type, acquirer):
 VERIFIED_DEAL_TYPES = {
     'WBD': 'All Cash',   # was stuck on 'Tender Offer' from the dead Dec'25-Jan'26 hostile Paramount bid; live deal is a shareholder-approved $31/share all-cash merger
     'ALOT': 'All Cash',  # was stuck on 'Tender Offer'; live deal is a $29/share all-cash PE take-private by Arcline — acquirer_type now correctly derives to Private Equity via the Arcline keyword added above
+    'LGMK': 'All Cash',  # 8-K 0001213900-26-084705 never says "tender offer": one-step merger, stockholder vote, each share "converted into the right to receive cash ... $1.31". Its cash sentence ("right to receive cash in an amount equal to") matches no has_cash phrase, so it kept the search query's 'Tender Offer'
 }
 
 # ─── EXTRACTION HELPERS ──────────────────────────────────────────────────────
@@ -2073,7 +2106,8 @@ def apply_blended_to_spread(deal):
     if deal.get('score') is not None:
         deal['risk'] = get_risk(deal['score'], deal.get('outside_date'),
                                 _has_completion_signal(deal.get('ticker')),
-                                break_downside=deal.get('break_downside'))
+                                break_downside=deal.get('break_downside'),
+                                spread_pct=new_sp)
     return {'ticker': deal.get('ticker'), 'blended': b,
             'sp_pct': (old_sp, new_sp), 'ann': (old_ann, deal['ann']),
             'risk': (old_risk, deal.get('risk'))}
@@ -3387,6 +3421,104 @@ If you cannot find the total deal value clearly stated, use null. Do not guess."
     return enriched
 
 
+def relabel_from_structure(deal):
+    """
+    A deal with a hand-verified DEAL_STRUCTURES entry that has a cash leg AND a
+    stock leg is Cash + Stock, whatever the text classifier made of the filing.
+    PEN ("$374 in cash or 3.8721 shares of Boston Scientific common stock") carried
+    a blended price and the label "All Cash": a deal that pays in stock cannot be all
+    cash, and a reader sees the two contradict. The structure is the authoritative
+    record of what the deal pays, so the label follows it. Returns (old, new) or None.
+    """
+    terms = DEAL_STRUCTURES.get(deal.get('ticker'))
+    if not terms or not terms.get('cash') or not terms.get('ratio'):
+        return None
+    old = deal.get('deal_type')
+    if old == 'Cash + Stock':
+        return None
+    deal['deal_type'] = 'Cash + Stock'
+    return (old, 'Cash + Stock')
+
+
+def classify_deal_type(full_ct, deal_type):
+    """
+    The deal type read from the filing text, and whether the deal has no fixed
+    price (all stock). Returns (deal_type, no_fixed_price). Lifted out of
+    fetch_deals_from_edgar unchanged so it can be tested on real filings; the
+    caller nulls dp when no_fixed_price is set.
+    """
+    # Reclassify deal type from filing text — overrides query-assigned type.
+    # Whitespace is flattened before the substring checks below: EMKR's
+    # source HTML had a literal newline inside "per share in\ncash", which
+    # defeated the plain 'in' substring match, flipped has_cash to False,
+    # and let has_pe's "not has_cash" guard mislabel an all-cash deal
+    # "Private Equity". The regex-based extractors elsewhere already use
+    # \s+ and were never exposed to this.
+    full_ct_flat = re.sub(r'\s+', ' ', full_ct).lower()
+    # "all-cash transaction ... for $101 per share" (AMED, HA) and
+    # "$61 per share in an all-cash ..." (IRBT) state the same fact
+    # as "per share in cash" without ever using that exact phrase.
+    has_cash = (
+        'per share in cash' in full_ct_flat
+        or 'per common share in cash' in full_ct_flat
+        or 'all-cash transaction' in full_ct_flat
+        or 'all cash transaction' in full_ct_flat
+        or 'in an all-cash' in full_ct_flat
+        or 'all-cash deal' in full_ct_flat
+        # "converted into the right to receive $71.00 in cash"
+        # (AXNX, GLS, IRBT, HCP, LGTY, IVAC) and "...the right
+        # to receive an amount in cash equal to $17.50" (ROIC)
+        # state cash consideration with neither "per share"
+        # nor any of the phrases above anywhere nearby.
+        # [^\n] not [^.]: LGTY's own price, "$14.30", contains
+        # a period, which [^.] can never cross -- the same
+        # decimal trap deal_flags.py already documents.
+        or bool(re.search(r'right\s+to\s+receive[^\n]{0,60}?in\s+cash', full_ct_flat))
+        # A cash-or-stock ELECTION states its cash leg as a bare
+        # amount: "either (i) $90.00 in cash or (ii) 0.3210
+        # shares of Amazon common stock" (GSAT). None of the
+        # phrases above match that, so has_stock alone (via the
+        # proration sentence's "stock consideration") called it
+        # All Stock and the branch below nulled a real $90 price.
+        or bool(re.search(r'\$\s?\d[\d,]*(?:\.\d+)?\s+(?:per\s+share\s+)?in\s+cash', full_ct_flat)))
+    has_stock = any(kw in full_ct_flat for kw in [
+        'stock consideration','equity consideration',
+        'per share in a combination of cash and','per share in cash and stock',
+        # Pure stock-for-stock phrasing — none of the above ever fires on
+        # a deal with no cash leg at all (DFS, BERY, STAF, ESSA, IPG,
+        # PWOD, WMPN all went undetected without these).
+        'exchange ratio','stock-for-stock','all-stock transaction',
+        'common stock for each','shares for each','share for each',
+        '100% stock'])
+    # Deliberately NOT extended with "an exchange ratio of N decimals before
+    # 'shares'": tried, and against 128 real filings it relabelled 11, including
+    # live all-cash deals (SLP, AXNX, ROIC) whose award-treatment language quotes a
+    # share count, and turned two unlabelled filings (SCOR, ZYME) into All Stock,
+    # which nulls the price. A hand-verified DEAL_STRUCTURES entry fixes the label
+    # of the deals it covers instead -- see relabel_from_structure.
+    no_fixed_price = False
+    has_tender = 'tender offer' in full_ct_flat
+    has_pe = any(kw in full_ct_flat for kw in ['equity sponsor','private equity sponsor','portfolio company of','backed by']) and not has_cash
+    if has_tender:
+        deal_type = 'Tender Offer'
+    elif has_pe:
+        deal_type = 'Private Equity'
+    elif has_cash and has_stock:
+        deal_type = 'Cash + Stock'
+    elif has_cash:
+        deal_type = 'All Cash'
+    elif has_stock:
+        deal_type = 'All Stock'
+        # A pure stock deal has no fixed cash price by nature. Whatever
+        # extract_price_from_text matched here is a floating reference
+        # value, not a price paid to anyone -- WMPN's $31.88 was Mid
+        # Penn's OWN stock price near "per share" text, and BERY's $73.59
+        # was Amcor's exchange-ratio reference value, both asserted as
+        # "the deal price" when neither one is a number anybody is owed.
+        no_fixed_price = True
+    return deal_type, no_fixed_price
+
+
 def fetch_deals_from_edgar():
     # Capture prior direction verdicts BEFORE anything writes to the cache.
     # The direction block near the end of this function runs after save_cache()
@@ -3881,67 +4013,8 @@ def fetch_deals_from_edgar():
                     _fd_sig,_fd_src=financing_from_filed_disclosure(cik,accession,headers)
                     if _fd_sig and financing_source!='filed_disclosure':
                         financing_signal,financing_source=_fd_sig,_fd_src
-                    # Reclassify deal type from filing text — overrides query-assigned type.
-                    # Whitespace is flattened before the substring checks below: EMKR's
-                    # source HTML had a literal newline inside "per share in\ncash", which
-                    # defeated the plain 'in' substring match, flipped has_cash to False,
-                    # and let has_pe's "not has_cash" guard mislabel an all-cash deal
-                    # "Private Equity". The regex-based extractors elsewhere already use
-                    # \s+ and were never exposed to this.
-                    full_ct_flat = re.sub(r'\s+', ' ', full_ct).lower()
-                    # "all-cash transaction ... for $101 per share" (AMED, HA) and
-                    # "$61 per share in an all-cash ..." (IRBT) state the same fact
-                    # as "per share in cash" without ever using that exact phrase.
-                    has_cash = (
-                        'per share in cash' in full_ct_flat
-                        or 'per common share in cash' in full_ct_flat
-                        or 'all-cash transaction' in full_ct_flat
-                        or 'all cash transaction' in full_ct_flat
-                        or 'in an all-cash' in full_ct_flat
-                        or 'all-cash deal' in full_ct_flat
-                        # "converted into the right to receive $71.00 in cash"
-                        # (AXNX, GLS, IRBT, HCP, LGTY, IVAC) and "...the right
-                        # to receive an amount in cash equal to $17.50" (ROIC)
-                        # state cash consideration with neither "per share"
-                        # nor any of the phrases above anywhere nearby.
-                        # [^\n] not [^.]: LGTY's own price, "$14.30", contains
-                        # a period, which [^.] can never cross -- the same
-                        # decimal trap deal_flags.py already documents.
-                        or bool(re.search(r'right\s+to\s+receive[^\n]{0,60}?in\s+cash', full_ct_flat))
-                        # A cash-or-stock ELECTION states its cash leg as a bare
-                        # amount: "either (i) $90.00 in cash or (ii) 0.3210
-                        # shares of Amazon common stock" (GSAT). None of the
-                        # phrases above match that, so has_stock alone (via the
-                        # proration sentence's "stock consideration") called it
-                        # All Stock and the branch below nulled a real $90 price.
-                        or bool(re.search(r'\$\s?\d[\d,]*(?:\.\d+)?\s+(?:per\s+share\s+)?in\s+cash', full_ct_flat)))
-                    has_stock = any(kw in full_ct_flat for kw in [
-                        'stock consideration','equity consideration',
-                        'per share in a combination of cash and','per share in cash and stock',
-                        # Pure stock-for-stock phrasing — none of the above ever fires on
-                        # a deal with no cash leg at all (DFS, BERY, STAF, ESSA, IPG,
-                        # PWOD, WMPN all went undetected without these).
-                        'exchange ratio','stock-for-stock','all-stock transaction',
-                        'common stock for each','shares for each','share for each',
-                        '100% stock'])
-                    has_tender = 'tender offer' in full_ct_flat
-                    has_pe = any(kw in full_ct_flat for kw in ['equity sponsor','private equity sponsor','portfolio company of','backed by']) and not has_cash
-                    if has_tender:
-                        deal_type = 'Tender Offer'
-                    elif has_pe:
-                        deal_type = 'Private Equity'
-                    elif has_cash and has_stock:
-                        deal_type = 'Cash + Stock'
-                    elif has_cash:
-                        deal_type = 'All Cash'
-                    elif has_stock:
-                        deal_type = 'All Stock'
-                        # A pure stock deal has no fixed cash price by nature. Whatever
-                        # extract_price_from_text matched here is a floating reference
-                        # value, not a price paid to anyone -- WMPN's $31.88 was Mid
-                        # Penn's OWN stock price near "per share" text, and BERY's $73.59
-                        # was Amcor's exchange-ratio reference value, both asserted as
-                        # "the deal price" when neither one is a number anybody is owed.
+                    deal_type, _no_fixed_price = classify_deal_type(full_ct, deal_type)
+                    if _no_fixed_price:
                         dp = None
                     break
                 except Exception as e:
@@ -4009,7 +4082,7 @@ def fetch_deals_from_edgar():
             # rescore block after the commitment loop.
             sc=score_deal(sp_pct,days,deal_type,reg_tags,break_price,dp,
                           financing_signal,None,None)
-            risk=get_risk(sc,None,break_downside=break_downside)
+            risk=get_risk(sc,None,break_downside=break_downside,spread_pct=sp_pct)
             # Annualized against THIS deal's time to close, not a constant.
             # None where the close date is unknown or has passed — see
             # annualized_spread. The UI already renders null as an em-dash.
@@ -4250,6 +4323,10 @@ def fetch_deals_from_edgar():
                 _terms = DEAL_STRUCTURES.get(_d.get('ticker'))
                 if not _terms:
                     continue
+                _rl = relabel_from_structure(_d)
+                if _rl:
+                    print(f"  [Pricing] {_d.get('ticker')}: deal type {_rl[0]!r} -> {_rl[1]!r} "
+                          f"to match its hand-verified structure")
                 _px, _ts = _acquirer_quote(_terms.get('acquirer_ticker', ''))
                 # Barrier 6 checks the cash figure against the sentence the
                 # filing states it in — that is what the ELECTION flag already
@@ -4509,7 +4586,8 @@ def fetch_deals_from_edgar():
                     _od, _d.get('blended'), _closing,
                     (_d.get('commitment') or {}).get('fees', {}).get('reverse_fee_pct'))
                 _d['risk'] = get_risk(_d['score'], _od, _closing,
-                                       break_downside=_d.get('break_downside'))
+                                       break_downside=_d.get('break_downside'),
+                                       spread_pct=_sp)
                 if (_d['score'], _d['risk']) != _before:
                     _rescored.append(f"{_d.get('ticker')} {_before[0]}/{_before[1]}"
                                      f" -> {_d['score']}/{_d['risk']}")

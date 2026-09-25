@@ -172,6 +172,36 @@ check("the old get_risk(spread, score) signature is gone",
       get_risk(70, None) == 'Low', True,
       'callers pass (score, outside_date) now')
 
+# 4b. the extreme end of the spread: the graded penalty has run out of room.
+# IMXI: $16.00 cash, shareholder-approved, trading at $10.57 -- a 51% spread --
+# scored 55, the bottom of Low, because every other factor was clean.
+from main import get_risk as _gr, cap_risk_for_spread, relabel_from_structure
+_imxi = 55      # IMXI's recorded production score on 2026-09-25 (score_history)
+check("without the override IMXI's own score lands in Low (the defect)",
+      _gr(_imxi, None), 'Low', f"score {_imxi}")
+check("IMXI at a 51% spread is High", _gr(_imxi, None, spread_pct=51.37), 'High')
+check("25% is the line: 25.0 is High, 24.99 is not",
+      (cap_risk_for_spread('Low', 25.0), cap_risk_for_spread('Low', 24.99)), ('High', 'Medium'))
+check("18% is the next tier: never below Medium",
+      (cap_risk_for_spread('Very Low', 18.0), cap_risk_for_spread('Low', 17.99)), ('Medium', 'Low'))
+check("the override raises a band and never lowers one",
+      (cap_risk_for_spread('High', 19.0), cap_risk_for_spread('Medium', 19.0)), ('High', 'Medium'))
+check("a tight spread and a missing or NaN spread change nothing",
+      (cap_risk_for_spread('Very Low', 1.9), cap_risk_for_spread('Low', None),
+       cap_risk_for_spread('Low', float('nan'))), ('Very Low', 'Low', 'Low'))
+check("a negative spread is not a wide spread", cap_risk_for_spread('Low', -12.0), 'Low')
+
+# 4c. the label follows the hand-verified structure.
+_pen = {'ticker': 'PEN', 'deal_type': 'All Cash'}
+check("PEN pays cash or Boston Scientific stock, so it cannot read All Cash",
+      (relabel_from_structure(_pen), _pen['deal_type']),
+      (('All Cash', 'Cash + Stock'), 'Cash + Stock'))
+_mk = {'ticker': 'MKTX', 'deal_type': 'All Cash'}
+check("a deal with no stock leg keeps its label",
+      (relabel_from_structure(_mk), _mk['deal_type']), (None, 'All Cash'))
+_gs = {'ticker': 'GSAT', 'deal_type': 'Cash + Stock'}
+check("a label already consistent is left alone", relabel_from_structure(_gs), None)
+
 print()
 print("=" * 78)
 print("§9 — explanation, never a sub-score")
