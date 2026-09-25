@@ -286,6 +286,14 @@ def run_barriers(terms, headline_price, target_price, acquirer_price,
     """
     results = []
     structure = classify_structure(terms)
+    # NaN is not a price. It compares False to everything, so a NaN quote passed
+    # the freshness barrier ("no price" was never tripped) and then failed 4 and 5
+    # with "$nan" in the detail -- the blended value deleted by the wrong barrier
+    # for the wrong reason. Missing is missing.
+    if acquirer_price is not None and acquirer_price != acquirer_price:
+        acquirer_price = None
+    if announcement_acquirer_price is not None and announcement_acquirer_price != announcement_acquirer_price:
+        announcement_acquirer_price = None
 
     # ── 1 · extraction produced something ────────────────────────────────────
     got = [k for k in ('cash', 'ratio', 'acquirer_ticker', 'cash_cap',

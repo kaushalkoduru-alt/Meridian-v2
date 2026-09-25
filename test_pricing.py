@@ -209,5 +209,11 @@ b, why, r = run_barriers(dict(KVUE_TERMS, ratio=1.4625), 21.01, 17.61, 97.22, FR
 check("fixed cash-and-stock: a ratio off by 10x is still caught (divergence from headline)",
       b is None and any(x.barrier == B_DIVERGENCE and not x.passed for x in r))
 
+# A NaN acquirer quote (yfinance's not-yet-filled session) must read as missing, so
+# the freshness barrier names the real problem instead of passing it.
+b, why, r = run_barriers(GSAT_TERMS, 90.00, 83.40, float('nan'), FRESH, GSAT_FILING, GSAT_FILING)
+check("NaN acquirer quote: no blended value, and barrier 9 fails as 'no acquirer price'",
+      b is None and any(x.barrier == B_PRICE_FRESH and not x.passed and 'no acquirer price' in x.detail for x in r))
+
 print("\n" + "=" * 80)
 print("ALL PASS" if ok else "SOMETHING FAILED — do not wire in until every barrier fires correctly")

@@ -3756,6 +3756,11 @@ def fetch_deals_from_edgar():
                     print(f"${ticker}: price fetch failed ({_pe}) — skipping")
                     seen_tickers.add(ticker)
                     continue
+            # A bar whose Close is NaN (the session yfinance has not filled in yet,
+            # common after the close) is not a price: float(NaN) sails past every
+            # `is None` check and comes out as "$nan" in the spread.
+            if h is not None:
+                h = h.dropna(subset=['Close'])
             if h is None or h.empty:
                 print(f"${ticker}: no price data (period=5d) — likely delisted, skipping")
                 seen_tickers.add(ticker)
@@ -4195,6 +4200,12 @@ def fetch_deals_from_edgar():
                         _h = _ex.submit(
                             lambda: yf.Ticker(tk).history(period='5d')
                         ).result(timeout=10)
+                    # The last bar WITH a close: a NaN bar is the session yfinance has
+                    # not filled in yet, and its price read as "$nan" here, which
+                    # barrier 9 passed (its timestamp is fine) and barriers 4 and 5
+                    # then failed -- deleting GSAT's blended price overnight.
+                    if _h is not None:
+                        _h = _h.dropna(subset=['Close'])
                     if _h is not None and not _h.empty:
                         _px = float(_h['Close'].iloc[-1])
                         _bar = _h.index[-1]
@@ -4226,6 +4237,8 @@ def fetch_deals_from_edgar():
                             start=(_d0 - timedelta(days=7)).strftime('%Y-%m-%d'),
                             end=(_d0 + timedelta(days=1)).strftime('%Y-%m-%d'))
                         ).result(timeout=10)
+                    if _h is not None:
+                        _h = _h.dropna(subset=['Close'])
                     if _h is not None and not _h.empty:
                         _v = float(_h['Close'].iloc[-1])
                 except Exception as _ae:
