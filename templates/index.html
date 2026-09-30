@@ -1237,29 +1237,40 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
       <span style="font-family:'Playfair Display', serif; font-style:italic; font-size:16px; color:#9a9079;">sorted best&#8211;first by risk&#8211;adjusted return</span>
       <div style="flex:1; height:1px; background:linear-gradient(90deg, rgba(238,228,208,0.18), transparent);"></div>
     </div>
+  </section>
+  <!-- A sticky element can only stay stuck within the height of its own
+       DIRECT PARENT -- that's the "containing block" the spec bounds it to.
+       #risk-tabs-mount used to wrap just the pill bar, so its parent was
+       exactly the pill bar's own height and the sticky style had zero room
+       to ever visibly stick. This wrapper spans pills + table + footnote +
+       footer instead, so the pill bar has the whole rest of the page to
+       stay pinned across, and only runs out of room where the page itself
+       does. -->
+  <div id="risk-tabs-and-rest">
+    <div id="risk-tabs-mount" style="position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:8px; padding:12px 22px; background:rgba(22,19,16,0.97); backdrop-filter:blur(10px); border-bottom:1px solid rgba(238,228,208,0.12); box-shadow:0 8px 20px -10px rgba(0,0,0,0.5);"></div>
     <div id="deal-list" style="background:#161310; overflow:hidden;"></div>
     <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; font-size:10px; letter-spacing:0.12em; color:#6f6753; text-transform:uppercase; flex-wrap:wrap; gap:8px;">
       <span>Spread = (deal &#8722; last) / last &#183; Annualized est. on expected close horizon</span>
       <span>Break price is an optimistic downside estimate — historically the stock fell further</span>
     </div>
-  </section>
 
-  <!-- FOOTER -->
-  <footer style="margin-top:56px; padding-top:28px; border-top:1px solid rgba(238,228,208,0.12);">
-    <div style="display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap;">
-      <div>
-        <div style="font-family:'Playfair Display', serif; font-size:19px; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span></div>
-        <div style="margin-top:8px; font-size:11px; letter-spacing:0.06em; color:#e8e0d0;">Built by Kaushal Koduru</div>
+    <!-- FOOTER -->
+    <footer style="margin-top:56px; padding-top:28px; border-top:1px solid rgba(238,228,208,0.12);">
+      <div style="display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap;">
+        <div>
+          <div style="font-family:'Playfair Display', serif; font-size:19px; color:#f4eee0;">Meri<span style="color:#5fe0c9;">dian</span></div>
+          <div style="margin-top:8px; font-size:11px; letter-spacing:0.06em; color:#e8e0d0;">Built by Kaushal Koduru</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:7px; font-size:10.5px; letter-spacing:0.04em; color:#e8e0d0; line-height:1.5;">
+          <div>&#183; Data sourced from SEC EDGAR and Yahoo Finance</div>
+          <div>&#183; Prices refresh hourly alongside deal data</div>
+          <div>&#183; For informational purposes only. Not financial advice</div>
+          <div>&#183; No track record yet — scoring begins June 2026, logged publicly as deals resolve</div>
+          <div>&#183; Always conduct your own due diligence before investing</div>
+        </div>
       </div>
-      <div style="display:flex; flex-direction:column; gap:7px; font-size:10.5px; letter-spacing:0.04em; color:#e8e0d0; line-height:1.5;">
-        <div>&#183; Data sourced from SEC EDGAR and Yahoo Finance</div>
-        <div>&#183; Prices refresh hourly alongside deal data</div>
-        <div>&#183; For informational purposes only. Not financial advice</div>
-        <div>&#183; No track record yet — scoring begins June 2026, logged publicly as deals resolve</div>
-        <div>&#183; Always conduct your own due diligence before investing</div>
-      </div>
-    </div>
-  </footer>
+    </footer>
+  </div>
 
 </div>
 
@@ -3928,7 +3939,12 @@ function renderDeals(deals){
     activeRiskTab = 'All'; // the picked band emptied out (deals resolved/dropped) -- fall back rather than show nothing
   }
 
-  var pillsHtml = '<div style="position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px; padding:12px 22px; background:rgba(22,19,16,0.97); backdrop-filter:blur(10px); border-bottom:1px solid rgba(238,228,208,0.12);">';
+  // #risk-tabs-mount itself carries the sticky/background/padding styling
+  // (static in the markup, so it never gets torn down); this just fills in
+  // its buttons. Own element, not part of #deal-list's innerHTML -- see the
+  // comment on #risk-tabs-and-rest in the markup for why the sticky element's
+  // PARENT has to span the whole rest of the page, not just the table.
+  var pillsHtml = '';
   [{risk:'All', label:'All'}].concat(groupDefs).forEach(function(g){
     var on = activeRiskTab === g.risk;
     var fg = g.risk === 'All' ? '#efe7d6' : riskMeta(g.risk).fg;
@@ -3938,9 +3954,10 @@ function renderDeals(deals){
       + g.label + '<span style="color:'+(on?fg:'#6f6753')+'; opacity:'+(on?'0.75':'1')+'; margin-left:7px;">'+tabCounts[g.risk]+'</span>'
       + '</button>';
   });
-  pillsHtml += '</div>';
+  var pillsMount = document.getElementById('risk-tabs-mount');
+  if(pillsMount) pillsMount.innerHTML = pillsHtml;
 
-  var html = pillsHtml
+  var html = ''
     + '<div style="display:grid; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; background:#1b1712; border-bottom:1px solid rgba(238,228,208,0.12); font-size:9.5px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase;">'
     +   '<div>Ticker</div><div>Type</div><div>Acquirer</div><div>Company</div>'
     +   '<div style="text-align:right;">Last</div><div style="text-align:right;">Deal</div>'
@@ -4026,12 +4043,15 @@ function setRiskTab(risk){
     renderDeals(allDeals);
     return;
   }
-  // Cross-fade the whole panel (pills + table) around the content swap --
-  // a straight innerHTML replace jumps 19 rows to 3 with no transition at
-  // all, which reads as a glitch rather than a filter changing. Fading the
-  // stable #deal-list wrapper out, rebuilding, then fading it back in keeps
-  // the swap on one element the whole time, so there's nothing to animate
-  // FROM/TO across a DOM node that no longer exists.
+  // Cross-fade the table content around the swap -- a straight innerHTML
+  // replace jumps 19 rows to 3 with no transition at all, which reads as a
+  // glitch rather than a filter changing. Fading the stable #deal-list
+  // wrapper out, rebuilding, then fading it back in keeps the swap on one
+  // element the whole time, so there's nothing to animate FROM/TO across a
+  // DOM node that no longer exists. The pills themselves (#risk-tabs-mount)
+  // are deliberately NOT part of this fade -- they're the sticky control the
+  // user is actively looking at mid-click, and staying solid reads as more
+  // responsive than dimming the thing you just clicked.
   var gen = ++_riskTabAnimGen; // a second click before this one finishes voids it, rather than both fighting to render
   listEl.style.transition = 'opacity 0.16s ease, transform 0.16s ease';
   listEl.style.opacity = '0';
