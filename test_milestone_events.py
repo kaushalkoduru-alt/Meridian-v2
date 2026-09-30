@@ -86,3 +86,39 @@ def test_agency_closing_its_investigation_is_a_clearance_and_resolves_a_second_r
     t = "In addition, on June 12, 2026, the Antitrust Division of the United States Department of Justice (the \"DOJ\") issued a statement in connection with closing its investigation into the Merger."
     assert ev2(t, "8-K") == [("agency_review_closed", "2026-06-12")]
     assert ev2("The Division is closing its investigation of an unrelated matter.", "8-K") == []
+
+
+# ── from the acquirer-path spot checks (TXNM, ACVA) ───────────────────────────
+def test_termination_date_extended_passive_form_txnm():
+    t = ("TXNM Energy and Blackstone Infrastructure have extended the terms of their merger agreement. "
+         "The termination date under the agreement has been extended to May 31, 2027, to allow for further time to obtain regulatory approvals.")
+    r = extract_events_types(t)
+    assert ("outside_date_extended", "2026-07-20") in r
+
+def extract_events_types(t, kind="8-K"):
+    from milestone_events import extract_events
+    return [(e["type"], e["date"]) for e in extract_events(t, "2026-07-20", (), kind)]
+
+def test_multi_regulator_sentence_lists_all():
+    from milestone_events import extract_events
+    e = extract_events("The transaction has received approval from the Public Utility Commission of Texas (PUCT), the Federal Energy Regulatory Commission (FERC), the Federal Communications Commission (FCC) and under the waiting period required by the Hart-Scott-Rodino Antitrust Improvements Act.", "2026-07-20", (), "8-K")
+    regs = [x["regulator"] for x in e if x["type"] == "reg_approval"]
+    assert regs and all(w in regs[0] for w in ("PUCT", "FERC", "FCC"))
+
+def test_paused_regulatory_review_is_flagged_with_the_regulator_named():
+    assert ("regulatory_delay", "2026-07-20") in extract_events_types("The NMPRC procedural schedule has been paused, pending the filing and review of a compliance report involving the Merger.")
+    assert extract_events_types("The review has been paused for the holiday.") == []
+
+def test_pull_and_refile():
+    r = extract_events_types("On September 28, 2026, Copart voluntarily withdrew its Premerger Notification and Report Form under the HSR Act with respect to the Offer and the Merger in order to provide the agencies with additional time to review the acquisition.", "SC 14D9/A")
+    assert r == [("hsr_refiled", "2026-09-28")]
+
+def test_acquirer_document_must_name_the_target():
+    from milestone_events import _names_target
+    assert _names_target("Teledyne and Varex Imaging announced", "Varex Imaging Corp", "VREX")
+    assert not _names_target("Blackstone announced an unrelated fund closing", "TXNM ENERGY INC", "TXNM")
+
+
+def test_month_of_may_is_not_the_modal_verb():
+    assert ("hsr_expired", "2026-05-12") in extract_events_types("At 11:59 p.m. Eastern Time on May 12, 2026, the waiting period under the HSR Act with respect to the Merger expired.")
+    assert ("second_request", "2026-05-04") in extract_events_types("On May 4, 2026, the Company received a Second Request from the FTC in connection with the Merger.")

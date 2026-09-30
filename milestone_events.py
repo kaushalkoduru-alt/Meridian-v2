@@ -48,6 +48,9 @@ REGULATORS = [  # (regex, display name) — first hit in the sentence wins
     (r"Bundeskartellamt", "Bundeskartellamt"),
     (r"Federal Reserve|\bFRB\b", "Federal Reserve"),
     (r"Office of the Comptroller|\bOCC\b", "OCC"),
+    (r"\bPUCT\b|Public Utility Commission of Texas", "PUCT"),
+    (r"\bNMPRC\b|New Mexico Public Regulation Commission", "NMPRC"),
+    (r"Nuclear Regulatory Commission|\bNRC\b", "NRC"),
     (r"\bFCC\b|Federal Communications Commission", "FCC"),
     (r"\bFERC\b", "FERC"),
     (r"\bHSR\b|Hart-Scott-Rodino", "HSR (FTC/DOJ)"),
@@ -70,10 +73,11 @@ def _sentences(text):
 
 
 def _regulator(s):
-    for rx, name in REGULATORS:
-        if re.search(rx, s):
-            return name
-    return None
+    """Every named regulator in the sentence, in order of the table ("PUCT; FERC;
+    FCC"). HSR is listed only when nothing more specific is named."""
+    hits = [name for rx, name in REGULATORS if re.search(rx, s)]
+    specific = [h for h in hits if not h.startswith("HSR")]
+    return "; ".join(specific or hits) or None
 
 
 def _event_date(s, trig_pos, filing_date, prefer_before=False):
@@ -121,6 +125,15 @@ RULES = [
     ("outside_date_extended", "Outside date extended", True,
      r"\b(extended|has extended|have extended|agreed to extend|amended[^.]{0,80}to extend)\b[^.]{0,80}\b(End Date|Outside Date|Termination Date|Drop[- ]Dead Date|Outside Closing Date)\b[^.]{0,80}\b(?:to|until)(?=\s+" + MONTHS + ")",
      None, False),
+    ("outside_date_extended", "Outside date extended", True,
+     r"\b(End Date|Outside Date|Termination Date|Drop[- ]Dead Date|Outside Closing Date)\b[^.]{0,120}\b(?:has|have|had|was|were)\s+been\s+(?:extended|moved|pushed)\b[^.]{0,20}\b(?:to|until)(?=\s+" + MONTHS + ")",
+     None, False),
+    ("hsr_refiled", "HSR filing withdrawn / refiled (pull-and-refile)", False,
+     r"\b(?:withdr[ae]w|withdrawn|refiled)\b[^.]{0,80}\b(?:Premerger\s+Notification|Notification\s+and\s+Report\s+Form|HSR)\b",
+     None, False),
+    ("regulatory_delay", "Regulatory review paused / delayed", True,
+     r"\b(?:procedural\s+schedule|review|hearing|proceeding)\b[^.]{0,80}\b(?:has|have)\s+been\s+(?:paused|suspended|postponed|delayed|stayed)\b",
+     None, True),
     ("deal_repriced", "Deal price / terms amended", False,
      r"\b(entered into|executed|agreed to)\b[^.]{0,120}\bAmendment\b[^.]{0,200}\b(increas\w*|decreas\w*|reduc\w*|revis\w*)\w*[^.]{0,80}\b(merger consideration|per share|offer price|purchase price)\b",
      None, False),
@@ -135,6 +148,7 @@ DEAL_ANCHOR = re.compile(r"\b(Merger|merger|transaction|acquisition|Acquisition)
 def extract_events(text, filing_date, anchors=(), form_kind="8-K"):
     """Sentence-level events from one document. Returns dicts (no accession yet)."""
     out = []
+    merger_doc = bool(re.search(r"merger agreement|agreement and plan of merger", text, re.I))
     for s in _sentences(text):
         if len(s) < 25 or len(s) > 900:
             continue
@@ -150,11 +164,13 @@ def extract_events(text, filing_date, anchors=(), form_kind="8-K"):
                 continue
             # Suspension/adverse wording is not a forward-looking hedge problem
             # for the modal check only when it reports something that happened.
-            if MODAL.search(s) and not (typ in ("approval_suspended", "second_request")
-                                        and re.search(r"\b(sent|received|issued|suspend(?:ed|ing))\b", s, re.I)
-                                        and not re.search(r"\b(could|may|might|if|unless|no assurance)\b", s, re.I)):
+            # "May 31, 2027" is a date, not the modal verb: strip dates before hedge checks.
+            nd = DATE_RE.sub(" ", s)
+            if MODAL.search(nd) and not (typ in ("approval_suspended", "second_request")
+                                         and re.search(r"\b(sent|received|issued|suspend(?:ed|ing))\b", s, re.I)
+                                         and not re.search(r"\b(could|may|might|if|unless|no assurance)\b", nd, re.I)):
                 continue
-            if typ in ("reg_approval", "approval_suspended", "outside_date_extended", "deal_repriced", "agency_review_closed") and not (
+            if typ in ("reg_approval", "approval_suspended", "deal_repriced", "agency_review_closed", "hsr_refiled", "regulatory_delay") and not (
                     DEAL_ANCHOR.search(s) or any(a and a.lower() in s.lower() for a in anchors)):
                 continue  # generic wording needs the deal named; HSR/CFIUS/second-request text is specific
             reg = _regulator(s)
@@ -164,7 +180,7 @@ def extract_events(text, filing_date, anchors=(), form_kind="8-K"):
                 reg = "HSR (FTC/DOJ)"
             if typ == "cfius_clearance":
                 reg = "CFIUS"
-            if typ == "reg_approval" and reg == "CFIUS":
+            if typ == "reg_approval" and reg in ("CFIUS", "CFIUS; HSR (FTC/DOJ)"):
                 continue  # typed as cfius_clearance
             d, basis = _event_date(s, m.end(), filing_date, prefer_before=(typ == "outside_date_extended"))
             if "[" in s:
@@ -174,8 +190,15 @@ def extract_events(text, filing_date, anchors=(), form_kind="8-K"):
             # filing date is an acceptable fallback.
             if form_kind != "8-K" and basis != "stated":
                 continue
-            if typ == "outside_date_extended" and form_kind != "8-K":
-                continue  # proxy text about the extension mechanism / negotiations
+            if typ == "outside_date_extended":
+                if form_kind != "8-K":
+                    continue  # proxy text about the extension mechanism / negotiations
+                # A release that says "the termination date under the agreement has
+                # been extended" may not name the deal in that sentence; the document
+                # must be about a merger agreement, and loan/credit dates are out.
+                if not (merger_doc or DEAL_ANCHOR.search(s)) or re.search(
+                        r"credit|facility|loan|revolv|commitment|notes?\b|indenture", s, re.I):
+                    continue
             if typ == "second_request" and basis != "stated":
                 continue  # undated second-request mentions are background
             out.append({"type": typ, "label": label, "adverse": adverse,
@@ -317,6 +340,14 @@ def _docs(f, fails=None):
     return docs
 
 
+def _names_target(text, target, ticker):
+    toks = _norm(target).split()
+    if not toks:
+        return False
+    key = toks[0] if len(toks[0]) >= 4 else " ".join(toks[:2])
+    return bool(re.search(r"\b" + re.escape(key) + r"\b", text, re.I))
+
+
 def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, target_cik=None):
     """Milestone events since `announced` (YYYY-MM-DD) from target + acquirer filings."""
     tc = target_cik or next((r["cik_str"] for r in _ticker_rows() if r["ticker"] == ticker), None)
@@ -346,6 +377,8 @@ def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, targe
                     fails.append(f"{f['acc']} {name}")
                     continue
                 norm_txt = re.sub(r"\s+", " ", txt.replace("​", " ").replace("\xa0", " "))
+                if role == "acquirer" and not _names_target(norm_txt, target, ticker):
+                    continue  # an acquirer's unrelated 8-K: its regulatory sentences are not this deal's
                 found = extract_events(txt, f["date"], anchors, "8-K" if f["form"].startswith("8-K") else f["form"])
                 # Vote: only the TARGET's own 5.07 is its shareholder vote.
                 if role == "target" and "5.07" in f["items"] and name == f["doc"]:
@@ -391,6 +424,12 @@ def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, targe
             e["caveat"] = ("This records that a Second Request was issued, not that it is unresolved. "
                            "No later clearance was found in the filings Meridian read, but a clearance "
                            "disclosed elsewhere would not show here.")
+        elif e["type"] == "regulatory_delay":
+            e["caveat"] = ("This records a pause as of the filing; the review may have resumed since, "
+                           "which would not show here until a filing reports it.")
+        elif e["type"] == "outside_date_extended":
+            e["caveat"] = ("An extension is a neutral-to-adverse signal: it moves the deadline and does "
+                           "not by itself say whether approvals are close.")
         elif e["type"] == "approval_suspended":
             e["caveat"] = ("This records the suspension as of the filing. A later reinstatement may not "
                            "be reflected until a filing reports it.")
