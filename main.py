@@ -3692,6 +3692,7 @@ def fetch_deals_from_edgar():
                 _prior_gates[_tk] = _gv
     except Exception as _pge:
         print(f"[Gate] could not capture prior verdicts: {_pge}")
+    from deal_gate import VERDICT_VERIFIED
 
     # Same capture, same reason, for the two readings taken off the merger
     # agreement. This is the fourth time this shape has appeared: the deal dict
@@ -4082,9 +4083,30 @@ def fetch_deals_from_edgar():
             # filer is the acquirer, not the target. Genuine negative spreads happen
             # when the market expects a topping bid, but those run 1-3%, not 8%.
             # RKLB (acquiring Iridium) entered the feed at -7.85% under the old -10 gate.
-            if sp_pct < -3 or sp_pct > 60:
+            #
+            # Admission-only: this exists to catch a BAD DETECTION (wrong filer,
+            # garbage price extraction), not to judge an already-verified deal's
+            # honest price movement. It used to run unconditionally on every
+            # rescan, so once a real, gate-VERIFIED deal's spread later drifted
+            # out of this band -- the market trading through the deal price, a
+            # deal stalling further -- the fresh cp/sp_pct got thrown away here
+            # EVERY scan and the ticker fell back to merge_with_existing's
+            # carried, no-refetch price, frozen forever at its last in-range
+            # reading. LFCR: verified 2026-09-28 at cp=$4.20/+49.52%; by the next
+            # close the stock had moved to $6.52 (spread -3.7%, past this gate),
+            # and the board stayed pinned at +49.52% because every later scan's
+            # real price kept getting discarded right here.
+            _prior_gate = _prior_gates.get(ticker)
+            _already_verified = bool(
+                _prior_gate and _prior_gate.get('verdict') == VERDICT_VERIFIED
+                and _prior_gate.get('accession') == accession)
+            if not _already_verified and (sp_pct < -3 or sp_pct > 60):
                 print(f"  [SpreadGate] {ticker}: spread {sp_pct:.2f}% out of range — skipping")
                 continue
+            if _already_verified and (sp_pct < -3 or sp_pct > 60):
+                print(f"  [SpreadGate] {ticker}: spread {sp_pct:.2f}% out of range but "
+                      f"already gate-verified on accession {accession} — letting the "
+                      f"fresh price through instead of freezing it")
             days=(datetime.utcnow().date()-datetime.strptime(src['file_date'],'%Y-%m-%d').date()).days
             if days > 548:
                 print(f"  Rolling drop: {ticker} — deal is {days} days old, likely closed")
