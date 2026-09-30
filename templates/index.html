@@ -2020,6 +2020,10 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
 let allDeals = [];
 let expandedIndex = null;
 let dealsLoaded = false;
+// Which risk band the "All Deals" table currently shows. Persists across
+// re-renders (polling, filter changes elsewhere) so picking a band doesn't
+// get reset out from under you every refresh.
+let activeRiskTab = 'Very Low';
 const collapsedSections = new Set();
 const compsCache = {};
 let compareData = [];
@@ -3901,7 +3905,7 @@ function renderDeals(deals){
     }).join('');
   }
 
-  // ================= TABLE (risk-grouped) =================
+  // ================= TABLE (risk-band tabs) =================
   // The Deal column carries a labelled block once the display is on, and
   // 82px cannot hold OFFER IN THE FILING without wrapping it.
   var dealCol = PRICING_DISPLAY ? '132px' : '82px';
@@ -3913,7 +3917,30 @@ function renderDeals(deals){
     { risk:'High',     label:'High Risk' }
   ];
 
-  var html = ''
+  // One band on screen at a time instead of all 44 stacked -- keeps the
+  // picked band selected across re-renders (polling, hero-card clicks
+  // elsewhere) rather than snapping back to a default every refresh.
+  var tabCounts = { All: deals.length };
+  groupDefs.forEach(function(g){
+    tabCounts[g.risk] = deals.filter(function(d){ return (d.risk||'').toUpperCase() === g.risk.toUpperCase(); }).length;
+  });
+  if(activeRiskTab !== 'All' && !tabCounts[activeRiskTab]){
+    activeRiskTab = 'All'; // the picked band emptied out (deals resolved/dropped) -- fall back rather than show nothing
+  }
+
+  var pillsHtml = '<div style="position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px; padding:12px 22px; background:rgba(22,19,16,0.97); backdrop-filter:blur(10px); border-bottom:1px solid rgba(238,228,208,0.12);">';
+  [{risk:'All', label:'All'}].concat(groupDefs).forEach(function(g){
+    var on = activeRiskTab === g.risk;
+    var fg = g.risk === 'All' ? '#efe7d6' : riskMeta(g.risk).fg;
+    var bd = g.risk === 'All' ? 'rgba(238,228,208,0.28)' : riskMeta(g.risk).bd;
+    var bg = on ? (g.risk === 'All' ? 'rgba(238,228,208,0.08)' : riskMeta(g.risk).bg) : 'transparent';
+    pillsHtml += '<button onclick="setRiskTab(\''+g.risk+'\')" style="font-family:\'DM Mono\',monospace; font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; padding:7px 14px; border:1px solid '+(on?bd:'rgba(238,228,208,0.16)')+'; background:'+bg+'; color:'+(on?fg:'#9a9079')+'; transition:all 0.15s;">'
+      + g.label + '<span style="color:'+(on?fg:'#6f6753')+'; opacity:'+(on?'0.75':'1')+'; margin-left:7px;">'+tabCounts[g.risk]+'</span>'
+      + '</button>';
+  });
+  pillsHtml += '</div>';
+
+  var html = pillsHtml
     + '<div style="display:grid; grid-template-columns:'+cols+'; column-gap:14px; align-items:center; padding:13px 22px; background:#1b1712; border-bottom:1px solid rgba(238,228,208,0.12); font-size:9.5px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase;">'
     +   '<div>Ticker</div><div>Type</div><div>Acquirer</div><div>Company</div>'
     +   '<div style="text-align:right;">Last</div><div style="text-align:right;">Deal</div>'
@@ -3922,15 +3949,22 @@ function renderDeals(deals){
     + '</div>';
 
   var lastBorderColor = null;
-  groupDefs.forEach(function(g){
+  var visibleGroups = activeRiskTab === 'All' ? groupDefs : groupDefs.filter(function(g){ return g.risk === activeRiskTab; });
+  var anyVisibleRows = false;
+  visibleGroups.forEach(function(g){
     var rows = deals.filter(function(d){ return (d.risk||'').toUpperCase() === g.risk.toUpperCase(); });
     if(!rows.length) return;
+    anyVisibleRows = true;
     var m = riskMeta(g.risk);
     lastBorderColor = m.bd;
-    html += '<div style="display:flex; align-items:center; gap:11px; padding:11px 22px 10px; border-top:1px solid '+m.bd+'; background:#100e0a;">'
-          +   '<span style="font-size:9.5px; letter-spacing:0.2em; color:'+m.fg+'; text-transform:uppercase;">'+g.label+'</span>'
-          +   '<span style="font-size:9.5px; letter-spacing:0.12em; color:#7d745f;">'+rows.length+(rows.length===1?' deal':' deals')+'</span>'
-          + '</div>';
+    // Redundant with the pill already showing this count when a single band
+    // is selected, so the group header is only worth its space in the "All" view.
+    if(activeRiskTab === 'All'){
+      html += '<div style="display:flex; align-items:center; gap:11px; padding:11px 22px 10px; border-top:1px solid '+m.bd+'; background:#100e0a;">'
+            +   '<span style="font-size:9.5px; letter-spacing:0.2em; color:'+m.fg+'; text-transform:uppercase;">'+g.label+'</span>'
+            +   '<span style="font-size:9.5px; letter-spacing:0.12em; color:#7d745f;">'+rows.length+(rows.length===1?' deal':' deals')+'</span>'
+            + '</div>';
+    }
     rows.forEach(function(d){
       var m2 = riskMeta(d.risk);
       // The list is where deals get compared against each other, so a row may
@@ -3975,8 +4009,47 @@ function renderDeals(deals){
   if(lastBorderColor){
     html += '<div style="border-top:1px solid '+lastBorderColor+';"></div>';
   }
+  if(!anyVisibleRows){
+    html += '<div style="padding:40px 22px; color:#7d745f; font-size:13px;">No deals in this band right now.</div>';
+  }
 
   listEl.innerHTML = html;
+}
+
+let _riskTabAnimGen = 0;
+function setRiskTab(risk){
+  if(risk === activeRiskTab) return;
+  var listEl = document.getElementById('deal-list');
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!listEl || reduceMotion){
+    activeRiskTab = risk;
+    renderDeals(allDeals);
+    return;
+  }
+  // Cross-fade the whole panel (pills + table) around the content swap --
+  // a straight innerHTML replace jumps 19 rows to 3 with no transition at
+  // all, which reads as a glitch rather than a filter changing. Fading the
+  // stable #deal-list wrapper out, rebuilding, then fading it back in keeps
+  // the swap on one element the whole time, so there's nothing to animate
+  // FROM/TO across a DOM node that no longer exists.
+  var gen = ++_riskTabAnimGen; // a second click before this one finishes voids it, rather than both fighting to render
+  listEl.style.transition = 'opacity 0.16s ease, transform 0.16s ease';
+  listEl.style.opacity = '0';
+  listEl.style.transform = 'translateY(4px)';
+  setTimeout(function(){
+    if(gen !== _riskTabAnimGen) return;
+    activeRiskTab = risk;
+    renderDeals(allDeals);
+    var el = document.getElementById('deal-list');
+    if(!el) return;
+    el.style.transition = 'none';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(4px)';
+    void el.offsetHeight; // force a reflow so the 0-state is registered before animating in
+    el.style.transition = 'opacity 0.24s ease, transform 0.24s ease';
+    el.style.opacity = '1';
+    el.style.transform = 'translateY(0)';
+  }, 160);
 }
 
 function toggleDeal(i){
