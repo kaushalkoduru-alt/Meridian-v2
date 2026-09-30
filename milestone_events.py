@@ -112,6 +112,9 @@ RULES = [
     ("reg_approval", "Regulatory approval received", False,
      r"\b(received|obtained|granted)\b[^.]{0,80}\b(approval|clearance)\b|\b(approval|clearance)\b[^.]{0,60}\b(was|has been) (granted|received|obtained)\b",
      None, True),
+    ("agency_review_closed", "Antitrust review closed", False,
+     r"\b(clos(?:ed|ing)|conclud(?:ed|ing)|terminat(?:ed|ing))\b[^.]{0,25}\b(?:its|the)\s+(?:antitrust\s+)?(?:investigation|review)\b|\bcompleted\s+its\s+(?:analysis|review|investigation)\b",
+     None, True),
     ("approval_suspended", "Regulatory approval suspended", True,
      r"\b(suspend\w*|revok\w*|withdr[ae]w\w*|rescind\w*)\b[^.]{0,80}\bapproval\b|\bapproval\b[^.]{0,80}\b(suspended|revoked|withdrawn|rescinded)\b",
      None, True),
@@ -151,7 +154,7 @@ def extract_events(text, filing_date, anchors=(), form_kind="8-K"):
                                         and re.search(r"\b(sent|received|issued|suspend(?:ed|ing))\b", s, re.I)
                                         and not re.search(r"\b(could|may|might|if|unless|no assurance)\b", s, re.I)):
                 continue
-            if typ in ("reg_approval", "approval_suspended", "outside_date_extended", "deal_repriced") and not (
+            if typ in ("reg_approval", "approval_suspended", "outside_date_extended", "deal_repriced", "agency_review_closed") and not (
                     DEAL_ANCHOR.search(s) or any(a and a.lower() in s.lower() for a in anchors)):
                 continue  # generic wording needs the deal named; HSR/CFIUS/second-request text is specific
             reg = _regulator(s)
@@ -226,6 +229,64 @@ def resolve_cik(name):
     return next(iter(hits)) if len(hits) == 1 else None
 
 
+_GENERIC = {"america", "americas", "usa", "us", "u", "s", "a", "inc", "corp", "co", "company", "holdings",
+            "holding", "group", "ltd", "plc", "llc", "lp", "the", "and", "of", "partners", "management",
+            "capital", "bidco", "investments"}
+
+
+def _toks(name):
+    name = re.sub(r"\((?:[^)]*)\)", " ", name or "")          # "(AMZN) (CIK 000...)"
+    name = name.replace("\u2019", "").replace("'", "")          # Brink's -> brinks
+    return [t for t in re.sub(r"[^a-z0-9 ]+", " ", name.lower()).split()]
+
+
+def _name_matches(acquirer, cand):
+    """Conservative: every distinctive acquirer word is in the candidate's name
+    (Teledyne -> TELEDYNE TECHNOLOGIES), or the candidate's distinctive words
+    are all in the acquirer's (BRINKS CO -> The Brink's Company)."""
+    a = [t for t in _toks(acquirer) if t not in _GENERIC]
+    c = [t for t in _toks(cand) if t not in _GENERIC]
+    if not a or not c:
+        return False
+    return all(t in c for t in a) or all(t in a for t in c)
+
+
+def _fulltext_filers(target, announced):
+    """Filers OTHER than the target whose 8-K/425 text names the target since
+    announcement: [(cik, display_name, hits)]. EDGAR full-text search."""
+    short = re.sub(r"[,.]?\s+(Inc|Corp|Corporation|Co|Company|Ltd|PLC|Holdings)\b\.?.*$", "", target or "", flags=re.I).strip()
+    if len(short) < 3:
+        return []
+    r = _get("https://efts.sec.gov/LATEST/search-index",
+             params={"q": '"' + short + '"', "forms": "8-K,425,SC 14D9,SC TO-T",
+                             "startdt": announced, "enddt": datetime.utcnow().strftime("%Y-%m-%d")})
+    r.raise_for_status()
+    out = {}
+    for h in r.json().get("hits", {}).get("hits", []):
+        src = h.get("_source", {})
+        for cik, dn in zip(src.get("ciks", []), src.get("display_names", [])):
+            d = out.setdefault(int(cik), [dn, 0])
+            d[1] += 1
+    return [(c, v[0], v[1]) for c, v in out.items()]
+
+
+def resolve_acquirer(ticker, target, acquirer, announced, target_cik=None):
+    """(cik, method) or (None, reason). Never guesses: a candidate must both
+    name the target in its own filings AND have a name matching the acquirer."""
+    cik = resolve_cik(acquirer)
+    if cik:
+        return cik, "sec_name"
+    try:
+        cands = [c for c in _fulltext_filers(target, announced)
+                 if c[0] != target_cik and _name_matches(acquirer, c[1])]
+    except Exception as e:
+        return None, f"full-text search failed: {e}"
+    if cands:
+        cands.sort(key=lambda c: -c[2])
+        return cands[0][0], "fulltext"
+    return None, "no SEC filer by that name mentions the target (likely private / foreign buyer)"
+
+
 def _filings(cik, since):
     r = _get(f"https://data.sec.gov/submissions/CIK{int(cik):010d}.json").json()["filings"]["recent"]
     for i, form in enumerate(r["form"]):
@@ -259,13 +320,15 @@ def _docs(f, fails=None):
 def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, target_cik=None):
     """Milestone events since `announced` (YYYY-MM-DD) from target + acquirer filings."""
     tc = target_cik or next((r["cik_str"] for r in _ticker_rows() if r["ticker"] == ticker), None)
-    ac = acquirer_cik or resolve_cik(acquirer)
+    ac, how = (acquirer_cik, "given") if acquirer_cik else resolve_acquirer(ticker, target, acquirer, announced, tc)
     anchors = (_norm(target), _norm(acquirer), ticker)
     events, seen, notes, fails = [], set(), [], []
     if not tc:
         notes.append("target CIK not found")
     if not ac:
-        notes.append("acquirer CIK not resolved; acquirer filings not scanned")
+        notes.append(f"acquirer not scanned: {how}")
+        if how.startswith("full-text search failed"):
+            fails.append("acquirer lookup")
     for cik, role in ((tc, "target"), (ac, "acquirer")):
         if not cik:
             continue
@@ -313,16 +376,24 @@ def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, targe
                                    "url": f"https://www.sec.gov/Archives/edgar/data/{f['cik']}/"
                                           f"{f['acc'].replace('-', '')}/{name}"})
     # Once the vote has a result, "meeting scheduled" is stale noise.
-    if any(e["type"] in ("vote_passed", "vote_failed") for e in events):
+    if any(e["type"] in ("vote_passed", "vote_failed", "vote_held") for e in events):
         events = [e for e in events if e["type"] != "vote_scheduled"]
     # A second request that a later-dated waiting-period expiry / clearance has
     # followed is history, not a live risk signal.
-    cleared = [e["date"] for e in events if e["type"] in ("hsr_expired", "cfius_clearance")]
+    cleared = [e["date"] for e in events if e["type"] in ("hsr_expired", "cfius_clearance", "agency_review_closed")]
     events = [e for e in events
               if not (e["type"] == "second_request" and any(c >= e["date"] for c in cleared))]
     stated = {(e["type"], e["regulator"]) for e in events if e["date_basis"] == "stated"}
     events = [e for e in events if e["date_basis"] == "stated" or (e["type"], e["regulator"]) not in stated]
     events.sort(key=lambda e: (e["date"], e["filed"]), reverse=True)
+    for e in events:
+        if e["type"] == "second_request":
+            e["caveat"] = ("This records that a Second Request was issued, not that it is unresolved. "
+                           "No later clearance was found in the filings Meridian read, but a clearance "
+                           "disclosed elsewhere would not show here.")
+        elif e["type"] == "approval_suspended":
+            e["caveat"] = ("This records the suspension as of the filing. A later reinstatement may not "
+                           "be reflected until a filing reports it.")
     if fails:
         notes.append(f"{len(fails)} document(s) could not be read; timeline may be incomplete")
     return {"events": events, "notes": notes, "partial": bool(fails),
@@ -345,23 +416,84 @@ def _acquirer_meeting(text, phrase, acquirer):
                 or re.search(r"(?:meeting|stockholders|shareholders|holders)\W+of\W+(?:the\W+)?(?:holders\W+of\W+)?" + a0, ctx))
 
 
+# The merger proposal, in the ways Item 5.07 words it.
+_MERGER_PROP = re.compile(
+    r"Merger\s+(?:Agreement\s+)?Proposal"
+    r"|proposal\s+to\s+(?:adopt|approve)[^.]{0,120}?(?:Merger\s+Agreement|Agreement\s+and\s+Plan\s+of\s+Merger)"
+    r"|(?:approved|adopted)\s+(?:and\s+(?:approved|adopted)\s+)?the\s+(?:Merger\s+Agreement|Agreement\s+and\s+Plan\s+of\s+Merger)"
+    r"|adopt(?:ion\s+of)?\s+the\s+(?:Merger\s+Agreement|Agreement\s+and\s+Plan\s+of\s+Merger)", re.I)
+# How a sentence refers to the merger proposal.
+_MERGER_ID = re.compile(
+    r"Merger\s+(?:Agreement\s+)?Proposal|Proposal\s+1\b"
+    r"|\bto\s+(?:adopt|approve)\s+the\s+(?:Merger\s+Agreement|Agreement\s+and\s+Plan\s+of\s+Merger)"
+    r"|proposal\s+to\s+(?:adopt|approve)[^.]{0,120}?(?:Merger\s+Agreement|Agreement\s+and\s+Plan\s+of\s+Merger)"
+    r"|(?:adopted|approved)\s+(?:and\s+(?:adopted|approved)\s+)?the\s+(?:Merger\s+Agreement|Agreement\s+and\s+Plan\s+of\s+Merger)", re.I)
+_FAIL = re.compile(r"\b(?:did\s+not\s+(?:receive|obtain|approve|adopt)|was\s+not\s+(?:approved|adopted)|not\s+approved|rejected|was\s+not\s+obtained)\b", re.I)
+_PASS = re.compile(r"\b(?:approved|adopted)\b", re.I)
+# Board action, recommendations and hypotheticals are not a stockholder result.
+_NOT_RESULT = re.compile(r"\b(?:Board|board of directors|unanimous\w*|previously|recommend\w*|if|may|will|would|could|necessary|insufficient)\b")
+
+
 def _vote_events(text, filing_date):
-    """Target's own Item 5.07: the clause reporting the merger proposal's result,
-    with the vote count when the filing gives one."""
-    m = re.search(r"([^.:]{0,80}?\b(approved|did not approve|failed to approve|rejected|not approved)\b"
-                  r"[^.:]{0,40}proposal to adopt the Merger Agreement[^.:]{0,160}?"
-                  r"(?:by the following count:\s*Votes For\s+Votes Against\s+Abstentions\s+Broker Non-Votes\s+[\d,]+\s+[\d,]+\s+[\d,]+)?)", text)
-    if not m:
+    """The target's merger-vote result from its Item 5.07, or [].
+
+    Only a meeting that voted on the MERGER counts: an annual-meeting 5.07 has no
+    merger proposal in it and yields nothing. passed / failed need an explicit
+    stockholder-result sentence tied to the merger proposal; if the filing only
+    shows a vote table, a neutral 'vote held' event carries the counts instead of
+    a guessed verdict."""
+    i = text.find("Item 5.07")
+    if i < 0:
         return []
-    failed = m.group(2).lower() != "approved"
-    d = re.search(r"On (" + MONTHS + r" \d{1,2}, 20\d{2}),[^.]{0,200}?special meeting", text)
+    end = re.search(r"Item\s+(?:7\.01|8\.01|9\.01)|SIGNATURE", text[i + 40:])
+    sec = text[i: i + 40 + end.start()] if end else text[i:]
+    if not _MERGER_PROP.search(sec):
+        return []
+    d = re.search(r"On\s+(" + MONTHS + r"\s+\d{1,2},\s+20\d{2}),.{0,400}?meeting", sec)
     date, basis = filing_date, "filing_date"
     if d:
-        date, basis = datetime.strptime(d.group(1), "%B %d, %Y").strftime("%Y-%m-%d"), "stated"
-    return [{"type": "vote_failed" if failed else "vote_passed",
-             "label": "Shareholder vote failed" if failed else "Shareholder vote passed",
-             "adverse": failed, "regulator": None, "date": date, "date_basis": basis,
-             "quote": m.group(1).strip()}]
+        date, basis = datetime.strptime(re.sub(r"\s+", " ", d.group(1)), "%B %d, %Y").strftime("%Y-%m-%d"), "stated"
+
+    def ev(typ, label, adverse, q):
+        return [{"type": typ, "label": label, "adverse": adverse, "regulator": None,
+                 "date": date, "date_basis": basis, "quote": q.strip()[:500]}]
+
+    def clip(pos, end):
+        q = sec[max(0, pos - 150): end + 150]
+        q = q[q.find(" ") + 1:] if pos - 150 > 0 else q          # whole words only
+        return q[: q.rfind(" ")] if end + 150 < len(sec) else q
+
+    markers = [m2.end() for m2 in _MERGER_ID.finditer(sec)]
+    sides = [m2.start() for m2 in re.finditer(r"advisory|compensation|golden\s+parachute|adjourn", sec, re.I)]
+    for verdict, rx in (("fail", _FAIL), ("pass", _PASS)):
+        for hit in rx.finditer(sec):
+            before = sec[max(0, hit.start() - 200): hit.start()]
+            after = sec[hit.end(): hit.end() + 140]
+            if re.search(r"\b(?:Board|board of directors|previously|unanimously|recommend\w*|if|may|could)\b", before[-90:]):
+                continue
+            # the nearest thing named before the verdict must be the merger, not the
+            # compensation / adjournment proposal that follows it
+            lm = max([x for x in markers if x <= hit.start()], default=-1)
+            ls = max([x for x in sides if x <= hit.start()], default=-1)
+            near_merger = lm > ls and hit.start() - lm < 700
+            named_after = re.search(r"Merger\s+Agreement|Merger\s+Proposal|Agreement\s+and\s+Plan\s+of\s+Merger", after[:70], re.I) \
+                and not re.search(r"advisory|compensation", sec[max(0, hit.start() - 60): hit.end() + 70], re.I)
+            subject = re.search(r"(?:stockholders|shareholders|holders|Proposal(?:\s+\d)?|proposal|Merger(?:\s+Agreement)?|which|was|were)\W+(?:\w+\W+){0,3}$", before, re.I)
+            if not (near_merger or named_after) or not subject:
+                continue
+            if verdict == "fail":
+                return ev("vote_failed", "Shareholder vote failed", True, clip(hit.start(), hit.end()))
+            return ev("vote_passed", "Shareholder vote passed", False, clip(hit.start(), hit.end()))
+    # "Each proposal was approved ... Because Proposal 1 was approved" style
+    for x in [x for x in _sentences(sec) if 25 < len(x) < 600]:
+        if re.search(r"\b(?:each|both|all)\s+(?:of\s+the\s+)?proposals?\s+(?:was|were)\s+approved", x, re.I):
+            return ev("vote_passed", "Shareholder vote passed", False, x)
+    # "there were sufficient votes to approve the Merger Agreement Proposal" is not
+    # a result either; fall back to the table, stated neutrally.
+    t = re.search(r"(?:Merger(?:\s+Agreement)?\s+Proposal|Proposal\s+1)\s*:?\s*Votes?\s+For[^A-Za-z]{0,10}(?:Votes?\s+)?Against.{0,120}", sec, re.I)
+    if t:
+        return ev("vote_held", "Shareholder vote held (see result in filing)", False, t.group(0))
+    return []
 
 
 def get_timeline(ticker, target, acquirer, announced):

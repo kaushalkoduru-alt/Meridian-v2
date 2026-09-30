@@ -2975,7 +2975,7 @@ async function loadMilestones(tk){
     if(bad.length){
       adv.style.display='block';
       adv.innerHTML=bad.map(e=>'<div style="border:1px solid #e07a6a; color:#f0b2a6; padding:7px 12px; font-size:12px; margin-bottom:6px;">'
-        +'<b style="letter-spacing:0.08em; text-transform:uppercase; font-size:10px;">Risk signal</b> &nbsp;'+esc(e.label)+(e.regulator?' — '+esc(e.regulator):'')+' · '+esc(e.date)+'</div>').join('');
+        +'<b style="letter-spacing:0.08em; text-transform:uppercase; font-size:10px;">Risk signal</b> &nbsp;'+esc(e.label)+(e.regulator?' — '+esc(e.regulator):'')+' · '+esc(e.date)+(e.caveat?'<div style="margin-top:4px; font-size:11px; line-height:1.45; color:#d9b7ae;">'+esc(e.caveat)+'</div>':'')+'</div>').join('');
     }
     ul.innerHTML=ev.map(e=>'<li style="padding:10px 0; border-top:1px solid rgba(238,228,208,0.14);">'
       +'<div style="display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline;">'
@@ -2983,6 +2983,7 @@ async function loadMilestones(tk){
       +'<span style="font-size:13px; color:'+(e.adverse?'#f0b2a6':'#e8e0d0')+';">'+esc(e.label)+(e.regulator?' — '+esc(e.regulator):'')+'</span>'
       +(e.date_basis==='filing_date'?'<span style="font-size:10px; color:#8f8671;">(filing date)</span>':'')+'</div>'
       +'<div style="margin-top:4px; font-size:11.5px; line-height:1.5; color:#b9ae96;">“'+esc(e.quote)+'”</div>'
+      +(e.caveat?'<div style="margin-top:3px; font-size:10.5px; color:#8f8671;">'+esc(e.caveat)+'</div>':'')
       +'<div style="margin-top:3px; font-size:10.5px;"><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer" style="color:#5fe0c9;">'
       +esc(e.form)+' · '+esc(e.accession)+' ↗</a> <span style="color:#8f8671;">· filed by '+esc(e.filer)+' · '+esc(e.filed)+'</span></div></li>').join('');
     if(j.partial){ ul.innerHTML+='<li style="padding-top:8px; font-size:11px; color:#f0c987;">Some filings could not be read just now, so this timeline may be incomplete. It refreshes within minutes.</li>'; }
