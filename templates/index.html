@@ -1646,6 +1646,22 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </section>
 
+  <!-- ============ MILESTONE TIMELINE — regulatory events read from SEC filings ============ -->
+  <section id="dr-s-milestones" class="dr-sec" style="margin-top:34px; scroll-margin-top:56px;">
+    <div class="dr-sec-head">
+      <span class="dr-eye">Milestone Timeline</span>
+      <span class="dr-fn">regulatory &amp; deal events, read from SEC filings &middot; newest first</span>
+      <span class="dr-rule"></span>
+    </div>
+    <div id="da-ms-adverse" style="display:none; margin-bottom:10px;"></div>
+    <ul id="da-milestones" style="list-style:none; margin:0; padding:0;"></ul>
+    <div id="da-ms-foot" style="margin-top:10px; font-size:10.5px; line-height:1.5; color:#8f8671;">
+      Each event is a sentence quoted verbatim from the linked filing (target, acquirer or proxy). Dates are as stated there;
+      &ldquo;filing date&rdquo; means the filing gave no event date. Only filing text is read &mdash; approvals disclosed solely in
+      press releases, and jurisdiction counts, will not appear here.
+    </div>
+  </section>
+
   <!-- FOOTER -->
   <footer style="margin-top:44px; padding-top:24px; border-top:1px solid rgba(238,228,208,0.12);">
     <div style="display:flex; justify-content:space-between; gap:40px; flex-wrap:wrap;">
@@ -2934,7 +2950,45 @@ function marketEnvHTML(p, deal){
   return html;
 }
 
+/* Milestone timeline: dated events read from SEC filings, each with accession + verbatim quote. */
+async function loadMilestones(tk){
+  const ul=document.getElementById('da-milestones'), adv=document.getElementById('da-ms-adverse');
+  if(!ul) return;
+  const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const note=t=>{ul.innerHTML='<li style="font-size:11px; color:#8f8671;">'+t+'</li>';};
+  adv.style.display='none'; adv.innerHTML='';
+  note('Reading filings…');
+  try{
+    let j=null;
+    for(let n=0;n<45;n++){   // the server never blocks: poll while it builds in the background
+      j=await (await fetch('/api/milestones/'+encodeURIComponent(tk))).json();
+      if(window.__msTk!==tk) return;
+      if(j.status!=='pending') break;
+      note('Reading filings… (first load of this deal takes up to a minute)');
+      await new Promise(r=>setTimeout(r,4000));
+    }
+    if(window.__msTk!==tk) return;
+    if(j.status==='pending'){ note('Still reading filings — reload in a minute.'); return; }
+    const ev=j.events||[];
+    if(!ev.length){ note(j.error?'Filings could not be read right now.':'No dated regulatory milestones found in filings since announcement.'); return; }
+    const bad=ev.filter(e=>e.adverse);
+    if(bad.length){
+      adv.style.display='block';
+      adv.innerHTML=bad.map(e=>'<div style="border:1px solid #e07a6a; color:#f0b2a6; padding:7px 12px; font-size:12px; margin-bottom:6px;">'
+        +'<b style="letter-spacing:0.08em; text-transform:uppercase; font-size:10px;">Risk signal</b> &nbsp;'+esc(e.label)+(e.regulator?' — '+esc(e.regulator):'')+' · '+esc(e.date)+'</div>').join('');
+    }
+    ul.innerHTML=ev.map(e=>'<li style="padding:10px 0; border-top:1px solid rgba(238,228,208,0.14);">'
+      +'<div style="display:flex; flex-wrap:wrap; gap:4px 12px; align-items:baseline;">'
+      +'<span style="font-size:12px; color:#f4eee0;">'+esc(e.date)+'</span>'
+      +'<span style="font-size:13px; color:'+(e.adverse?'#f0b2a6':'#e8e0d0')+';">'+esc(e.label)+(e.regulator?' — '+esc(e.regulator):'')+'</span>'
+      +(e.date_basis==='filing_date'?'<span style="font-size:10px; color:#8f8671;">(filing date)</span>':'')+'</div>'
+      +'<div style="margin-top:4px; font-size:11.5px; line-height:1.5; color:#b9ae96;">“'+esc(e.quote)+'”</div>'
+      +'<div style="margin-top:3px; font-size:10.5px;"><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer" style="color:#5fe0c9;">'
+      +esc(e.form)+' · '+esc(e.accession)+' ↗</a> <span style="color:#8f8671;">· filed by '+esc(e.filer)+' · '+esc(e.filed)+'</span></div></li>').join('');
+  }catch(err){ note('Filings could not be read right now.'); }
+}
 async function renderAnalysis(deal){
+  if(deal){ window.__msTk=deal.ticker; loadMilestones(deal.ticker); }
   if(!deal) return;
   var m       = _daRiskMeta(deal.risk);
   var company = deal.company || (deal.ticker + ' Corp.');

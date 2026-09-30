@@ -5169,6 +5169,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(auto_refresh_loop())
     asyncio.create_task(startup_scan())
     asyncio.create_task(daily_validation_loop())
+    asyncio.create_task(milestone_warm_loop())
     yield
 
 # ─── APP & ROUTES ─────────────────────────────────────────────────────────────
@@ -5288,6 +5289,52 @@ def get_clean_deals():
         print(f"  [CleanDeals] withheld {len(dropped)} unverified deal(s) from "
               f"the feed: {', '.join(str(t) for t in dropped)}")
     return kept
+
+@app.get("/api/milestones/{ticker}")
+async def deal_milestones(ticker: str):
+    """Dated regulatory/milestone events read from SEC filings (target + acquirer
+    + proxies). Display and risk-signal only: nothing here feeds the score or
+    either enforcing gate. Names and announce date come from the feed record.
+
+    NEVER blocks on EDGAR: a cold build takes 40s+, so this returns at once.
+    status 'ready' carries the timeline; 'pending' means a background build is
+    running (the page polls); 'error' means the last build failed (retry in
+    10 min). milestone_warm_loop pre-builds every live deal so pages are
+    normally 'ready' on first open."""
+    import milestone_events as me
+    t = ticker.upper()
+    d = next((x for x in get_clean_deals() if x.get('ticker') == t), None)
+    if not d:
+        return JSONResponse({"ticker": t, "status": "error", "events": [], "error": "unknown deal"}, status_code=404)
+    announced = str(d.get('filed') or '')[:10]
+    if not re.match(r"\d{4}-\d{2}-\d{2}$", announced):
+        return {"ticker": t, "status": "ready", "events": [], "adverse": [], "notes": ["announcement date unknown"]}
+    st = me.kick(t, d.get('company') or '', d.get('acquirer') or '', announced)
+    if st == "ready":
+        return {"ticker": t, "status": "ready", **me.peek(t)}
+    return {"ticker": t, "status": st, "events": [], "adverse": []}
+
+async def milestone_warm_loop():
+    """Pre-build the milestone timeline for every live deal, one at a time, so
+    the first person to open a deal never waits. Display-only."""
+    import milestone_events as me
+    await asyncio.sleep(180)          # let the startup scan populate the feed
+    while True:
+        try:
+            for d in get_clean_deals():
+                announced = str(d.get('filed') or '')[:10]
+                if me.peek(d['ticker']) is not None or not re.match(r"\d{4}-\d{2}-\d{2}$", announced):
+                    continue
+                try:
+                    await asyncio.to_thread(me.get_timeline, d['ticker'], d.get('company') or '',
+                                            d.get('acquirer') or '', announced)
+                except Exception as e:
+                    print(f"[Milestones] warm {d.get('ticker')}: {e}")
+                await asyncio.sleep(2)
+            print("[Milestones] warm pass complete")
+        except Exception as e:
+            print(f"[Milestones] warm loop error: {e}")
+        await asyncio.sleep(5 * 3600 + 1800)
 
 @app.get("/api/deals")
 async def get_deals():
