@@ -56,8 +56,8 @@ REGULATORS = [  # (regex, display name) — first hit in the sentence wins
 MODAL = re.compile(
     r"\b(could|may|might|would|should|if|unless|until|provided that|no assurance|"
     r"expects?|anticipates?|intends?|required to|subject to|conditioned|condition to|"
-    r"cannot be|will be|shall|in the event|absent)\b", re.I)
-PAST_DATE_GUARD = re.compile(r"(granted|previously|originally|dated|filed|filings|submitted|"
+    r"cannot be|will be|will have|must|shall|in the event|absent|neither|nor)\b", re.I)
+PAST_DATE_GUARD = re.compile(r"(previously|originally|dated|filed|filings|submitted|"
                              r"entered into|announced)\W+(?:\w+\W+){0,3}$", re.I)
 
 
@@ -76,7 +76,7 @@ def _regulator(s):
     return None
 
 
-def _event_date(s, trig_pos, filing_date):
+def _event_date(s, trig_pos, filing_date, prefer_before=False):
     """Date the EVENT happened. Prefer 'on <date>' just after the trigger word,
     else the nearest date before it. Dates that are only context ('previously
     granted on', 'filed on') are ignored. Fallback: the filing date, labelled."""
@@ -91,7 +91,7 @@ def _event_date(s, trig_pos, filing_date):
         cands.append((m.start(), iso))
     after = [c for c in cands if c[0] >= trig_pos and c[0] - trig_pos <= 60]
     before = [c for c in cands if c[0] < trig_pos]
-    if after:
+    if after and not prefer_before:
         return after[0][1], "stated"
     if before:
         return before[-1][1], "stated"
@@ -101,7 +101,7 @@ def _event_date(s, trig_pos, filing_date):
 # (type, label, adverse, trigger regex, extra require regex or None, use regulator?)
 RULES = [
     ("hsr_expired", "HSR waiting period expired / early termination", False,
-     r"\b(expired|was terminated|has been terminated|early termination[^.]{0,60}(?:was |been )?granted|granted early termination)\b",
+     r"\b(expired|was terminated|has been terminated|early termination[^.]{0,160}\bgranted\b|granted early termination)\b",
      r"waiting period[^.]*\b(HSR|Hart-Scott)|\b(HSR|Hart-Scott)[^.]*waiting period", False),
     ("second_request", "Second Request issued", True,
      r"\b(received|issued|issuing|was issued|has issued|were issued)\b[^.]{0,80}second request|second request[^.]{0,80}\b(was issued|was received|issued)\b",
@@ -116,7 +116,7 @@ RULES = [
      r"\b(suspend\w*|revok\w*|withdr[ae]w\w*|rescind\w*)\b[^.]{0,80}\bapproval\b|\bapproval\b[^.]{0,80}\b(suspended|revoked|withdrawn|rescinded)\b",
      None, True),
     ("outside_date_extended", "Outside date extended", True,
-     r"\b(extend\w*|extension)\b[^.]{0,160}\b(End Date|Outside Date|Termination Date|Drop[- ]Dead Date|Outside Closing Date)\b",
+     r"\b(extended|has extended|have extended|agreed to extend|amended[^.]{0,80}to extend)\b[^.]{0,80}\b(End Date|Outside Date|Termination Date|Drop[- ]Dead Date|Outside Closing Date)\b[^.]{0,80}\b(?:to|until)(?=\s+" + MONTHS + ")",
      None, False),
     ("deal_repriced", "Deal price / terms amended", False,
      r"\b(entered into|executed|agreed to)\b[^.]{0,120}\bAmendment\b[^.]{0,200}\b(increas\w*|decreas\w*|reduc\w*|revis\w*)\w*[^.]{0,80}\b(merger consideration|per share|offer price|purchase price)\b",
@@ -163,7 +163,18 @@ def extract_events(text, filing_date, anchors=(), form_kind="8-K"):
                 reg = "CFIUS"
             if typ == "reg_approval" and reg == "CFIUS":
                 continue  # typed as cfius_clearance
-            d, basis = _event_date(s, m.start(), filing_date)
+            d, basis = _event_date(s, m.end(), filing_date, prefer_before=(typ == "outside_date_extended"))
+            if "[" in s:
+                continue  # unfinished draft text ("on [August")
+            # A proxy narrates history and restates conditions; only a DATED past
+            # assertion counts there. An 8-K reports the event itself, so its
+            # filing date is an acceptable fallback.
+            if form_kind != "8-K" and basis != "stated":
+                continue
+            if typ == "outside_date_extended" and form_kind != "8-K":
+                continue  # proxy text about the extension mechanism / negotiations
+            if typ == "second_request" and basis != "stated":
+                continue  # undated second-request mentions are background
             out.append({"type": typ, "label": label, "adverse": adverse,
                         "regulator": reg, "date": d, "date_basis": basis,
                         "quote": s.strip()})
@@ -172,10 +183,21 @@ def extract_events(text, filing_date, anchors=(), form_kind="8-K"):
 
 # ── EDGAR plumbing ────────────────────────────────────────────────────────────
 def _get(url, **kw):
-    time.sleep(0.12)
-    r = requests.get(url, headers=HEADERS, timeout=25, **kw)
-    r.raise_for_status()
-    return r
+    last = None
+    for attempt in range(4):
+        time.sleep(0.12 + attempt * 1.5)
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=25, **kw)
+            if r.status_code in (429, 500, 502, 503, 504):
+                last = RuntimeError(f"HTTP {r.status_code}")
+                continue
+            r.raise_for_status()
+            return r
+        except requests.exceptions.HTTPError:
+            raise                      # 404 etc: a real answer, do not retry
+        except requests.exceptions.RequestException as e:
+            last = e
+    raise last
 
 
 def _text(url):
@@ -220,7 +242,7 @@ def _filings(cik, since):
                "items": items, "doc": r["primaryDocument"][i]}
 
 
-def _docs(f):
+def _docs(f, fails=None):
     base = f"https://www.sec.gov/Archives/edgar/data/{f['cik']}/{f['acc'].replace('-', '')}/"
     docs = [(f["doc"], base + f["doc"])]
     if f["form"].startswith("8-K"):
@@ -229,7 +251,8 @@ def _docs(f):
             for h in re.findall(r'href="/Archives/[^"]*/([^"/]*ex-?99[^"/]*\.htm)"', idx, re.I):
                 docs.append((h, base + h))
         except Exception:
-            pass
+            if fails is not None:
+                fails.append(f"{f['acc']} exhibit index")
     return docs
 
 
@@ -238,7 +261,7 @@ def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, targe
     tc = target_cik or next((r["cik_str"] for r in _ticker_rows() if r["ticker"] == ticker), None)
     ac = acquirer_cik or resolve_cik(acquirer)
     anchors = (_norm(target), _norm(acquirer), ticker)
-    events, seen, notes = [], set(), []
+    events, seen, notes, fails = [], set(), [], []
     if not tc:
         notes.append("target CIK not found")
     if not ac:
@@ -250,12 +273,14 @@ def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, targe
             filings = sorted(_filings(cik, announced), key=lambda f: (f["date"], not f["form"].startswith("8-K")))
         except Exception as e:
             notes.append(f"{role} filings unreadable: {e}")
+            fails.append(f"{role} filing list")
             continue
         for f in filings:
-            for name, url in _docs(f):
+            for name, url in _docs(f, fails):
                 try:
                     txt = _text(url)
                 except Exception:
+                    fails.append(f"{f['acc']} {name}")
                     continue
                 norm_txt = re.sub(r"\s+", " ", txt.replace("​", " ").replace("\xa0", " "))
                 found = extract_events(txt, f["date"], anchors, "8-K" if f["form"].startswith("8-K") else f["form"])
@@ -265,6 +290,8 @@ def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, targe
                 # Meeting date from the proxy text.
                 if role == "target" and f["form"] in ("DEFM14A", "PREM14A"):
                     md, phrase = extract_meeting_date(txt, filed_date=f["date"])
+                    if md and _acquirer_meeting(norm_txt, phrase, acquirer):
+                        md = None  # the ACQUIRER's holders' meeting, not the target's
                     if md:
                         found.append({"type": "vote_scheduled", "label": "Shareholder meeting scheduled",
                                       "adverse": False, "regulator": None, "date": md,
@@ -288,11 +315,34 @@ def build_timeline(ticker, target, acquirer, announced, acquirer_cik=None, targe
     # Once the vote has a result, "meeting scheduled" is stale noise.
     if any(e["type"] in ("vote_passed", "vote_failed") for e in events):
         events = [e for e in events if e["type"] != "vote_scheduled"]
+    # A second request that a later-dated waiting-period expiry / clearance has
+    # followed is history, not a live risk signal.
+    cleared = [e["date"] for e in events if e["type"] in ("hsr_expired", "cfius_clearance")]
+    events = [e for e in events
+              if not (e["type"] == "second_request" and any(c >= e["date"] for c in cleared))]
     stated = {(e["type"], e["regulator"]) for e in events if e["date_basis"] == "stated"}
     events = [e for e in events if e["date_basis"] == "stated" or (e["type"], e["regulator"]) not in stated]
     events.sort(key=lambda e: (e["date"], e["filed"]), reverse=True)
-    return {"events": events, "notes": notes,
+    if fails:
+        notes.append(f"{len(fails)} document(s) could not be read; timeline may be incomplete")
+    return {"events": events, "notes": notes, "partial": bool(fails),
             "adverse": [e for e in events if e["adverse"]]}
+
+
+def _acquirer_meeting(text, phrase, acquirer):
+    """True when the matched meeting phrase sits in a sentence about the
+    acquirer's own stockholder meeting (K-C and FOX proxies describe both)."""
+    i = text.find(re.sub(r"\s+", " ", phrase or ""))
+    if i < 0:
+        return False
+    w = _norm(acquirer).split()
+    if not w:
+        return False
+    start = max(text.rfind('. ', 0, i) + 2, i - 200)   # this sentence only
+    ctx = text[start:i + len(phrase) + 30].lower()
+    a0 = re.escape(w[0])
+    return bool(re.search(a0 + r"\W+(?:\w+\W+){0,4}(?:special\W+)?(?:meeting|stockholders|shareholders|holders)", ctx)
+                or re.search(r"(?:meeting|stockholders|shareholders|holders)\W+of\W+(?:the\W+)?(?:holders\W+of\W+)?" + a0, ctx))
 
 
 def _vote_events(text, filing_date):
@@ -321,7 +371,8 @@ def get_timeline(ticker, target, acquirer, announced):
         return hit[1]
     res = build_timeline(ticker, target, acquirer, announced)
     with _lock:
-        _cache[ticker] = (time.time(), res)
+        # a partial read expires in 10 minutes instead of CACHE_TTL
+        _cache[ticker] = (time.time() - (CACHE_TTL - 600 if res.get("partial") else 0), res)
     return res
 
 
