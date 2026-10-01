@@ -18,6 +18,7 @@ current values. Snapshots taken before it are tagged prov=True, not deleted.
 Pure functions plus one EDGAR lookup (cached by accession); the caller injects
 the lookup so tests need no network.
 """
+import ast
 import json
 import os
 import time
@@ -105,6 +106,17 @@ def _parse(t):
         return None
 
 
+def _last_pre(deal):
+    b = deal.get("break_price_band")
+    if isinstance(b, str):
+        try:
+            b = ast.literal_eval(b)
+        except (ValueError, SyntaxError):
+            return None
+    v = b.get("last_pre") if isinstance(b, dict) else None
+    return float(v) if isinstance(v, (int, float)) else None
+
+
 def rebaseline_detection(deal, accept_fn, now=None):
     """Re-derive the three detection fields for a recently announced deal.
     Returns a one-line description when it changed something, else None.
@@ -137,7 +149,19 @@ def rebaseline_detection(deal, accept_fn, now=None):
     if first >= confirm:
         return None
 
-    idx = next((i for i, s in enumerate(sh) if (_parse(s.get("t")) or datetime.min) >= confirm), None)
+    # A snapshot taken after the close only counts if its PRICE is post-announcement.
+    # LFCR: the scanner's price stayed at the 25 Sept close (4.20) for a day and a
+    # half after the 28 Sept announcement (stock 6.52), so snapshots after the close
+    # still carried the pre-announcement price. A price equal to the pre-announcement
+    # price (the first scan's, or the stored last pre-announcement close) is stale.
+    pre = [x for x in (sh[0].get("cp"), _last_pre(deal)) if isinstance(x, (int, float)) and x > 0]
+
+    def stale(snap):
+        cp = snap.get("cp")
+        return not isinstance(cp, (int, float)) or any(abs(cp - x) / x <= 0.001 for x in pre)
+
+    idx = next((i for i, s in enumerate(sh)
+                if (_parse(s.get("t")) or datetime.min) >= confirm and not stale(s)), None)
     for j in range(idx if idx is not None else len(sh)):
         sh[j]["prov"] = True
         sch[j]["prov"] = True

@@ -114,3 +114,30 @@ def test_unknown_acceptance_assumes_the_filing_date_close():
     d = deal()
     rebaseline_detection(d, lambda x: None, NOW)
     assert d["sp_pct_at_detection"] == -2.9
+
+
+def lfcr():
+    rows = [("2026-09-28T13:17:32Z", 49.52, 4.2, 76, "High"), ("2026-09-29T00:17:28Z", 49.52, 4.2, 76, "High"),
+            ("2026-09-29T01:17:39Z", 49.52, 4.2, 76, "High"), ("2026-09-30T02:08:07Z", -4.7, 6.59, 80, "Low"),
+            ("2026-09-30T03:07:44Z", -4.7, 6.59, 80, "Low")]
+    return {"ticker": "LFCR", "filed": "2026-09-28", "accession": "y", "sp_pct": -3.98, "score": 90, "risk": "Low",
+            "sp_pct_at_detection": 49.52, "score_at_detection": 76, "risk_at_detection": "High",
+            "break_price_band": {"last_pre": 4.2},
+            "spread_history": [{"t": t, "sp": sp, "cp": cp} for t, sp, cp, sc, r in rows],
+            "score_history": [{"t": t, "sc": sc, "risk": r} for t, sp, cp, sc, r in rows]}
+
+def test_snapshots_after_the_close_that_still_carry_the_old_price_do_not_count():
+    d = lfcr()
+    rebaseline_detection(d, lambda x: datetime(2026, 9, 28, 12, 53), datetime(2026, 10, 1, 16, 0))
+    assert (d["sp_pct_at_detection"], d["score_at_detection"], d["risk_at_detection"]) == (-4.7, 80, "Low")
+    assert [bool(s.get("prov")) for s in d["spread_history"]] == [True, True, True, False, False]
+
+def test_stale_check_works_without_a_stored_band_too():
+    d = lfcr(); del d["break_price_band"]
+    rebaseline_detection(d, lambda x: datetime(2026, 9, 28, 12, 53), datetime(2026, 10, 1, 16, 0))
+    assert d["sp_pct_at_detection"] == -4.7                 # first scan's price (4.20) is the reference
+
+def test_band_may_arrive_as_a_repr_string():
+    d = lfcr(); d["break_price_band"] = repr(d["break_price_band"])
+    rebaseline_detection(d, lambda x: datetime(2026, 9, 28, 12, 53), datetime(2026, 10, 1, 16, 0))
+    assert d["sp_pct_at_detection"] == -4.7
