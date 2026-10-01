@@ -16,7 +16,10 @@ FOUR TERMS
 
   Antitrust efforts         "Hell or high water" obliges the acquirer to divest
                             whatever regulators demand. "Reasonable best
-                            efforts" lets them walk when it gets expensive.
+                            efforts" is a firm obligation short of that;
+                            "commercially reasonable efforts" is the weakest
+                            common standard and lets them walk when it gets
+                            expensive.
                             Close to determinative on a contested deal.
 
   Financing condition       Its ABSENCE is the good outcome. "Not subject to a
@@ -47,6 +50,12 @@ import re
 STRONG   = "STRONG"    # the term favours the deal closing
 WEAK     = "WEAK"      # the term gives the acquirer room to walk
 UNKNOWN  = "UNKNOWN"   # language not found, or too ambiguous to call
+MODERATE = "MODERATE"  # between the two: a real obligation, but not an unlimited one.
+                       # Used only for the efforts ladder, where a binary verdict
+                       # misstated "reasonable best efforts" in BOTH directions.
+EFFORTS_VERSION = 2    # bump when check_antitrust_efforts changes; the scan drops
+                       # cached readings carrying an older value (a reading cached
+                       # on the document alone is blocked from every improvement)
 
 # ── fee formatting ────────────────────────────────────────────────────────────
 # One divisor cannot span these fees. They run from GBCS's $400,000 to WBD's
@@ -96,10 +105,36 @@ CARVEOUT_PATTERNS = [
      "explicit ceiling on divestiture"),
 ]
 
-WEAK_EFFORTS_PATTERNS = [
-    (r'commercially\s+reasonable\s+efforts', "commercially reasonable efforts"),
-    (r'reasonable\s+best\s+efforts', "reasonable best efforts"),
+# The efforts ladder, strongest to weakest. HOHW sits above this list and is
+# handled separately (it has the carve-out check). The ranks are the market
+# convention, not a finding: higher = a heavier burden on the acquirer.
+#   3  reasonable best efforts / best efforts   -> MODERATE
+#   2  commercially reasonable efforts          -> WEAK
+#   1  reasonable efforts (no "best")           -> WEAK
+# This list used to hold only the bottom two and read them in the WRONG order,
+# calling "reasonable best efforts" the acquirer's licence to walk. It is the
+# stronger standard, and an agreement naming both is reported at the stronger.
+EFFORTS_LADDER = [
+    (3, r'reasonable\s+best\s+efforts', "reasonable best efforts"),
+    (3, r'(?<!reasonable\s)(?<!commercially\s)best\s+efforts', "best efforts"),
+    (2, r'commercially\s+reasonable\s+efforts', "commercially reasonable efforts"),
+    (1, r'(?<!commercially\s)reasonable\s+efforts', "reasonable efforts"),
 ]
+# What ties an efforts phrase to the CLEARANCE covenant. Antitrust-specific words
+# and the heading merger agreements give that covenant ("Cooperation; Efforts to
+# Consummate"). The bare phrase "efforts to consummate" was tried and matched an
+# unrelated divestiture covenant (MGLD), so only the heading form is used. Bare
+# "approval",
+# "consent", "Governmental Authority" and "waiting period" were tried first and
+# let stockholder-vote, interim-operations and employee-plan covenants pose as
+# the clearance covenant.
+_REG_CONTEXT = re.compile(
+    r'antitrust|competition\s+laws?|\bHSR\b|Hart-Scott|regulatory\s+(?:laws?|approvals?|clearances?|matters)|'
+    r'clearance|cooperation;\s*efforts|foreign\s+investment', re.I)
+# How far from the efforts phrase an anchor may sit. Clearance covenants run to
+# thousands of characters, so a sentence is too tight (a sentence-length test
+# found nothing in nine agreements); this is a hand-chosen prior, not a finding.
+_REG_WINDOW = 800
 
 # ── financing ─────────────────────────────────────────────────────────────────
 # ── the single source of truth for "is closing conditioned on financing?" ────
@@ -418,6 +453,34 @@ def _first_match(text, patterns, flags=0):
     return None, None
 
 
+def _efforts_standard(flat):
+    """(rank, label, quote, other_labels) for the efforts standard that governs
+    regulatory clearance, or None.
+
+    Only matches within reach of antitrust / clearance wording count; an
+    unrelated covenant's "commercially reasonable efforts" must not outrank, or
+    stand in for, the clearance covenant. Among those, the
+    STRONGEST rank wins. With no regulatory context anywhere there is no reading:
+    the caller reports UNKNOWN rather than guess from an unrelated covenant.
+    """
+    hits = []
+    for rank, pat, label in EFFORTS_LADDER:
+        for m in re.finditer(pat, flat, re.I):
+            # Anchored on proximity to clearance wording, not on the sentence: see
+            # _REG_WINDOW. An efforts phrase with no anchor in reach is not shown
+            # to govern clearance and is NOT used (no fallback to "any match").
+            ctx = flat[max(0, m.start() - _REG_WINDOW): m.end() + _REG_WINDOW]
+            hits.append((rank, label, m.group(0)[:180], bool(_REG_CONTEXT.search(ctx))))
+    if not hits:
+        return None
+    pool = [h for h in hits if h[3]]
+    if not pool:
+        return None
+    best = max(pool, key=lambda h: h[0])
+    others = sorted({h[1] for h in pool if h[1] != best[1]})
+    return best[0], best[1], best[2], others
+
+
 def check_antitrust_efforts(text):
     """
     How hard the acquirer is bound to fight for regulatory clearance.
@@ -433,7 +496,7 @@ def check_antitrust_efforts(text):
 
     hohw_label, hohw_text = _first_match(flat, HOHW_PATTERNS)
     carve_label, carve_text = _first_match(flat, CARVEOUT_PATTERNS)
-    weak_label, weak_text = _first_match(flat, WEAK_EFFORTS_PATTERNS)
+    std = _efforts_standard(flat)
 
     if hohw_label and carve_label:
         return WEAK, (f"efforts covenant reads '{hohw_label}' but is limited by a "
@@ -441,9 +504,21 @@ def check_antitrust_efforts(text):
     if hohw_label:
         return STRONG, (f"'{hohw_label}' — the acquirer is obliged to take whatever "
                         f"remedial action regulators demand"), hohw_text
-    if weak_label:
-        return WEAK, (f"'{weak_label}' — the acquirer may walk when clearance gets "
-                      f"expensive"), weak_text
+    if std:
+        rank, label, quote, also = std
+        extra = f" (the agreement also uses {', '.join(also)} near clearance wording)" if also else ""
+        if rank == 3:
+            return MODERATE, (f"'{label}' — a firm obligation to pursue clearance, "
+                              f"stronger than 'commercially reasonable efforts' but short "
+                              f"of hell-or-high-water: no promise to accept any remedy{extra}"), quote
+        if rank == 2:
+            return WEAK, (f"'{label}' — the weakest common standard: the acquirer need "
+                          f"not take steps that are commercially costly{extra}"), quote
+        return WEAK, (f"'{label}' — an unqualified efforts promise, the lowest rung "
+                      f"on the ladder{extra}"), quote
+    if re.search(r'efforts', flat, re.I) and any(re.search(p_, flat, re.I) for _, p_, _ in EFFORTS_LADDER):
+        return UNKNOWN, ("efforts language appears in the agreement, but none within reach of "
+                         "antitrust or clearance wording, so the clearance standard is not read"), None
     return UNKNOWN, "no antitrust efforts language found", None
 
 
@@ -773,11 +848,12 @@ def assess_commitment(agreement_text, deal_value=None, party_names=(),
             'quote': fees.get('reverse_fee_text'),
         })
 
-    resolved = [t for t in terms if t['verdict'] in (STRONG, WEAK)]
+    resolved = [t for t in terms if t['verdict'] in (STRONG, MODERATE, WEAK)]
     strong = sum(1 for t in resolved if t['verdict'] == STRONG)
 
     return {
         'terms': terms,
+        'efforts_v': EFFORTS_VERSION,
         'fees': fees,
         'strong_count': strong,
         'resolved_count': len(resolved),

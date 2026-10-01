@@ -8,7 +8,7 @@ a buyer is bound to fight when the buyer has a documented exit.
 """
 import sys
 sys.path.insert(0, '/home/claude/commit')
-from deal_commitment import (check_antitrust_efforts, check_financing,
+from deal_commitment import (MODERATE, check_antitrust_efforts, check_financing,
                              third_party_fee_names,
                              check_specific_performance, extract_termination_fees,
                              assess_commitment, format_fee,
@@ -35,7 +35,44 @@ check("plain hell-or-high-water language", v, STRONG, why)
 v, why, q = check_antitrust_efforts(
     "Parent shall use its reasonable best efforts to obtain clearance under the "
     "HSR Act as promptly as practicable.")
-check("reasonable best efforts", v, WEAK, why)
+check("reasonable best efforts is MODERATE, not WEAK: it outranks commercially reasonable", v, "MODERATE", why)
+
+# The ladder: hell-or-high-water > reasonable best > commercially reasonable > plain.
+v, why, q = check_antitrust_efforts(
+    "Parent shall use commercially reasonable efforts to obtain clearance under the "
+    "HSR Act as promptly as practicable.")
+check("commercially reasonable efforts is WEAK", v, WEAK, why)
+
+v, why, q = check_antitrust_efforts(
+    "Parent shall use reasonable efforts to obtain regulatory approval under the HSR Act.")
+check("plain reasonable efforts is WEAK", v, WEAK, why)
+
+# Both standards named: the stronger one governs clearance (the old code took
+# whichever pattern was listed first, i.e. the weaker).
+v, why, q = check_antitrust_efforts(
+    "Parent shall use its commercially reasonable efforts to arrange the financing. "
+    "Each party shall use reasonable best efforts to obtain all antitrust clearance "
+    "and regulatory approvals under the HSR Act.")
+check("both named, regulatory context picks reasonable best", v, "MODERATE", why)
+
+# An unrelated covenant's standard must not stand in for the clearance covenant.
+# KNOWN LIMIT: covenants within the proximity window of each other can leak
+# (the stronger standard wins). Realistic agreements separate them by pages.
+v, why, q = check_antitrust_efforts(
+    "The Company shall use reasonable best efforts to cooperate with the debt "
+    "financing. " + ("Filler covenant text about unrelated matters. " * 40) +
+    "Parent shall use commercially reasonable efforts to obtain "
+    "antitrust clearance and regulatory approval.")
+check("regulatory context beats an unrelated stronger covenant", v, WEAK, why)
+
+v, why, q = check_antitrust_efforts(
+    "The Company shall use reasonable best efforts to solicit proxies. "
+    "Parent shall be bound by its covenant to pay the fee.")
+check("efforts language with no clearance wording in reach is UNKNOWN, not a guess", v, UNKNOWN, why)
+
+v, why, q = check_antitrust_efforts(
+    "Parent shall use best efforts to obtain antitrust clearance and approval.")
+check("best efforts ranks with reasonable best", v, "MODERATE", why)
 
 # THE IMPORTANT ONE
 v, why, q = check_antitrust_efforts(

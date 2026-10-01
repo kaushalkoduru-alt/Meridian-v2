@@ -23,7 +23,6 @@ from deal_direction import (check_direction, direction_report,
                             DIRECTION_ENFORCING, VERDICT_TARGET,
                             VERDICT_ACQUIRER, VERDICT_UNCLEAR)
 from provenance import provenance_map
-from explain import explain_deal
 from verification import verification_state
 from cvr_spread import spread_not_meaningful, cvr_terms
 from detection_baseline import rebaseline_detection, accepted_utc
@@ -4519,7 +4518,7 @@ def fetch_deals_from_edgar():
         # inside three weeks — and is filed under a new accession, which drops
         # the cached readings and forces a fresh read.
         try:
-            from deal_commitment import assess_commitment
+            from deal_commitment import assess_commitment, EFFORTS_VERSION
             from outside_date import extract_outside_date, extract_agreement_date
 
             # Restore the prior readings captured before the scan's first write.
@@ -4538,6 +4537,18 @@ def fetch_deals_from_edgar():
                           f"{_p.get('accession')} -> {_d.get('accession')} — "
                           f"agreement amended, cached readings discarded")
                     _amended += 1
+                    continue
+                # A reading cached on the document alone is blocked from every
+                # extractor improvement (CLAUDE.md). The commitment carries the
+                # efforts-ladder version that produced it; an older reading is
+                # dropped, and so is agreement_read, so the exhibit is re-read.
+                # outside_date is restored as before and is not re-derived.
+                _stale = ((_p.get('commitment') or {}).get('efforts_v') != EFFORTS_VERSION
+                          if isinstance(_p.get('commitment'), dict) else bool(_p.get('commitment')))
+                if _stale:
+                    _d['outside_date'] = _p.get('outside_date') or _d.get('outside_date')
+                    print(f"  [Commitment] {_d.get('ticker')}: efforts reading predates "
+                          f"v{EFFORTS_VERSION}, will re-read")
                     continue
                 for _f in ('commitment', 'outside_date', 'agreement_read'):
                     if _p.get(_f):
@@ -5284,12 +5295,11 @@ def get_clean_deals():
             d['break_price_band'] = parse_structured(d.get('break_price_band', {}))
         # §20 and §9, attached AFTER the round-trip above so both read the
         # parsed dicts rather than repr strings. Neither feeds any stored value:
-        # `provenance` says where each displayed number came from, `explanation`
-        # is the evidence behind the risk in words. Computed per request so a
+        # `provenance` says where each displayed number came from. The risk in
+        # words is /api/risk-breakdown (it replaced the old `explanation`). Computed per request so a
         # cached row written before either existed still carries them.
         try:
             d['provenance'] = provenance_map(d)
-            d['explanation'] = explain_deal(d)
             # Which enforcing checks actually ran. Computed per request from
             # the record itself, so a cached row written before this existed
             # still reports honestly rather than defaulting to verified.
@@ -5358,6 +5368,29 @@ async def deal_milestones(ticker: str):
     if st == "ready":
         return {"ticker": t, "status": "ready", **me.peek(t)}
     return {"ticker": t, "status": st, "events": [], "adverse": []}
+
+@app.get("/api/risk-breakdown/{ticker}")
+async def deal_risk_breakdown(ticker: str):
+    """Five-dimension explanation of the risk band (regulatory, contractual,
+    structure, timing, downside), assembled from fields already extracted.
+    Display only: feeds neither the score nor either enforcing gate. Never
+    blocks on EDGAR: if the milestone timeline is still building, the
+    regulatory dimension says so and the page polls."""
+    import milestone_events as me
+    from risk_breakdown import risk_breakdown
+    t = ticker.upper()
+    d = next((x for x in get_clean_deals() if x.get('ticker') == t), None)
+    if not d:
+        return JSONResponse({"ticker": t, "error": "unknown deal"}, status_code=404)
+    announced = str(d.get('filed') or '')[:10]
+    status, tl = "ready", None
+    if re.match(r"\d{4}-\d{2}-\d{2}$", announced):
+        status = me.kick(t, d.get('company') or '', d.get('acquirer') or '', announced)
+        if status == "ready":
+            tl = me.peek(t)
+    out = risk_breakdown(d, tl, status, _has_completion_signal(t))
+    out.update({"ticker": t, "milestone_status": status})
+    return out
 
 async def milestone_warm_loop():
     """Pre-build the milestone timeline for every live deal, one at a time, so

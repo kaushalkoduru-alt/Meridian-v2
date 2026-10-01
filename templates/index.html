@@ -1428,7 +1428,7 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     <a href="#da-structure-section">Structure</a>
     <a href="#da-commitment-section">Commitment</a>
     <a href="#da-capstructure-section">Debt</a>
-    <a href="#dr-s-explain">Risk band</a>
+    <a href="#dr-s-breakdown">Risk breakdown</a>
     <a href="#dr-s-score">Score</a>
   </nav>
 
@@ -1598,26 +1598,15 @@ footer{padding:1.25rem 2.5rem;border-top:1px solid var(--bdr);display:flex;justi
     </div>
   </div>
 
-  <!-- ============ 3.7 · WHY THIS RISK BAND (explanation; hidden when no evidence) ============ -->
-  <div id="dr-s-explain" class="dr-sec" style="scroll-margin-top:56px;">
+  <!-- ============ 3.6 · RISK BREAKDOWN (five dimensions, evidence + source; display only) ============ -->
+  <section id="dr-s-breakdown" class="dr-sec" style="scroll-margin-top:56px;">
     <div class="dr-sec-head">
-      <span class="dr-eye">Why This Risk Band</span>
-      <span class="dr-fn">what the rating is built on</span>
+      <span class="dr-eye">Risk Breakdown</span>
+      <span class="dr-fn">why the band reads as it does &middot; facts from filings, not sub-scores</span>
       <span class="dr-rule"></span>
     </div>
-    <div class="dr-fold" data-fold>
-      <button class="dr-fold-bar" type="button" aria-expanded="false">
-        <span>
-          <span class="dr-fold-lead"><b>Why This Risk Band</b></span>
-          <span class="dr-fold-meta">the evidenced categories behind the risk tier, with the filing language &middot; click to open</span>
-        </span>
-        <span class="dr-chev" aria-hidden="true">&#9656;</span>
-      </button>
-      <div class="dr-fold-body"><div><div class="dr-fold-inner">
-        <div id="da-explain"></div>
-      </div></div></div>
-    </div>
-  </div>
+    <div id="da-breakdown" style="font-size:11.5px; color:#8f8671;">Assembling&hellip;</div>
+  </section>
 
   <!-- ============ 4 · V3 SCORE BREAKDOWN ============ -->
   <section class="dr-sec" id="dr-s-score">
@@ -2479,74 +2468,8 @@ function _daWhy(deal, field){
   return p ? p.why : '';
 }
 
-// §9. Categories as EXPLANATION, never as sub-scores. There is deliberately no
-// number on any row: 41 verified deals with 7 failures cannot validate eight
-// weighted categories, and a number would read as a measurement.
-var _DA_VERDICT = {
-  'strong':                {fg:'#5fe0c9', bd:'rgba(95,224,201,0.35)'},
-  'weak':                  {fg:'#f0735e', bd:'rgba(240,115,94,0.35)'},
-  'mixed':                 {fg:'#e2b23f', bd:'rgba(226,178,63,0.32)'},
-  'evidence, no verdict':  {fg:'#9a9079', bd:'rgba(154,144,121,0.30)'},
-  'insufficient evidence': {fg:'#7d745f', bd:'rgba(125,116,95,0.25)'}
-};
-function _daExplain(deal){
-  var rows = deal && deal.explanation;
-  if(!rows || !rows.length) return '';
-  var have = 0;
-  // §9 requires that an unevidenced category says so. It does not require that
-  // each one gets a full row: three of eight repeat the same boilerplate down
-  // the page, and the repetition is what buries the six rows that carry
-  // something. They are named together on one line at the foot of the panel --
-  // the information is identical, the vertical cost is a third.
-  var total = rows.length;          // the denominator is all eight, always
-  var bare = rows.filter(function(r){ return r.verdict === 'insufficient evidence'; });
-  rows = rows.filter(function(r){ return r.verdict !== 'insufficient evidence'; });
-  var body = rows.map(function(r){
-    var m = _DA_VERDICT[r.verdict] || _DA_VERDICT['insufficient evidence'];
-    var none = false;
-    have++;
-    return '<div style="padding:13px 0; border-top:1px solid rgba(238,228,208,0.07);">'
-      + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
-      +   '<span style="font-size:12.5px; color:'+(none?'#7d745f':'#f3ead7')+'; '
-      +     'font-weight:500; min-width:170px;">'+r.category+'</span>'
-      +   '<span style="padding:2px 9px; font-size:9.5px; letter-spacing:0.11em; '
-      +     'font-weight:600; color:'+m.fg+'; border:1px solid '+m.bd+'; '
-      +     'text-transform:uppercase;">'+r.verdict+'</span>'
-      +   '<span style="font-size:8.5px; letter-spacing:0.13em; color:#7d745f;">'
-      +     (r.provenance_label||'')+'</span>'
-      + '</div>'
-      + (r.evidence||[]).map(function(e){
-          // An evidence item is a plain string, or {text, quote} where the
-          // quoted language is kept separate so it can collapse.
-          var txt = (e && e.text !== undefined) ? e.text : e;
-          var q   = (e && e.quote) ? e.quote : null;
-          return '<div style="margin-top:7px; padding-left:12px; '
-            + 'border-left:2px solid rgba(238,228,208,0.10); font-size:11.5px; '
-            + 'line-height:1.65; color:#9a9079;">' + txt
-            + _daQuote(q, m.bd) + '</div>';
-        }).join('')
-      + '</div>';
-  }).join('');
-  return '<div>'
-    + '<div style="font-size:11px; color:#8d988d; line-height:1.6;">'
-    +   have+' of '+total+' categories carry evidence. The rest are shown '
-    +   'as unevidenced rather than given a number \u2014 there is not enough '
-    +   'verified history to weight eight categories honestly.</div>'
-    + '<div style="margin-top:9px;"><span id="da-q-all" '
-    +   'onclick="_daQuoteToggleAll()" style="cursor:pointer; font-size:9.5px; '
-    +   'letter-spacing:0.13em; text-transform:uppercase; color:#6bbaa8; '
-    +   'border-bottom:1px dotted rgba(107,186,168,0.5);">'
-    +   'show all filing language</span></div>'
-    + body
-    + (bare.length ? '<div style="margin-top:13px; padding-top:11px; '
-        + 'border-top:1px solid rgba(238,228,208,0.07); font-size:11px; '
-        + 'line-height:1.6; color:#7d745f;">'
-        + '<span style="color:#8f8772;">Not evidenced — </span>'
-        + bare.map(function(r){ return r.category; }).join(', ')
-        + '. Nothing is extracted for these yet, so they are shown as '
-        + 'unevidenced rather than scored.</div>' : '')
-    + '</div>';
-}
+// (The old §9 "Why This Risk Band" panel was merged into the Risk Breakdown section;
+//  see loadRiskBreakdown and risk_breakdown.py.)
 /* ── filing language, collapsed behind the claim ──────────────────────────
    Five sections carry quotes -- structure flags, commitment terms, the outside
    date, financing evidence and the premium -- and stacked at equal weight they
@@ -2997,8 +2920,41 @@ async function loadMilestones(tk){
     if(j.partial){ ul.innerHTML+='<li style="padding-top:8px; font-size:11px; color:#f0c987;">Some filings could not be read just now, so this timeline may be incomplete. It refreshes within minutes.</li>'; }
   }catch(err){ note('Filings could not be read right now.'); }
 }
+/* Risk breakdown: five dimensions, each a qualitative read with its evidence and source. */
+var _RB_READ={elevated:{fg:'#f0735e',bd:'rgba(240,115,94,0.35)'},moderate:{fg:'#e2b23f',bd:'rgba(226,178,63,0.32)'},
+  limited:{fg:'#5fe0c9',bd:'rgba(95,224,201,0.35)'},'not enough evidence':{fg:'#7d745f',bd:'rgba(125,116,95,0.25)'}};
+async function loadRiskBreakdown(tk){
+  const box=document.getElementById('da-breakdown'); if(!box) return;
+  const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  box.textContent='Assembling…';
+  try{
+    let j=null;
+    for(let n=0;n<45;n++){
+      j=await (await fetch('/api/risk-breakdown/'+encodeURIComponent(tk))).json();
+      if(window.__msTk!==tk) return;
+      if(j.milestone_status!=='pending') break;
+      await new Promise(r=>setTimeout(r,4000));
+    }
+    if(window.__msTk!==tk) return;
+    if(!j.dimensions){ box.textContent='Breakdown unavailable.'; return; }
+    box.innerHTML=j.dimensions.map(d=>{
+      const m=_RB_READ[d.read]||_RB_READ['not enough evidence'];
+      return '<div style="padding:13px 0; border-top:1px solid rgba(238,228,208,0.07);">'
+        +'<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
+        +'<span style="font-size:12.5px; color:#f3ead7; font-weight:500; min-width:170px;">'+esc(d.title)+'</span>'
+        +'<span style="padding:2px 9px; font-size:9.5px; letter-spacing:0.11em; font-weight:600; text-transform:uppercase; color:'+m.fg+'; border:1px solid '+m.bd+';">'+esc(d.read)+'</span>'
+        +'<span style="font-size:12px; color:#cdbf9f;">'+esc(d.headline)+'</span></div>'
+        +(d.basis?'<div style="margin-top:5px; font-size:10px; letter-spacing:0.02em; color:#7d745f;">'+esc(d.basis)+'</div>':'')
+        +d.evidence.map(e=>'<div style="margin-top:7px; padding-left:12px; border-left:2px solid rgba(238,228,208,0.10); font-size:11.5px; line-height:1.65; color:#9a9079;">'+esc(e.text)
+          +' <span style="font-size:10px; color:#7d745f;">· '+(e.url?'<a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer" style="color:#5fe0c9;">'+esc(e.source)+' ↗</a>':esc(e.source))+'</span>'
+          +(e.quote?'<div style="margin-top:3px; font-size:10.5px; color:#8f8671;">“'+esc(e.quote)+'”</div>':'')+'</div>').join('')
+        +d.gaps.map(g=>'<div style="margin-top:6px; padding-left:12px; font-size:10.5px; line-height:1.55; color:#7d745f;">'+esc(g)+'</div>').join('')
+        +'</div>';
+    }).join('')+'<div style="margin-top:10px; font-size:10.5px; color:#7d745f; line-height:1.5;">The three-word reads are rules of thumb chosen by hand and not validated against outcomes; the evidence lines are the content. They are not sub-scores and do not feed the band above.</div>';
+  }catch(err){ box.textContent='Breakdown unavailable.'; }
+}
 async function renderAnalysis(deal){
-  if(deal){ window.__msTk=deal.ticker; loadMilestones(deal.ticker); }
+  if(deal){ window.__msTk=deal.ticker; loadMilestones(deal.ticker); loadRiskBreakdown(deal.ticker); }
   if(!deal) return;
   var m       = _daRiskMeta(deal.risk);
   var company = deal.company || (deal.ticker + ' Corp.');
@@ -3277,10 +3233,6 @@ async function renderAnalysis(deal){
   _daSet('da-verification', _daVerification(deal));
   // The contractual deadline is now folded into the single Timing block
   // (_daTimingRows) — no separate box, no repeated date.
-  var _explHtml = _daExplain(deal);
-  _daSet('da-explain', _explHtml);
-  var _explSec = document.getElementById('dr-s-explain');
-  if(_explSec) _explSec.style.display = _explHtml ? '' : 'none';
 
   // ---- structure notes (deal flags + blended consideration) — neutral facts
   //      about what the price means ----
@@ -3453,11 +3405,11 @@ function toggleSection(id){
 // Terms read out of the merger agreement exhibit. Neutral throughout: WEAK is a
 // fact about a contract, not a warning, so it takes the same amber the structure
 // notes use and no icon.
-var COMMITMENT_COLOR = { STRONG:'#5fe0c9', WEAK:'#d4a24c' };
+var COMMITMENT_COLOR = { STRONG:'#5fe0c9', MODERATE:'#b9c47a', WEAK:'#d4a24c' };
 
 // "Financing condition and specific performance" — sentence case, serial join.
 function commitmentUnreadSentence(terms){
-  var names = terms.filter(function(t){ return t.verdict !== 'STRONG' && t.verdict !== 'WEAK'; })
+  var names = terms.filter(function(t){ return t.verdict !== 'STRONG' && t.verdict !== 'MODERATE' && t.verdict !== 'WEAK'; })
                    .map(function(t){ return String(t.term || '').toLowerCase(); });
   if(!names.length) return '';
   var joined = names.length === 1 ? names[0]
@@ -3469,7 +3421,7 @@ function commitmentUnreadSentence(terms){
 function commitmentHTML(commitment){
   if(!commitment || !commitment.terms || !commitment.terms.length) return '';
   var terms = commitment.terms;
-  var resolved = terms.filter(function(t){ return t.verdict === 'STRONG' || t.verdict === 'WEAK'; });
+  var resolved = terms.filter(function(t){ return t.verdict === 'STRONG' || t.verdict === 'MODERATE' || t.verdict === 'WEAK'; });
   if(!resolved.length) return '';   // nothing read: the caller drops the section
 
   var html = resolved.map(function(t){
