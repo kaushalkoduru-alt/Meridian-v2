@@ -2183,7 +2183,7 @@ async function buildTicker(){
         const items = deals.map(d=>{
             const cls  = d.sp_pct>=0?'ti-pos':'ti-neg';
             const s    = d.sp_pct>=0?'+':'';
-            return `<span class="ti"><span class="ti-sym">${d.ticker}</span><span class="${cls}">${s}${(d.sp_pct||0).toFixed(2)}%</span></span>`;
+            return `<span class="ti"><span class="ti-sym">${d.ticker}</span><span class="${d.spread_nm?'ti-sym':cls}">${d.spread_nm?'CVR':s+(d.sp_pct||0).toFixed(2)+'%'}</span></span>`;
         }).join('');
         const track = document.getElementById('ticker-track');
         track.innerHTML = items + items + items + items;
@@ -2216,7 +2216,7 @@ function fillHeroCard(d){
     };
     set('hero-ticker', d.ticker||'--');
     set('hero-parties', (d.acquirer||'--')+' → '+(d.company||''));
-    set('hero-spread', sgn(d.sp_pct));
+    set('hero-spread', d.spread_nm ? 'n/m (CVR)' : sgn(d.sp_pct));
     set('hero-last', usd(d.cp));
     set('hero-deal', usd(d.dp));
     set('hero-break', usd(d.break_price));
@@ -2252,11 +2252,18 @@ function finDesc(sig){
 }
 
 // ── RISK FACTORS ──────────────────────────────────────────────────────────────
+function cvrNote(d){
+    var c = d.cvr || {};
+    var t = 'The stock trades above the $' + Number(d.dp).toFixed(2) + ' cash price because holders also receive a contingent value right (CVR) that the filing does not price. The spread to cash is therefore not meaningful: it is not scored and no annualized figure is shown.';
+    if(c.max_per_share != null) t += ' The filing states the CVR pays up to $' + Number(c.max_per_share).toFixed(2) + ' per share (total up to $' + Number(c.total_max).toFixed(2) + '); CVR payments depend on future results and are often zero.';
+    return t;
+}
 function getRiskFactors(d){
     const f=[];
     if(d.sp_pct>=12)              f.push({l:'hi',t:`Spread of ${d.sp_pct.toFixed(2)}% puts this deal in the High Risk zone. Wide spreads above 12% reflect elevated break probability. The market is pricing in significant deal risk.`});
     if(d.sp_pct>=8&&d.sp_pct<12) f.push({l:'md',t:`Spread of ${d.sp_pct.toFixed(2)}% is in the Uncertain Zone. Spreads in this range reflect real market uncertainty about closure. The V3 score helps tiebreak but monitor closely.`});
-    if(d.sp_pct<0)                f.push({l:'hi',t:'Negative spread: stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
+    if(d.spread_nm)               f.push({l:'md',t:cvrNote(d)});
+    if(d.sp_pct<0 && !d.spread_nm) f.push({l:'hi',t:'Negative spread: stock trading above the deal price. May indicate a broken deal, a competing bid, or stub value in a complex transaction. Extreme caution warranted.'});
     if(d.financing_signal==='contingent') f.push({l:'hi',t:'Deal is contingent on financing. If credit markets tighten or lenders withdraw, this deal can break independently of regulatory outcome.'});
     if(d.days_old>270)            f.push({l:'md',t:`Deal has been pending for ${d.days_old} days. Some legitimate deals take 18-24 months due to regulatory review and still close — but extended timelines accumulate risk. Monitor the spread.`});
     if(d.deal_type==='Cash + Stock') f.push({l:'md',t:"Mixed consideration deals add complexity. The stock component means final value depends on the acquirer's share price at closing, introducing market risk beyond the deal itself."});
@@ -2276,7 +2283,8 @@ function getScoreBreakdown(d){
     // range: spread was 60 of 153 points AND get_risk's primary gate, so it was
     // counted twice. It is no longer.
     let spreadAdj, spreadNote;
-    if(sp > 0 && sp < 3)        { spreadAdj = 12;  spreadNote = 'tight — market confident'; }
+    if(d.spread_nm)             { spreadAdj = 0;   spreadNote = 'n/m — CVR deal above its cash price; not scored'; }
+    else if(sp > 0 && sp < 3)   { spreadAdj = 12;  spreadNote = 'tight — market confident'; }
     else if(sp >= 3 && sp < 5)  { spreadAdj = 9;   spreadNote = 'healthy spread'; }
     else if(sp >= 5 && sp < 8)  { spreadAdj = 5;   spreadNote = 'moderate spread'; }
     else if(sp >= 8 && sp < 12) { spreadAdj = 0;   spreadNote = 'wide — skepticism'; }
@@ -3042,7 +3050,7 @@ async function renderAnalysis(deal){
   var cells = [
     { l:'Last Close'+_daBadge(deal,'cp'), v:_daUsd(deal.cp),  c:'#f4eee0' },
     { l:'Deal Value',    v:_daUsd(deal.dp),  c:'#f7f1e4' },
-    { l:'Gross Spread',  v:_daSgn(deal.sp_pct), c:m.fg },
+    { l:'Gross Spread',  v:(deal.spread_nm?'n/m (CVR)':_daSgn(deal.sp_pct)), c:m.fg },
     { l:'Premium',       v:_daPremiumText(deal),  c:'#e2d8c0' },
     { l:'Annualized',    v:_daAnnBounds(deal),  c:m.fg },
     // "Days to Close" is gone. It carried a day count from the uncapped
@@ -3138,7 +3146,7 @@ async function renderAnalysis(deal){
     + '<div style="position:relative; background:var(--dr-panel); border:1px solid var(--dr-line); border-top:2px solid #5fe0c9; padding:18px 20px; overflow:hidden;">'
     +   '<div style="font-family:\'DM Mono\',monospace; font-size:10px; letter-spacing:0.16em; color:#6bbaa8; text-transform:uppercase;">If Deal Closes'+_daBadge(deal,'dp')+'</div>'
     +   '<div style="margin-top:11px; font-family:\'Playfair Display\',serif; font-weight:600; font-size:32px; color:#f4eee0;">'+_daUsd(deal.dp)+'</div>'
-    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+_daSgn(deal.sp_pct)+'</div>'
+    +   '<div style="margin-top:7px; font-size:19px; font-weight:600; color:#5fe0c9;">'+(deal.spread_nm?'n/m (CVR)':_daSgn(deal.sp_pct))+'</div>'
     +   '<div style="margin-top:4px; font-size:12.5px; color:#cdc2a8;">'+((deal.dp!=null&&deal.cp!=null)?_daSgnUsd(deal.dp-deal.cp)+' / share':'')+'</div>'
     +   '<div style="margin-top:12px; padding-top:11px; border-top:1px solid rgba(238,228,208,0.08); font-size:11px; color:#8f8772;">Annualized '+_daAnnSingle(deal)+'</div>'
     + '</div>';
@@ -3158,7 +3166,7 @@ async function renderAnalysis(deal){
   var sizes = [25000, 50000, 100000, 250000, 500000];
   var rowsHtml = sizes.map(function(inv){
     var shares = (deal.cp!=null && deal.cp>0) ? Math.floor(inv/deal.cp) : null;
-    var up = (deal.sp_pct!=null) ? (deal.sp_pct/100)*inv : null;
+    var up = (deal.sp_pct!=null && !deal.spread_nm) ? (deal.sp_pct/100)*inv : null;
     var dn = (bd!=null) ? (bd/100)*inv : null;
     return '<div style="display:grid; grid-template-columns:1.1fr 1fr 1fr 1fr; column-gap:14px; align-items:center; padding:11px 22px; border-bottom:1px solid rgba(238,228,208,0.06);">'
       + '<div style="font-size:13px; color:#f1eadb; font-weight:500;">$'+inv.toLocaleString()+'</div>'
@@ -3170,7 +3178,7 @@ async function renderAnalysis(deal){
   _daSet('da-position-table',
     '<div style="display:grid; grid-template-columns:1.1fr 1fr 1fr 1fr; column-gap:14px; padding:10px 22px; background:#1b1712; border-bottom:1px solid rgba(238,228,208,0.12); font-size:9px; letter-spacing:0.14em; color:#857c66; text-transform:uppercase;">'
     + '<div>Position Size</div><div style="text-align:right;">Shares @ '+_daUsd(deal.cp)+'</div>'
-    + '<div style="text-align:right;">If Closes '+_daSgn(deal.sp_pct)+'</div>'
+    + '<div style="text-align:right;">If Closes '+(deal.spread_nm?'n/m (CVR)':_daSgn(deal.sp_pct))+'</div>'
     + '<div style="text-align:right;">If Breaks '+(bd!=null?_daSgn(bd):'\u2014')+'</div>'
     + '</div>' + rowsHtml);
 
@@ -3725,7 +3733,7 @@ function _pcWhen(iso){
 // One place decides whether a deal shows a blended value, so the price block,
 // the spread and the deal page can never disagree about it.
 function pricingView(d){
-  var out = { show:false, blended:null, spread:(d ? d.sp_pct : null), prose:'' };
+  var out = { show:false, blended:null, spread:(d ? d.sp_pct : null), nm:!!(d && d.spread_nm), prose:'' };
   var p = d && d.pricing;
   if(!PRICING_DISPLAY || !p || !p.all_passed) return out;
   var b = _pcNum(p.blended);
@@ -3825,6 +3833,8 @@ function priceBlockHTML(d, pv, opts){
   return '<div style="text-align:'+align+';">'
     + lbl('what you’d receive', TEAL_LBL, '0px')
     + '<div style="margin-top:4px; '+face+'font-size:'+big+'; line-height:1; color:#f7f1e4;">'+_pcMoney(d.dp)+'</div>'
+    // A CVR deal pays more than the cash headline; say so, using only what the filing states.
+    + (d.cvr ? lbl('+ CVR' + (d.cvr.max_per_share != null ? ' up to ' + _pcMoney(d.cvr.max_per_share) : ' (amount not read)'), '#8f8772', '5px') : '')
     + '</div>';
 }
 
@@ -3871,7 +3881,7 @@ function renderDeals(deals){
     if(n){
       var sumSp=0, sumSc=0, cSp=0, cSc=0;
       deals.forEach(function(d){
-        if(d.sp_pct!=null && !isNaN(d.sp_pct)){ sumSp+=Number(d.sp_pct); cSp++; }
+        if(d.sp_pct!=null && !isNaN(d.sp_pct) && !d.spread_nm){ sumSp+=Number(d.sp_pct); cSp++; }
         if(d.score!=null && !isNaN(d.score)){ sumSc+=Number(d.score); cSc++; }
       });
       var avgSp = cSp? sumSp/cSp : 0;
@@ -3957,7 +3967,7 @@ function renderDeals(deals){
       +   '</div>'
       +   '<div style="margin-top:22px; display:flex; align-items:flex-end; justify-content:space-between; gap:14px;">'
       +     '<div style="display:flex; align-items:flex-end; gap:14px;">'
-      +       '<div style="font-family:\'DM Mono\',monospace; font-weight:600; font-size:42px; line-height:0.9; color:'+m.fg+';">'+sgn(pv.spread)+'</div>'
+      +       '<div style="font-family:\'DM Mono\',monospace; font-weight:600; font-size:42px; line-height:0.9; color:'+m.fg+';">'+(pv.nm?'n/m (CVR)':sgn(pv.spread))+'</div>'
       +       '<div style="font-size:10px; letter-spacing:0.2em; color:#7d745f; text-transform:uppercase; padding-bottom:7px;">spread<br>to deal</div>'
       +     '</div>'
       +     (PRICING_DISPLAY ? priceBlockHTML(d, pv) : '')
@@ -4059,7 +4069,7 @@ function renderDeals(deals){
             +     (PRICING_DISPLAY
                     ? '<div>'+priceBlockHTML(d, pv, {big:13, small:11.5, gap:6, mono:true, align:'left'})+'</div>'
                     : '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Deal</div><div style="margin-top:2px; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div></div>')
-            +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Spread</div><div style="margin-top:2px; font-size:15px; font-weight:600; color:'+m2.fg+';">'+sgn(pv.spread)+'</div></div>'
+            +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Spread</div><div style="margin-top:2px; font-size:15px; font-weight:600; color:'+m2.fg+';">'+(pv.nm?'n/m (CVR)':sgn(pv.spread))+'</div></div>'
             +     '<div><div style="font-size:9px; letter-spacing:0.12em; color:#857c66; text-transform:uppercase;">Annualized</div><div style="margin-top:2px; font-size:13px; color:#9a9079;">'+annCell(d)+'</div></div>'
             +   '</div>'
             + '</div>';
@@ -4072,7 +4082,7 @@ function renderDeals(deals){
             +   (PRICING_DISPLAY
                   ? rowBlock
                   : '<div style="text-align:right; font-size:13px; color:#f1eadb; font-weight:500;">'+usd(d.dp)+'</div>')
-            +   '<div style="text-align:right; font-size:14px; font-weight:600; color:'+m2.fg+';">'+sgn(pv.spread)+'</div>'
+            +   '<div style="text-align:right; font-size:14px; font-weight:600; color:'+m2.fg+';">'+(pv.nm?'n/m (CVR)':sgn(pv.spread))+'</div>'
             +   '<div style="text-align:right; font-size:12.5px; color:#9a9079;">'+annCell(d)+'</div>'
             +   '<div style="text-align:right;">'+tagHTML(d.risk)+'</div>'
             + '</div>';

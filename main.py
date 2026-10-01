@@ -25,6 +25,8 @@ from deal_direction import (check_direction, direction_report,
 from provenance import provenance_map
 from explain import explain_deal
 from verification import verification_state
+from cvr_spread import spread_not_meaningful, cvr_terms
+from detection_baseline import rebaseline_detection, accepted_utc
 
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
@@ -766,6 +768,21 @@ def save_cache(records):
 
         if len(clean) >= 3:
             merged = rolling_merge(clean)
+            # A detection record is valid only once a price that can reflect the
+            # announcement exists. Runs after rolling_merge (which restores the old
+            # frozen values) and after the history append, because it re-derives
+            # the three fields from the history. Idempotent; see detection_baseline.py.
+            _rb = []
+            for _d in merged:
+                try:
+                    _msg = rebaseline_detection(
+                        _d, lambda x: accepted_utc(cik_for(x.get('ticker')), x.get('accession')))
+                    if _msg:
+                        _rb.append(_msg)
+                except Exception as _re_err:
+                    print(f"[Baseline] {_d.get('ticker')}: {_re_err}")
+            for _m in _rb:
+                print(f"[Baseline] {_m}")
             # Backfill the pre-announcement band for any deal that does not yet
             # carry one -- carried-forward deals never pass through the fresh-hit
             # path where it is computed. Runs the yfinance lookup once per deal,
@@ -1431,7 +1448,8 @@ def score_deal(spread_pct, days_since_filed, deal_type, reg_tags=None, break_pri
     # the spread wearing a different name and the other factors could barely
     # move it. It is still the single largest input, which is defensible; it is
     # no longer counted twice, which was not.
-    if 0 < spread_pct < 3:       score += 12
+    if spread_pct is None:       pass   # not meaningful (CVR deal above its cash price): see cvr_spread.py
+    elif 0 < spread_pct < 3:     score += 12
     elif 3 <= spread_pct < 5:    score += 9
     elif 5 <= spread_pct < 8:    score += 5
     elif 8 <= spread_pct < 12:   score += 0
@@ -2749,6 +2767,16 @@ def extract_acquirer(clean_text, target_name=''):
             m = m.strip().rstrip(',.')
             m = re.sub(r'\s+', ' ', m)
             m = clean_candidate(m)
+            # "...to be Acquired by Transom Capital Group SoundThinking shareholders to
+            # receive": a headline run into the next sentence ends the capture with the
+            # TARGET's own first word. The target is never part of the acquirer's name.
+            _tfirst = next((w for w in re.findall(r"[a-z0-9&]+", target_name.lower())
+                            if w not in STOP_WORDS), None) if target_name else None
+            if _tfirst:
+                _ws = m.split()
+                while len(_ws) > 1 and re.sub(r"[^a-z0-9&]", "", _ws[-1].lower()) == _tfirst:
+                    _ws.pop()
+                m = ' '.join(_ws)
             if not (2 < len(m) < 60): continue
             if any(b in m.lower() for b in BAD_PHRASES): continue
             if not m[0].isupper(): continue
@@ -4654,7 +4682,7 @@ def fetch_deals_from_edgar():
                 except (TypeError, ValueError):
                     continue
                 _d['score'] = score_deal(
-                    _sp, _dy, _d.get('deal_type'),
+                    (None if spread_not_meaningful(_d) else _sp), _dy, _d.get('deal_type'),
                     json.loads(_d['reg_tags']) if isinstance(_d.get('reg_tags'), str)
                     else (_d.get('reg_tags') or []),
                     _d.get('break_price'), _d.get('dp'),
@@ -4666,7 +4694,7 @@ def fetch_deals_from_edgar():
                     (_d.get('commitment') or {}).get('fees', {}).get('reverse_fee_pct'))
                 _d['risk'] = get_risk(_d['score'], _od, _closing,
                                        break_downside=_d.get('break_downside'),
-                                       spread_pct=_sp)
+                                       spread_pct=(None if spread_not_meaningful(_d) else _sp))
                 if (_d['score'], _d['risk']) != _before:
                     _rescored.append(f"{_d.get('ticker')} {_before[0]}/{_before[1]}"
                                      f" -> {_d['score']}/{_d['risk']}")
@@ -5268,6 +5296,23 @@ def get_clean_deals():
             d['verification'] = verification_state(d)
         except Exception as _pe:
             print(f"  [Provenance] {d.get('ticker')}: {_pe}")
+
+    # Step 3b: a CVR deal trading above its cash price has no meaningful spread.
+    # Derived here, per request, from the record itself. The spread is shown as
+    # n/m, the annualized figure is withheld, and what the filing states about
+    # the CVR travels with it. sp_pct itself stays numeric: the page sorts and
+    # filters on it.
+    for d in deals:
+        try:
+            if spread_not_meaningful(d):
+                d['spread_nm'] = 'cvr'
+                d['ann'] = None
+                d['ann_bounds'] = None
+            _cv = cvr_terms(d)
+            if _cv:
+                d['cvr'] = _cv
+        except Exception as _ce:
+            print(f"  [CVR] {d.get('ticker')}: {_ce}")
 
     # Step 4: an unverified deal never displays. `verified` is True only when
     # BOTH enforcing checks — direction and gate — actually passed; a skipped
